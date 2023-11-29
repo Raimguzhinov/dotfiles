@@ -30,7 +30,7 @@ export LC_ALL='ru_RU.UTF-8'
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 
 # ZSH_THEME="powerlevel10k/powerlevel10k"
-ZSH_THEME="robbyrussell"
+ZSH_THEME="spaceship"
 ZSH_TMUX_AUTOSTART='true'
 
 # Set list of themes to pick from when loading at random
@@ -93,7 +93,8 @@ ZSH_TMUX_AUTOSTART='true'
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions)
+plugins=( git sudo web-search copypath copybuffer dirhistory history macos )
+# zsh-autosuggestions)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -185,16 +186,16 @@ lfcd () {
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+# export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-source /Users/r0ot/.config/broot/launcher/bash/br
+# source /Users/r0ot/.config/broot/launcher/bash/br
 export PATH="/usr/local/sbin:$PATH"
 
-eval $(thefuck --alias)
+# eval $(thefuck --alias)
 
 export LF_ICONS="\
 tw=:\
@@ -369,4 +370,4 @@ export CALENDAR_DB_HOSTNAME="84.38.180.57"
 export CALENDAR_DB_PORT="5433"
 export VK_CLIENT_SECRET="wJuBeVcBmhVW4lzvgpZM"
 export OPENAI_API_KEY="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"
-source /usr/local/opt/spaceship/spaceship.zsh
+# source /usr/local/opt/spaceship/spaceship.zsh

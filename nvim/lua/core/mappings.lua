@@ -46,7 +46,7 @@ M.general = {
 
   n = {
     ["<Esc>"] = { ":noh <CR>", "Clear highlights" },
-    ["<leader>q"] = {"<cmd> NvimTreeClose <CR> :q <CR>", "Exit"},
+    ["<leader>q"] = {":q <CR>", "Exit"},
     ["<leader>wq"] = {":wqa <CR>", "Exit and save all"},
     ["<leader>w"] = {":w <CR>", "Save file"},
     ["<leader>wa"] = {":wa <CR>", "Save all"},
