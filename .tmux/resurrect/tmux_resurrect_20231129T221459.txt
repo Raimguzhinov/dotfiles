@@ -1,0 +1,17 @@
+pane	1	1	1	:##*	1	r0ot@MBP-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	2	1	1	:##*	1	r0ot@MBP-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	3	1	1	:##*	1	r0ot@MBP-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	котакбас	1	0	:##	1	nvim +NvimTreeToggle ~/.config/nvim/lua/custom/plugins.lua	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	котакбас	2	0	:	1	r0ot@MBP-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	котакбас	3	0	:	1	r0ot@MBP-Dias:~/Documents/Cources/OS/lab7	:/Users/r0ot/Documents/Cources/OS/lab7	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	котакбас	4	0	:-	1	r0ot@MBP-Dias:~/Downloads	:/Users/r0ot/Downloads	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	котакбас	5	1	:*	1	tmux source .tmux.conf	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+window	1	1	:zsh	1	:##*	cdbe,135x48,0,0,1	:
+window	2	1	:zsh	1	:##*	cdbf,135x48,0,0,2	:
+window	3	1	:zsh	1	:##*	cdc0,135x48,0,0,3	:
+window	котакбас	1	:теор.слож	0	:##	cdc1,135x48,0,0,4	off
+window	котакбас	2	:выч.сист	0	:	d002,149x48,0,0,5	off
+window	котакбас	3	:ос	0	:	cdc3,135x48,0,0,6	off
+window	котакбас	4	:qt	0	:-	d004,149x48,0,0,7	off
+window	котакбас	5	:-	1	:*	d005,149x48,0,0,8	off
+state	котакбас	1

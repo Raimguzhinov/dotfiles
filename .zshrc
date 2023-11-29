@@ -93,8 +93,7 @@ ZSH_TMUX_AUTOSTART='true'
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=( git sudo web-search copypath copybuffer dirhistory history macos )
-# zsh-autosuggestions)
+plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions zsh-syntax-highlighting)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -151,6 +150,8 @@ alias nvim='nvim +NvimTreeToggle'
 alias e='exit'
 alias rr='ranger'
 alias obs='cd && nvim /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/*.md'
+alias wgup='wg-quick up yarik'
+alias wgdown='wg-quick down yarik'
 
 if [ -x "$(command -v colorls)" ]; then
     alias ls="colorls"
@@ -360,8 +361,6 @@ ex=:\
 *.nix=:\
 "
 
-# Fig post block. Keep at the bottom of this file.
-[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
 export PATH="/usr/local/opt/postgresql@16/bin:$PATH"
 export LDFLAGS="-L/usr/local/opt/postgresql@16/lib"
 export CPPFLAGS="-I/usr/local/opt/postgresql@16/include"
@@ -371,3 +370,6 @@ export CALENDAR_DB_PORT="5433"
 export VK_CLIENT_SECRET="wJuBeVcBmhVW4lzvgpZM"
 export OPENAI_API_KEY="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"
 # source /usr/local/opt/spaceship/spaceship.zsh
+
+# Fig post block. Keep at the bottom of this file.
+[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
