@@ -146,7 +146,6 @@ alias скрип='spotify play artist скриптонит'
 alias gitree='rg --ignore --hidden --files --glob '!.git/' "$@" | tree --fromfile -a'
 alias vsrun='brew services start code-server && open ~/Applications/Chrome\ Apps.localized/VS\ Code.app/'
 alias vsstop='brew services stop code-server'
-alias nvim='nvim +NvimTreeToggle'
 alias e='exit'
 alias rr='ranger'
 alias obs='cd && nvim /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/*.md'
@@ -368,8 +367,8 @@ export PKG_CONFIG_PATH="/usr/local/opt/postgresql@16/lib/pkgconfig"
 export CALENDAR_DB_HOSTNAME="84.38.180.57"
 export CALENDAR_DB_PORT="5433"
 export VK_CLIENT_SECRET="wJuBeVcBmhVW4lzvgpZM"
-export OPENAI_API_KEY="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"
 # source /usr/local/opt/spaceship/spaceship.zsh
 
 # Fig post block. Keep at the bottom of this file.
 [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+export PATH=$PATH:/Users/r0ot/.spicetify

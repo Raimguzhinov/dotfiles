@@ -71,7 +71,7 @@ local plugins = {
   "kelly-lin/ranger.nvim",
   config = function()
     require("ranger-nvim").setup({
-  enable_cmds = false,
+  enable_cmds = true,
   replace_netrw = false,
   ui = {
     border = "none",
