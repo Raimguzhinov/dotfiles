@@ -99,18 +99,18 @@ local plugins = {
     ft = { "markdown" },
     build = function() vim.fn["mkdp#util#install"]() end,
   },
-  {
-    "jackMort/ChatGPT.nvim",
-    event = "VeryLazy",
-    config = function()
-      require("chatgpt").setup {}
-    end,
-    dependencies = {
-      "MunifTanjim/nui.nvim",
-      "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope.nvim",
-    },
-  },
+  -- {
+  --   "jackMort/ChatGPT.nvim",
+  --   event = "VeryLazy",
+  --   config = function()
+  --     require("chatgpt").setup {}
+  --   end,
+  --   dependencies = {
+  --     "MunifTanjim/nui.nvim",
+  --     "nvim-lua/plenary.nvim",
+  --     "nvim-telescope/telescope.nvim",
+  --   },
+  -- },
   {
     "nvim-neotest/neotest",
     event = "VeryLazy",
@@ -278,7 +278,7 @@ local plugins = {
         cmake_regenerate_on_save = true, -- auto generate when save CMakeLists.txt
         cmake_generate_options = { "-DCMAKE_EXPORT_COMPILE_COMMANDS=1" }, -- this will be passed when invoke `CMakeGenerate`
         cmake_build_options = {}, -- this will be passed when invoke `CMakeBuild`
-        cmake_build_directory = "", -- this is used to specify generate directory for cmake
+        cmake_build_directory = "build", -- this is used to specify generate directory for cmake
         cmake_build_directory_prefix = "cmake_build_", -- when cmake_build_directory is set to "", this option will be activated
         cmake_soft_link_compile_commands = true, -- this will automatically make a soft link from compile commands file to project root dir
         cmake_compile_commands_from_lsp = false, -- this will automatically set compile commands file location using lsp, to use it, please set `cmake_soft_link_compile_commands` to false
