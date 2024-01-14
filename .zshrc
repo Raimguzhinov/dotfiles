@@ -148,9 +148,8 @@ alias vsrun='brew services start code-server && open ~/Applications/Chrome\ Apps
 alias vsstop='brew services stop code-server'
 alias e='exit'
 alias rr='ranger'
-alias obs='cd && nvim /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/*.md'
-alias wgup='wg-quick up yarik'
-alias wgdown='wg-quick down yarik'
+alias obs='cd && nvim +NvimTreeToggle /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/.'
+alias d:last="docker ps -lq"
 
 if [ -x "$(command -v colorls)" ]; then
     alias ls="colorls"
@@ -163,6 +162,24 @@ if [ -x "$(command -v exa)" ]; then
     alias la="exa --long --icons -G -F --all --group"
     alias l.="exa --long --icons -G -F -d .* --all --group"
 fi
+
+d:bash () {
+  if [ $# != 1 ]; then
+    docker exec -it `d:last` bash
+  else
+    docker exec -it $1 bash
+  fi
+}
+
+d:run () {
+  if [ $# == 0 ]; then
+    docker run -it -v `pwd`:/app -w /app --rm buildpack-deps:trusty bash
+  elif [ $# == 1 ]; then
+    docker run -it -v `pwd`:/app -w /app --rm $1 
+  else
+    docker run -it -v `pwd`:/app -w /app --rm $1 ${@:2}
+  fi
+}
 
 mkcd ()
 {
@@ -183,6 +200,14 @@ lfcd () {
     fi
 }
 
+cdf() {
+    target=`osascript -e 'tell application "Finder" to if (count of Finder windows) > 0 then get POSIX path of (target of front Finder window as text)'`
+    if [ "$target" != "" ]; then
+        cd "$target"; pwd
+    else
+        echo 'No Finder window found' >&2
+    fi
+}
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -364,9 +389,9 @@ export PATH="/usr/local/opt/postgresql@16/bin:$PATH"
 export LDFLAGS="-L/usr/local/opt/postgresql@16/lib"
 export CPPFLAGS="-I/usr/local/opt/postgresql@16/include"
 export PKG_CONFIG_PATH="/usr/local/opt/postgresql@16/lib/pkgconfig"
-export CALENDAR_DB_HOSTNAME="84.38.180.57"
-export CALENDAR_DB_PORT="5433"
-export VK_CLIENT_SECRET="wJuBeVcBmhVW4lzvgpZM"
+export VK_CLIENT_SECRET=$(pass show dev.vk.com/apikey | head -n 1)
+export OPENAI_API_KEY=$(pass show neuroapi.host/token)
+export OPENAI_API_HOST="https://neuroapi.host"
 # source /usr/local/opt/spaceship/spaceship.zsh
 
 # Fig post block. Keep at the bottom of this file.

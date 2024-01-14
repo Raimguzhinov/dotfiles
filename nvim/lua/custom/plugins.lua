@@ -68,20 +68,20 @@ local plugins = {
     },
   },
   {
-  "kelly-lin/ranger.nvim",
-  config = function()
-    require("ranger-nvim").setup({
-  enable_cmds = true,
-  replace_netrw = false,
-  ui = {
-    border = "none",
-    height = 1,
-    width = 1,
-    x = 0.5,
-    y = 0.5,
-  }
-  })
-  end,
+    "kelly-lin/ranger.nvim",
+    config = function()
+      require("ranger-nvim").setup({
+        enable_cmds = true,
+        replace_netrw = false,
+        ui = {
+          border = "none",
+          height = 1,
+          width = 1,
+          x = 0.5,
+          y = 0.5,
+        }
+      })
+    end,
   },
   {
     "christoomey/vim-tmux-navigator",
@@ -99,18 +99,18 @@ local plugins = {
     ft = { "markdown" },
     build = function() vim.fn["mkdp#util#install"]() end,
   },
-  -- {
-  --   "jackMort/ChatGPT.nvim",
-  --   event = "VeryLazy",
-  --   config = function()
-  --     require("chatgpt").setup {}
-  --   end,
-  --   dependencies = {
-  --     "MunifTanjim/nui.nvim",
-  --     "nvim-lua/plenary.nvim",
-  --     "nvim-telescope/telescope.nvim",
-  --   },
-  -- },
+  {
+    "jackMort/ChatGPT.nvim",
+    event = "VeryLazy",
+    config = function()
+      require("chatgpt").setup()
+    end,
+    dependencies = {
+      "MunifTanjim/nui.nvim",
+      "nvim-lua/plenary.nvim",
+      "nvim-telescope/telescope.nvim",
+    },
+  },
   {
     "nvim-neotest/neotest",
     event = "VeryLazy",
@@ -782,19 +782,6 @@ local plugins = {
       require('vgit').setup()
     end
   },
-  -- {
-  --   "hrsh7th/nvim-cmp",
-  --   opts = function()
-  --     local M = require "plugins.configs.cmp"
-  --     M.completion.completeopt = "menu,menuone,noselect"
-  --     M.mapping["<CR>"] = cmp.mapping.confirm {
-  --       behavior = cmp.ConfirmBehavior.Insert,
-  --       select = false,
-  --     }
-  --     table.insert(M.sources, {name = "crates"})
-  --     return M
-  --   end,
-  -- },
   {
     "williamboman/mason.nvim",
     opts = {
