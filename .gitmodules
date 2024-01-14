@@ -10,3 +10,6 @@
 [submodule "nvim"]
 	path = nvim
 	url = git@github.com:Raimguzhinov/NvChad.git
+[submodule "pinentry-tem"]
+	path = pinentry-tem
+	url = https://github.com/notpushkin/pinentry-tem.git

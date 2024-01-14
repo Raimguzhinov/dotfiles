@@ -149,7 +149,8 @@ alias vsstop='brew services stop code-server'
 alias e='exit'
 alias rr='ranger'
 alias obs='cd && nvim +NvimTreeToggle /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/.'
-alias d:last="docker ps -lq"
+alias docker:last='docker ps -lq'
+alias pass='gopass'
 
 if [ -x "$(command -v colorls)" ]; then
     alias ls="colorls"
@@ -163,9 +164,9 @@ if [ -x "$(command -v exa)" ]; then
     alias l.="exa --long --icons -G -F -d .* --all --group"
 fi
 
-d:bash () {
+docker:bash () {
   if [ $# != 1 ]; then
-    docker exec -it `d:last` bash
+    docker exec -it `docker:last` bash
   else
     docker exec -it $1 bash
   fi
