@@ -13,3 +13,6 @@
 [submodule "pinentry-tem"]
 	path = pinentry-tem
 	url = https://github.com/notpushkin/pinentry-tem.git
+[submodule ".tmux/plugins/tmux-pass"]
+	path = .tmux/plugins/tmux-pass
+	url = https://github.com/rafi/tmux-pass

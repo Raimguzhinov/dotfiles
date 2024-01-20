@@ -138,6 +138,7 @@ alias cd...='cd ../../'
 alias cd....='cd ../../../'
 alias cd.....='cd ../../../../'
 alias cd-='cd -'
+alias clr='clear'
 alias cat='bat -p -P'
 alias g++='g++ -std=c++20'
 alias c+='clang++ -std=c++20 -O2'
@@ -208,6 +209,16 @@ cdf() {
     else
         echo 'No Finder window found' >&2
     fi
+}
+
+clangf() {
+  if ls -1 *.cpp 2>/dev/null || ls -1 *.c 2>/dev/null || ls -1 src/*.cpp 2>/dev/null || ls -1 src/*.c 2>/dev/null; then
+    cp ~/dotfiles/.clang-format .
+    cp ~/dotfiles/.clang-tidy .
+    echo "Копирование .clang-format завершено."
+  else
+    echo "Файлы *.cpp, *.c или src/*.cpp не найдены в текущем каталоге."
+  fi
 }
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
@@ -395,6 +406,7 @@ export OPENAI_API_KEY=$(pass show neuroapi.host/token)
 export OPENAI_API_HOST="https://neuroapi.host"
 # source /usr/local/opt/spaceship/spaceship.zsh
 
+export PATH=$PATH:/Users/r0ot/.spicetify
+
 # Fig post block. Keep at the bottom of this file.
 [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
-export PATH=$PATH:/Users/r0ot/.spicetify
