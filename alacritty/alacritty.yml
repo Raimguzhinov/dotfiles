@@ -14,7 +14,7 @@ window:
 
   dynamic_padding: true
 
-  decorations: full
+  decorations: buttonless
 
   startup_mode: Windowed
 
