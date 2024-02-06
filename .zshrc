@@ -401,12 +401,16 @@ export PATH="/usr/local/opt/postgresql@16/bin:$PATH"
 export LDFLAGS="-L/usr/local/opt/postgresql@16/lib"
 export CPPFLAGS="-I/usr/local/opt/postgresql@16/include"
 export PKG_CONFIG_PATH="/usr/local/opt/postgresql@16/lib/pkgconfig"
-export VK_CLIENT_SECRET=$(pass show dev.vk.com/apikey | head -n 1)
-export OPENAI_API_KEY=$(pass show neuroapi.host/token)
-export OPENAI_API_HOST="https://neuroapi.host"
+# export VK_CLIENT_SECRET=$(pass show dev.vk.com/apikey | head -n 1)
+# export OPENAI_API_KEY=$(pass show neuroapi.host/token)
+# export OPENAI_API_HOST="https://neuroapi.host"
 # source /usr/local/opt/spaceship/spaceship.zsh
 
 export PATH=$PATH:/Users/r0ot/.spicetify
+export GOPATH=$HOME/go
+export GOROOT=/usr/local/opt/go/libexec
+export PATH=$PATH:$GOPATH/bin
+export PATH=$PATH:$GOROOT/bin
 
 # Fig post block. Keep at the bottom of this file.
 [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
