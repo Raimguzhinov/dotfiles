@@ -1,7 +1,7 @@
 ---
 # MacOS has poor OpenGL suport,
 # https://github.com/alacritty/alacritty/issues/4474
-window.opacity: 1.0
+# window.opacity: 1.0
 
 window:
   # Window padding (changes require restart)
@@ -21,6 +21,8 @@ window:
   use_thin_strokes: true
 
   opacity: 0.96
+
+  blur: true
 
 draw_bold_text_with_bright_colors: true
 
@@ -43,7 +45,7 @@ font:
     family: JetBrainsMono Nerd Font Mono
     style: Bold Italic
 
-  size: 15
+  size: 13.5
 
 key_bindings:
   - key: Return
@@ -133,9 +135,10 @@ enabled:
 colors:
   # Default colors
   primary:
-    # background: '#292C3E'
+    # background-old: '#292C3E'
     # foreground: '#EBEBEB'
-    background: "#1E1E2E" # base
+    # background: "#1E1E2E" # base
+    background: "#151515" # base
     foreground: "#CDD6F4" # text
     # Bright and dim foreground colors
     dim_foreground: "#CDD6F4" # text

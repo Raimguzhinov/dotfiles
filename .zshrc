@@ -17,6 +17,7 @@ export NVM_DIR="$HOME/.nvm"
 
 export VISUAL=nvim;
 export EDITOR=nvim;
+export FZF_DEFAULT_OPTS='--height 40% --reverse --preview "bat --style=numbers --color=always --line-range :500 {}"'
 
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
@@ -34,6 +35,17 @@ export LC_ALL='ru_RU.UTF-8'
 # ZSH_THEME="powerlevel10k/powerlevel10k"
 ZSH_THEME="spaceship"
 ZSH_TMUX_AUTOSTART='true'
+
+# VI Mode!!!
+zvm_config() {
+  # Retrieve default cursor styles
+  local ncur=$(zvm_cursor_style $ZVM_CURSOR_BLINKING_UNDERLINE)
+
+  # Append your custom color for your cursor
+  ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+  ZVM_NORMAL_MODE_CURSOR=$ncur'\e\e]12;red\a'
+  ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
+}
 
 # Set list of themes to pick from when loading at random
 # Setting this variable when ZSH_THEME=random will cause zsh to load
@@ -95,7 +107,7 @@ ZSH_TMUX_AUTOSTART='true'
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions zsh-syntax-highlighting)
+plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions zsh-syntax-highlighting zsh-vi-mode )
 
 source $ZSH/oh-my-zsh.sh
 
@@ -404,8 +416,9 @@ export LDFLAGS="-L/usr/local/opt/postgresql@16/lib"
 export CPPFLAGS="-I/usr/local/opt/postgresql@16/include"
 export PKG_CONFIG_PATH="/usr/local/opt/postgresql@16/lib/pkgconfig"
 # export VK_CLIENT_SECRET=$(pass show dev.vk.com/apikey | head -n 1)
-# export OPENAI_API_KEY=$(pass show neuroapi.host/token)
-# export OPENAI_API_HOST="https://neuroapi.host"
+export OPENAI_API_KEY=$(cat ~/.neuroapi_token)
+export OPENAI_API_HOST="https://neuroapi.host"
+export CHROME_EXECUTABLE="/Applications/Thorium.app/Contents/MacOS/Thorium"
 # source /usr/local/opt/spaceship/spaceship.zsh
 
 export PATH=$PATH:/Users/r0ot/.spicetify
