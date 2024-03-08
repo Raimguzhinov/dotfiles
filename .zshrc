@@ -40,9 +40,10 @@ ZSH_TMUX_AUTOSTART='true'
 zvm_config() {
   # Retrieve default cursor styles
   local ncur=$(zvm_cursor_style $ZVM_CURSOR_BLINKING_UNDERLINE)
+  local icur=$(zvm_cursor_style $ZVM_CURSOR_BLOCK)
 
   # Append your custom color for your cursor
-  ZVM_INSERT_MODE_CURSOR=$ZVM_CURSOR_BLOCK
+  ZVM_INSERT_MODE_CURSOR=$icur'\e\e]12;white\a'
   ZVM_NORMAL_MODE_CURSOR=$ncur'\e\e]12;red\a'
   ZVM_VI_INSERT_ESCAPE_BINDKEY=jk
 }
@@ -107,7 +108,8 @@ zvm_config() {
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions zsh-syntax-highlighting zsh-vi-mode )
+plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions zsh-syntax-highlighting )
+# ( zsh-vi-mode )
 
 source $ZSH/oh-my-zsh.sh
 
@@ -162,7 +164,7 @@ alias gitree='rg --ignore --hidden --files --glob '!.git/' "$@" | tree --fromfil
 alias vsrun='brew services start code-server && open ~/Applications/Chrome\ Apps.localized/VS\ Code.app/'
 alias vsstop='brew services stop code-server'
 alias e='exit'
-alias rr='ranger'
+alias rr='yazi'
 alias obs='cd && nvim +NvimTreeToggle /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/.'
 alias docker:last='docker ps -lq'
 alias pass='gopass'

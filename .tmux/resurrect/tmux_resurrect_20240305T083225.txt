@@ -1,0 +1,18 @@
+pane	dev	1	1	:*	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Go:Protei/simple-grpc	:/Users/r0ot/Documents/Cources/Go:Protei/simple-grpc	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	dev	2	0	:-	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Algos	:/Users/r0ot/Documents/Cources/Algos	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	kotakbas	1	1	:*	1	r0ot@MacBook-Pro-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	sibguti	1	0	:	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Algos	:/Users/r0ot/Documents/Cources/Algos	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	sibguti	2	0	:	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/NetProg/lab1/server	:/Users/r0ot/Documents/Cources/NetProg/lab1/server	0	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	sibguti	2	0	:	2	r0ot@MacBook-Pro-Dias:~/Documents/Cources/NetProg/lab1/client	:/Users/r0ot/Documents/Cources/NetProg/lab1/client	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	sibguti	3	0	:	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/OS/kw_socket	:/Users/r0ot/Documents/Cources/OS/kw_socket	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	sibguti	4	0	:-	1	r0ot@MacBook-Pro-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+pane	sibguti	5	1	:*	1	r0ot@MacBook-Pro-Dias:~	:/Users/r0ot	1	zsh	:/usr/local/Cellar/zsh/5.9/bin/zsh
+window	dev	1	:protei	1	:*	62c0,209x55,0,0,11	off
+window	dev	2	:zsh	0	:-	62c1,209x55,0,0,12	:
+window	kotakbas	1	:zsh	1	:*	62c3,209x55,0,0,14	:
+window	sibguti	1	:алгосы	0	:	c521,209x55,0,0,4	off
+window	sibguti	2	:сетев.прог	0	:	3f26,209x55,0,0{101x55,0,0,5,107x55,102,0,6}	off
+window	sibguti	3	:cuda	0	:	c524,209x55,0,0,7	off
+window	sibguti	4	:android	0	:-	c525,209x55,0,0,8	off
+window	sibguti	5	:-	1	:*	62bf,209x55,0,0,10	off
+state	dev	kotakbas
