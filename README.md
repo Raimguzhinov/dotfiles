@@ -10,6 +10,7 @@ ln -s ~/dotfiles/.tmux ~/.tmux
 ln -s ~/dotfiles/.tmux.conf.local ~/.tmux.conf.local
 ln -s ~/dotfiles/.tmux.conf ~/.tmux/.tmux.conf
 ln -s -f .tmux/.tmux.conf
+ln -s ~/dotfiles/yazi/ ~/.config/yazi
 ```
 
 ### Homebrew installation:
