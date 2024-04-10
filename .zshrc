@@ -11,14 +11,13 @@ fi
 
 eval "$(zoxide init zsh)"
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$HOME/nvm.sh" ] && \. "$HOME/nvm.sh"
-[ -s "$HOME/bash_completion" ] && \. "$HOME/bash_completion"
-
 export VISUAL=nvim;
 export EDITOR=nvim;
 export FZF_DEFAULT_OPTS='--height 40% --reverse --preview "bat --style=numbers --color=always --line-range :500 {}"'
 
+export NVM_DIR="$HOME/.nvm"
+  [ -s "/usr/local/opt/nvm/nvm.sh" ] && \. "/usr/local/opt/nvm/nvm.sh"  # This loads nvm
+  [ -s "/usr/local/opt/nvm/etc/bash_completion.d/nvm" ] && \. "/usr/local/opt/nvm/etc/bash_completion.d/nvm"  # This loads nvm bash_completion
 # If you come from bash you might have to change your $PATH.
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
@@ -218,13 +217,22 @@ lfcd () {
     fi
 }
 
-cdf() {
+fcd() {
     target=`osascript -e 'tell application "Finder" to if (count of Finder windows) > 0 then get POSIX path of (target of front Finder window as text)'`
     if [ "$target" != "" ]; then
         cd "$target"; pwd
     else
         echo 'No Finder window found' >&2
     fi
+}
+
+rrcd() {
+	local tmp="$(mktemp -t "yazi-cwd.XXXXX")"
+	yazi "$@" --cwd-file="$tmp"
+	if cwd="$(cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+		cd -- "$cwd"
+	fi
+	rm -f -- "$tmp"
 }
 
 clangf() {
