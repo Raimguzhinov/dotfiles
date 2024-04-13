@@ -6,3 +6,4 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 ReferenceAlignment: Left
 AccessModifierOffset: -1
+IndentWidth: 4

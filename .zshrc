@@ -1,15 +1,16 @@
 # Fig pre block. Keep at the top of this file.
-[[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.pre.zsh"
+# [[ -f "$HOME/.fig/shell/zshrc.pre.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.pre.zsh"
 # CodeWhisperer pre block. Keep at the top of this file.
-[[ -f "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.pre.zsh"
+# [[ -f "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.pre.zsh" ]] && builtin source "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.pre.zsh"
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  # source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+# fi
 
 eval "$(zoxide init zsh)"
+eval "$(starship init zsh)"
 
 export VISUAL=nvim;
 export EDITOR=nvim;
@@ -22,7 +23,7 @@ export NVM_DIR="$HOME/.nvm"
 # export PATH=$HOME/bin:/usr/local/bin:$PATH
 
 # Path to your oh-my-zsh installation.
-export ZSH="/Users/r0ot/.oh-my-zsh"
+export ZSH="/home/r0ot/.oh-my-zsh"
 export LC_ALL='en_US.UTF-8'
 export LC_ALL='ru_RU.UTF-8'
 
@@ -32,8 +33,8 @@ export LC_ALL='ru_RU.UTF-8'
 # See https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
 
 # ZSH_THEME="powerlevel10k/powerlevel10k"
-ZSH_THEME="spaceship"
-ZSH_TMUX_AUTOSTART='true'
+# ZSH_THEME="spaceship"
+# ZSH_TMUX_AUTOSTART='true'
 
 # VI Mode!!!
 zvm_config() {
@@ -107,8 +108,9 @@ zvm_config() {
 # Custom plugins may be added to $ZSH_CUSTOM/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
-plugins=( git sudo web-search copypath copybuffer dirhistory history macos zsh-autosuggestions zsh-syntax-highlighting )
-# ( zsh-vi-mode )
+plugins=( git sudo web-search copypath copybuffer dirhistory history )
+# (zsh-autosuggestions zsh-syntax-highlighting )
+# ( zsh-vi-mode macos )
 
 source $ZSH/oh-my-zsh.sh
 
@@ -164,7 +166,6 @@ alias vsrun='brew services start code-server && open ~/Applications/Chrome\ Apps
 alias vsstop='brew services stop code-server'
 alias e='exit'
 alias rr='yazi'
-alias obs='cd && nvim +NvimTreeToggle /Users/r0ot/Library/Mobile\ Documents/iCloud\~md\~obsidian/Documents/notes/.'
 alias docker:last='docker ps -lq'
 alias pass='gopass'
 
@@ -246,7 +247,7 @@ clangf() {
 }
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 # source /usr/local/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 
 # export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
@@ -426,19 +427,20 @@ export LDFLAGS="-L/usr/local/opt/postgresql@16/lib"
 export CPPFLAGS="-I/usr/local/opt/postgresql@16/include"
 export PKG_CONFIG_PATH="/usr/local/opt/postgresql@16/lib/pkgconfig"
 # export VK_CLIENT_SECRET=$(pass show dev.vk.com/apikey | head -n 1)
-export OPENAI_API_KEY=$(cat ~/.neuroapi_token)
-export OPENAI_API_HOST="https://neuroapi.host"
-export CHROME_EXECUTABLE="/Applications/Thorium.app/Contents/MacOS/Thorium"
+# export OPENAI_API_KEY=$(cat ~/.neuroapi_token)
+# export OPENAI_API_HOST="https://neuroapi.host"
+# export CHROME_EXECUTABLE="/Applications/Thorium.app/Contents/MacOS/Thorium"
 # source /usr/local/opt/spaceship/spaceship.zsh
 
-export PATH=$PATH:/Users/r0ot/.spicetify
+# export GOROOT=/usr/local/opt/go/libexec
 export GOPATH=$HOME/go
-export GOROOT=/usr/local/opt/go/libexec
 export PATH=$PATH:$GOPATH/bin
-export PATH=$PATH:$GOROOT/bin
+export PATH=$PATH:/home/r0ot/.cargo/bin
+export PATH=$PATH:/home/r0ot/GoLand_2024_1/bin
+___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
 
 # CodeWhisperer post block. Keep at the bottom of this file.
-[[ -f "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh"
-
-# Fig post block. Keep at the bottom of this file.
-[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+# [[ -f "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh"
+#
+# # Fig post block. Keep at the bottom of this file.
+# [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
