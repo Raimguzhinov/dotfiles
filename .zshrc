@@ -435,12 +435,13 @@ export PKG_CONFIG_PATH="/usr/local/opt/postgresql@16/lib/pkgconfig"
 # export GOROOT=/usr/local/opt/go/libexec
 export GOPATH=$HOME/go
 export PATH=$PATH:$GOPATH/bin
+export PATH=$PATH:/usr/local/go/bin
 export PATH=$PATH:/home/r0ot/.cargo/bin
 export PATH=$PATH:/home/r0ot/GoLand_2024_1/bin
-___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
 
 # CodeWhisperer post block. Keep at the bottom of this file.
 # [[ -f "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh"
 #
 # # Fig post block. Keep at the bottom of this file.
 # [[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
+___MY_VMOPTIONS_SHELL_FILE="${HOME}/.jetbrains.vmoptions.sh"; if [ -f "${___MY_VMOPTIONS_SHELL_FILE}" ]; then . "${___MY_VMOPTIONS_SHELL_FILE}"; fi
