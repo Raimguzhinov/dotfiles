@@ -14,6 +14,7 @@ set idearefactormode=keep
 set ideamarks
 set number
 set relativenumber
+set clipboard+=unnamed
 
 " WhichKey
 set which-key
@@ -67,6 +68,8 @@ map gI <Action>(GotoSuperMethod)
 map <C-s> <Action>(ParameterInfo)
 imap <C-s> <Action>(ParameterInfo)
 map <leader>la <Action>(ShowIntentionActions)
+map <leader>li <Action>(ImplementMethods)
+map <leader>lg <Action>(Generate)
 
 " --- Enable IdeaVim plugins https://jb.gg/ideavim-plugins
 Plug 'preservim/nerdtree'
