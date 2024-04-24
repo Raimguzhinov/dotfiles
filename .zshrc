@@ -256,6 +256,7 @@ clangf() {
 
 # source /Users/r0ot/.config/broot/launcher/bash/br
 export PATH="/usr/local/sbin:$PATH"
+export PATH="$PATH:/opt/nvim-linux64/bin"
 
 # eval $(thefuck --alias)
 
@@ -438,6 +439,7 @@ export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:/usr/local/go/bin
 export PATH=$PATH:/home/r0ot/.cargo/bin
 export PATH=$PATH:/home/r0ot/GoLand_2024_1/bin
+export PATH=$PATH:/$HOME/.local/bin
 
 # CodeWhisperer post block. Keep at the bottom of this file.
 # [[ -f "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh" ]] && builtin source "${HOME}/Library/Application Support/codewhisperer/shell/zshrc.post.zsh"
