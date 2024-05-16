@@ -14,7 +14,7 @@ set idearefactormode=keep
 set ideamarks
 set number
 set relativenumber
-set clipboard+=unnamed
+set clipboard^=unnamedplus
 
 " WhichKey
 set which-key
