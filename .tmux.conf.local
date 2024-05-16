@@ -6,7 +6,7 @@
 
 set -g @plugin 'tmux-plugins/tpm'
 set -g @plugin 'tmux-plugins/tmux-sensible'
-set -g @plugin 'spywhere/tmux-now-playing'
+# set -g @plugin 'spywhere/tmux-now-playing'
 set -g @plugin 'christoomey/vim-tmux-navigator'
 # set -g @plugin 'tmux-plugins/tmux-yank'
 set -g @plugin 'tmux-plugins/tmux-resurrect'
@@ -17,6 +17,14 @@ set -g @plugin 'dreamsofcode-io/catppuccin-tmux'
 
 set -g @resurrect-capture-pane-contents 'on'
 set -g @continuum-restore 'on'
+
+set-option -g status-position top
+
+# Yazi
+set -g allow-passthrough on
+
+set -ga update-environment TERM
+set -ga update-environment TERM_PROGRAM
 
 # -- navigation ----------------------------------------------------------------
 
@@ -246,9 +254,10 @@ tmux_conf_theme_right_separator_sub="|"
 #     - #{uptime_s}
 #     - #{username}
 #     - #{username_ssh}
-tmux_conf_theme_status_left=" 🐙 #S "
-tmux_conf_theme_status_right="#{mouse}#{prefix}#{now_playing}#{pairing}#{synchronized} %R , %d %b | #{username}#{root} | #{hostname} "
-set -g status-right '#{prefix}#{now_playing}'
+
+# tmux_conf_theme_status_left=" 🐙 #S "
+# tmux_conf_theme_status_right="#{mouse}#{prefix}#{now_playing}#{pairing}#{synchronized} %R , %d %b | #{username}#{root} | #{hostname} "
+# set -g status-right '#{prefix}#{now_playing}'
 
 tmux_conf_theme_status_left_fg="$tmux_conf_theme_colour_6,$tmux_conf_theme_colour_7,$tmux_conf_theme_colour_8"
 tmux_conf_theme_status_left_bg="$tmux_conf_theme_colour_11,$tmux_conf_theme_colour_10,$tmux_conf_theme_colour_9"
@@ -437,8 +446,8 @@ tmux_conf_uninstall_plugins_on_reload=true
 # "$@"
 # # /!\ do not remove the previous line
 run '~/.tmux/plugins/tpm/tpm'
-run-shell ~/target/path/now-playing.tmux
+# run-shell ~/target/path/now-playing.tmux
 # run-shell ~/clone/path/yank.tmux
-run-shell ~/clone/path/resurrect.tmux
+# run-shell ~/clone/path/resurrect.tmux
 set -g mouse on
 # set-option -sa terminal-overrides ",xterm*:Tc"

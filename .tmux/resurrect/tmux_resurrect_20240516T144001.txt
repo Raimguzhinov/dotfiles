@@ -1,0 +1,18 @@
+pane	dev	1	0	:-	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Go:Protei/simple-grpc	:/home/r0ot	1	zsh	:
+pane	dev	2	0	:	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Go:Protei/caldav-tuest	:/home/r0ot	1	zsh	:
+pane	dev	3	1	:*	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Go:Protei/simple-grpc	:/home/r0ot	1	nvim	:nvim .tmux.conf
+pane	sibguti	1	0	:	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/Algos	:/home/r0ot	1	zsh	:
+pane	sibguti	2	1	:*	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/NetProg/lab4/server	:/home/r0ot	1	zsh	:
+pane	sibguti	2	1	:*	2	r0ot@MacBook-Pro-Dias:~/Documents/Cources/NetProg/lab2/client	:/home/r0ot	0	zsh	:
+pane	sibguti	3	0	:-	1	r0ot@MacBook-Pro-Dias:~/Documents/Cources/OS/kw_socket	:/home/r0ot	1	zsh	:
+pane	sibguti	4	0	:	1	r0ot@MacBook-Pro-Dias:~	:/home/r0ot	1	zsh	:
+pane	sibguti	5	0	:	1	r0ot@MacBook-Pro-Dias:~	:/home/r0ot	1	zsh	:
+window	dev	1	:grpc	0	:-	ba7e,108x43,0,0,1	off
+window	dev	2	:caldav	0	:	ba7f,108x43,0,0,2	off
+window	dev	3	:[tmux]	1	:*	b420,93x43,0,0,3	:
+window	sibguti	1	:алгосы	0	:	ba81,108x43,0,0,4	off
+window	sibguti	2	:сетев.прог	1	:*	2704,108x43,0,0{50x43,0,0,5,57x43,51,0,6}	off
+window	sibguti	3	:cuda	0	:-	ba84,108x43,0,0,7	off
+window	sibguti	4	:android	0	:	ba85,108x43,0,0,8	off
+window	sibguti	5	:-	0	:	ba86,108x43,0,0,9	off
+state	dev	sibguti
