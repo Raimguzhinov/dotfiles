@@ -1,0 +1,15 @@
+[preview]
+ueberzug_scale = 2
+ueberzug_offset = [0, 10, 0, 0]
+
+[plugin]
+prepend_previewers = [
+	# HEIC previewer
+	{ mime = "image/heic", run = "heic" },
+	{ mime = "video/x-matroska", run = "vlc '$@'" },
+]
+
+append_previewers = [
+	# My fallback previewer
+	{ name = "*" , run = "binary" },
+]
