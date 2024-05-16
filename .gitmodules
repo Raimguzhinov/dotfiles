@@ -19,3 +19,6 @@
 [submodule ".oh-my-zsh/custom/plugins/zsh-vi-mode"]
 	path = .oh-my-zsh/custom/plugins/zsh-vi-mode
 	url = https://github.com/jeffreytse/zsh-vi-mode
+[submodule ".tmux/plugins/tmux-battery"]
+	path = .tmux/plugins/tmux-battery
+	url = https://github.com/tmux-plugins/tmux-battery
