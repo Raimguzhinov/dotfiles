@@ -9,6 +9,7 @@
 	hist = log --oneline --decorate --graph --all
 [core]
     pager = delta
+	autocrlf = input
 [interactive]
     diffFilter = delta --color-only --features=interactive
 [delta]

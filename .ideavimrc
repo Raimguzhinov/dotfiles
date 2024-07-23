@@ -15,6 +15,7 @@ set ideamarks
 set number
 set relativenumber
 set clipboard^=unnamedplus
+set sneak
 
 " WhichKey
 set which-key
@@ -32,7 +33,7 @@ imap jk <Esc>
 
 map <leader>w :w<CR><Action>(eu.oakroot.GoImportTidy)
 map <leader>q :q<CR>
-map <leader>x <Action>(HideActiveWindow)
+map <leader>x <Action>(CloseContent)
 map <leader>+ <Action>(Run)
 map <leader>sv <Action>(SplitVertically)
 map <leader>sh <Action>(SplitHorizontally)
@@ -89,4 +90,3 @@ map <leader>k <Action>(QuickJavaDoc)
 "" Debug
 map <leader>dr <Action>(Debug)
 map <leader>db <Action>(ToggleLineBreakpoint)
-set clipboard^=ideaput

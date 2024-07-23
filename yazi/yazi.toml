@@ -1,6 +1,6 @@
 [preview]
-ueberzug_scale = 2
-ueberzug_offset = [0, 10, 0, 0]
+ueberzug_scale = 1.8
+ueberzug_offset = [-14, 3, 0, 0]
 
 [plugin]
 prepend_previewers = [

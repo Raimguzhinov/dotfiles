@@ -1,0 +1,21 @@
+pane	1	1	1	:##*	1	r0ot@archlinux:~	:/home/r0ot	1	zsh	:
+pane	dev	1	0	:##-	1	r0ot@archlinux:~/Documents/Protei/simple-grpc	:/home/r0ot/Documents/Protei/simple-grpc	1	zsh	:
+pane	dev	1	0	:##-	2	r0ot@archlinux:~/Documents/Protei/simple-grpc	:/home/r0ot/Documents/Protei/simple-grpc	0	zsh	:
+pane	dev	2	0	:##	1	r0ot@archlinux:~/Documents/Protei/dav-go	:/home/r0ot/Documents/Protei/dav-go	1	zsh	:
+pane	dev	3	1	:*	1	nvim .tmux.conf.local	:/home/r0ot	1	nvim	:nvim .tmux.conf.local
+pane	sibguti	1	0	:##-	1	r0ot@archlinux:~/Downloads/Telegram Desktop/Arkhiv_ZIP_-_WinRAR (3)	:/home/r0ot/Downloads/Telegram\ Desktop/Arkhiv_ZIP_-_WinRAR (3)	1	zsh	:
+pane	sibguti	2	0	:##	1	r0ot@archlinux:~	:/home/r0ot	0	zsh	:
+pane	sibguti	2	0	:##	2	r0ot@archlinux:~	:/home/r0ot	1	zsh	:
+pane	sibguti	3	0	:##	1	r0ot@archlinux:~	:/home/r0ot	1	zsh	:
+pane	sibguti	4	0	:##	1	r0ot@archlinux:~	:/home/r0ot	1	zsh	:
+pane	sibguti	5	1	:##*	1	r0ot@archlinux:~/Downloads	:/home/r0ot/Downloads	1	zsh	:
+window	1	1	:zsh	1	:##*	c000,187x44,0,0,3	:
+window	dev	1	:grpc	0	:##-	fa67,187x44,0,0{125x44,0,0,0,61x44,126,0,1}	off
+window	dev	2	:caldav	0	:##	bfff,187x44,0,0,2	off
+window	dev	3	:nvim	1	:*	c001,187x44,0,0,4	:
+window	sibguti	1	:алгосы	0	:##-	c002,187x44,0,0,5	off
+window	sibguti	2	:сетев.прог	0	:##	4c2e,187x44,0,0{90x44,0,0,6,96x44,91,0,7}	off
+window	sibguti	3	:cuda	0	:##	c005,187x44,0,0,8	off
+window	sibguti	4	:android	0	:##	c006,187x44,0,0,9	off
+window	sibguti	5	:-	1	:##*	602f,187x44,0,0,10	off
+state	dev	sibguti
