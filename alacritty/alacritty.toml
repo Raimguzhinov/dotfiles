@@ -22,3 +22,6 @@ bindings = [
     { key = "C", mods = "Control", action = "Copy" },
     { key = "C", mods = "Control | Shift", chars = "\u0003"}
 ]
+
+[selection]
+save_to_clipboard = true

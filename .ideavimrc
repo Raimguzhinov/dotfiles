@@ -62,10 +62,10 @@ map <leader>gP <Action>(Vcs.Push)
 map <leader>gb <Action>(Annotate)
 
 " LSP
-map gd <Action>(GotoTypeDeclaration)
-map gD <Action>(GotoDeclaration)
+map gd <Action>(GotoDeclaration)
 map gi <Action>(GotoImplementation)
 map gI <Action>(GotoSuperMethod)
+map gD <Action>(GotoTypeDeclaration)
 map <C-s> <Action>(ParameterInfo)
 imap <C-s> <Action>(ParameterInfo)
 map <leader>la <Action>(ShowIntentionActions)
