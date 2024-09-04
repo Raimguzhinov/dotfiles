@@ -1,0 +1,5 @@
+{
+  "keyMappings": "# Insert your preferred key mappings here.\nmap K previousTab\nmap J nextTab",
+  "linkHintCharacters": "sadfpkoewcmgh",
+  "settingsVersion": "2.1.2"
+}
