@@ -1,0 +1,33 @@
+pane	protei	1	0	:	1	r0ot@archlinux:~/Documents/Protei/simple-grpc	:/home/r0ot/Protei/file-scanner	1	zsh	:
+pane	protei	1	0	:	2	r0ot@archlinux:~/Documents/Protei/simple-grpc	:/home/r0ot/Protei/common\ (deleted)	0	zsh	:
+pane	protei	2	0	:-	1	r0ot@archlinux:~/Documents/Protei/dav-go	:/home/r0ot/Protei	1	zsh	:
+pane	protei	3	1	:*	1	nvim .tmux.conf.local	:/home/r0ot	1	zsh	:
+pane	protei	4	0	:	1	raimguzhinov	:/home/r0ot/dotfiles/hypr	1	zsh	:
+pane	sibguti	1	0	:-	1	r0ot@archlinux:~/Downloads/Telegram Desktop/Arkhiv_ZIP_-_WinRAR (3)	:/home/r0ot/Documents/Univer/tlp	1	zsh	:
+pane	sibguti	2	1	:*	1	r0ot@archlinux:~	:/home/r0ot/Documents/Univer/crypto	1	zsh	:
+pane	sibguti	2	1	:*	2	r0ot@archlinux:~	:/home/r0ot/Documents/Univer/crypto	0	zsh	:
+pane	sibguti	3	0	:	1	:/home/r0ot/Documents/Univer/bd	1	zsh	3438	:/opt/protei-unicom-desktop/unicom --type=zygote --no-zygote-sandbox
+/opt/protei-unicom-desktop/unicom --type=zygote
+/opt/protei-unicom-desktop/unicom --type=zygote
+/opt/protei-unicom-desktop/unicom --type=gpu-process --enable-crash-reporter=56d4bba5-d3a0-429a-bf4e-2103ac5fa7ed,no_channel --user-data-dir=/home/r0ot/.config/PROTEI-Unicom --gpu-preferences=WAAAAAAAAAAgAAAEAAAAAAAAAAAAAAAAAABgAAAAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAGAAAAAAAAAAYAAAAAAAAAAgAAAAAAAAACAAAAAAAAAAIAAAAAAAAAA== --shared-files --field-trial-handle=0,i,7676945202503255555,5132214241525561437,262144 --disable-features=SpareRendererForSitePerProcess
+/opt/protei-unicom-desktop/unicom --type=utility --utility-sub-type=network.mojom.NetworkService --lang=ru --service-sandbox-type=none --ignore-certificate-errors --ignore-certificate-errors --enable-crash-reporter=56d4bba5-d3a0-429a-bf4e-2103ac5fa7ed,no_channel --user-data-dir=/home/r0ot/.config/PROTEI-Unicom --shared-files=v8_context_snapshot_data:100 --field-trial-handle=0,i,7676945202503255555,5132214241525561437,262144 --disable-features=SpareRendererForSitePerProcess
+/opt/protei-unicom-desktop/unicom --type=renderer --enable-crash-reporter=56d4bba5-d3a0-429a-bf4e-2103ac5fa7ed,no_channel --user-data-dir=/home/r0ot/.config/PROTEI-Unicom --app-path=/opt/protei-unicom-desktop/resources/app.asar --enable-sandbox --first-renderer-process --lang=ru --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=5 --time-ticks-at-unix-epoch=-1726946308026874 --launch-time-ticks=4295906190 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=0,i,7676945202503255555,5132214241525561437,262144 --disable-features=SpareRendererForSitePerProcess
+/opt/protei-unicom-desktop/unicom --type=renderer --enable-crash-reporter=56d4bba5-d3a0-429a-bf4e-2103ac5fa7ed,no_channel --user-data-dir=/home/r0ot/.config/PROTEI-Unicom --app-path=/opt/protei-unicom-desktop/resources/app.asar --enable-sandbox --lang=ru --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=6 --time-ticks-at-unix-epoch=-1726946308026874 --launch-time-ticks=4295913938 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=0,i,7676945202503255555,5132214241525561437,262144 --disable-features=SpareRendererForSitePerProcess
+/opt/protei-unicom-desktop/unicom --type=renderer --enable-crash-reporter=56d4bba5-d3a0-429a-bf4e-2103ac5fa7ed,no_channel --user-data-dir=/home/r0ot/.config/PROTEI-Unicom --app-path=/opt/protei-unicom-desktop/resources/app.asar --enable-sandbox --lang=ru --num-raster-threads=4 --enable-main-frame-before-activation --renderer-client-id=4 --time-ticks-at-unix-epoch=-1726946308026874 --launch-time-ticks=4295917786 --shared-files=v8_context_snapshot_data:100 --field-trial-handle=0,i,7676945202503255555,5132214241525561437,262144 --disable-features=SpareRendererForSitePerProcess
+/opt/protei-unicom-desktop/unicom --type=utility --utility-sub-type=audio.mojom.AudioService --lang=ru --service-sandbox-type=none --ignore-certificate-errors --ignore-certificate-errors --enable-crash-reporter=56d4bba5-d3a0-429a-bf4e-2103ac5fa7ed,no_channel --user-data-dir=/home/r0ot/.config/PROTEI-Unicom --shared-files=v8_context_snapshot_data:100 --field-trial-handle=0,i,7676945202503255555,5132214241525561437,262144 --disable-features=SpareRendererForSitePerProcess
+pane	sibguti	4	0	:	1	r0ot@archlinux:~	:/home/r0ot/Documents/Univer/pmu	1	zsh	:
+pane	sibguti	5	0	:	1	r0ot@archlinux:~/Downloads	:/home/r0ot/Documents/Univer/stp	1	zsh	:
+pane	sibguti	6	0	:	1	raimguzhinov	:/home/r0ot/Protei/common\ (deleted)	1	zsh	:
+pane	sibguti	7	0	:	1	raimguzhinov	:/home/r0ot/Documents/Univer/osrv	1	zsh	:
+window	protei	1	:common	0	:	7a1b,239x57,0,0{151x57,0,0,0,87x57,152,0,1}	off
+window	protei	2	:core	0	:-	cddf,239x57,0,0,2	off
+window	protei	3	:unicom	1	:*	cde0,239x57,0,0,3	off
+window	protei	4	:zsh	0	:	cde1,239x57,0,0,4	:
+window	sibguti	1	:tlp	0	:-	cde3,239x57,0,0,6	off
+window	sibguti	2	:crypto	1	:*	8eaa,239x57,0,0{116x57,0,0,7,122x57,117,0,8}	off
+window	sibguti	3	:bd	0	:	cde6,239x57,0,0,9	off
+window	sibguti	4	:pmu	0	:	671f,239x57,0,0,10	off
+window	sibguti	5	:stp	0	:	6720,239x57,0,0,11	off
+window	sibguti	6	:mmo	0	:	6451,117x56,0,0,12	off
+window	sibguti	7	:osrv	0	:	6727,239x57,0,0,18	off
+state	sibguti	protei
