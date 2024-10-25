@@ -1,0 +1,14 @@
+[[manager.prepend_keymap]]
+on   = [ "g", "d" ]
+run  = "cd ~/Downloads"
+desc = "Go to ~/Downloads"
+
+[[manager.prepend_keymap]]
+on   = [ "g", "s" ]
+run  = "cd ~/Protei-WorkProjects/core/services"
+desc = "Go to local Protei services"
+
+[[manager.prepend_keymap]]
+on   = [ "g", "S" ]
+run  = "cd /home/protei/Protei-UC/"
+desc = "Go to root Protei services"

@@ -3,7 +3,7 @@ TERM = "xterm-256color"
 
 [window]
 decorations = "Buttonless"
-opacity = 0.85
+opacity = 0.9
 blur = true
 
 [window.padding]
@@ -25,3 +25,7 @@ bindings = [
 
 [selection]
 save_to_clipboard = true
+
+[terminal]
+[shell]
+program = "/usr/bin/fish"

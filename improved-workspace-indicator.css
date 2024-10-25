@@ -1,0 +1,8 @@
+.panel-workspace-indicator,
+.panel-workspace-indicator-box .workspace {
+  border: 1px solid #303030;
+  background-color: transparent;
+}
+.workspace-indicator-active {
+  background-color: #1793d1;
+}
