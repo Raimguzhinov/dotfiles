@@ -21,8 +21,8 @@ set -g @plugin 'tmux-plugins/tmux-resurrect'
 set -g @plugin 'tmux-plugins/tmux-continuum'
 set -g @plugin 'rafi/tmux-pass'
 set -g @plugin 'tmux-plugins/tmux-sessionist'
-# set -g @plugin 'dreamsofcode-io/catppuccin-tmux'
-set -g @plugin "janoamaral/tokyo-night-tmux"
+set -g @plugin 'dreamsofcode-io/catppuccin-tmux'
+# set -g @plugin "janoamaral/tokyo-night-tmux"
 
 set -g @resurrect-capture-pane-contents 'on'
 set -g @continuum-restore 'on'

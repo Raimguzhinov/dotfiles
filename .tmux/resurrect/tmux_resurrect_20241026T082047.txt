@@ -1,0 +1,26 @@
+pane	protei	1	0	:	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	protei	1	0	:	2	~	:/home/dias	0	fish	:[fish] <defunct>
+pane	protei	2	0	:	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	protei	3	0	:-	1	nvim .tmux.conf.loca ~	:/home/dias	1	nvim	:[fish] <defunct>
+nvim .tmux.conf.local
+pane	protei	4	1	:*	1	~	:/home/dias	1	fish	:
+pane	sibguti	1	0	:	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	sibguti	2	0	:	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	sibguti	2	0	:	2	~	:/home/dias	0	fish	:[fish] <defunct>
+pane	sibguti	3	0	:	1	~/d/	:/home/dias/dotfiles	1	fish	:
+pane	sibguti	4	0	:	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	sibguti	5	1	:*	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	sibguti	6	0	:-	1	~	:/home/dias	1	fish	:[fish] <defunct>
+pane	sibguti	7	0	:	1	~	:/home/dias	1	fish	:[fish] <defunct>
+window	protei	1	:common	0	:	f19c,239x56,0,0{151x56,0,0,1,87x56,152,0,2}	off
+window	protei	2	:core	0	:	c9e0,239x56,0,0,3	off
+window	protei	3	:unicom	0	:-	c9e1,239x56,0,0,4	off
+window	protei	4	:python3	1	:*	c9e2,239x56,0,0,5	off
+window	sibguti	1	:tlp	0	:	c9e3,239x56,0,0,6	off
+window	sibguti	2	:crypto	0	:	0a2a,239x56,0,0{116x56,0,0,7,122x56,117,0,8}	off
+window	sibguti	3	:bd	0	:	c9e6,239x56,0,0,9	off
+window	sibguti	4	:pmu	0	:	651f,239x56,0,0,10	off
+window	sibguti	5	:stp	1	:*	6520,239x56,0,0,11	off
+window	sibguti	6	:mmo	0	:-	6521,239x56,0,0,12	off
+window	sibguti	7	:osrv	0	:	6522,239x56,0,0,13	off
+state	protei	sibguti
