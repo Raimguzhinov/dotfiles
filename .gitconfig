@@ -1,15 +1,15 @@
 [user]
-	email = d.raimguzhinov@stud.sibguti.ru
-	name = Raimguzhinov
+        email = raimguzhinov@protei-lab.ru
+        name = Dias B. Raimguzhinov
 [alias]
-	co = checkout
-	br = branch
-	ci = commit
-	st = status
-	hist = log --oneline --decorate --graph --all
+        co = checkout
+        br = branch
+        ci = commit
+        st = status
+        hist = log --oneline --decorate --graph --all
 [core]
     pager = delta
-	autocrlf = input
+        autocrlf = input
 [interactive]
     diffFilter = delta --color-only --features=interactive
 [delta]
@@ -24,3 +24,5 @@
     hunk-header-file-style = red
     hunk-header-line-number-style = "#067a00"
     hunk-header-style = file line-number syntax
+[url "ssh://git@git.protei.ru/"]
+    insteadOf = https://git.protei.ru/
