@@ -13,6 +13,8 @@
 [interactive]
     diffFilter = delta --color-only --features=interactive
 [delta]
+    line-numbers = true
+    side-by-side = true
     features = decorations
 [delta "interactive"]
     keep-plus-minus-markers = false

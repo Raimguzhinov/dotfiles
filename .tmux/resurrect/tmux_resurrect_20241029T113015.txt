@@ -1,0 +1,26 @@
+pane	protei	1	1	:*	1	~	:/home/dias	0	fish	:
+pane	protei	1	1	:*	2	~	:/home/dias	1	fish	:
+pane	protei	2	0	:-	1	~	:/home/dias	0	fish	:
+pane	protei	2	0	:-	2	~	:/home/dias	1	fish	:
+pane	protei	3	0	:	1	~	:/home/dias	1	fish	:
+pane	protei	4	0	:	1	~	:/home/dias	1	fish	:
+pane	sibguti	1	0	:	1	~	:/home/dias	1	fish	:
+pane	sibguti	2	0	:	1	~	:/home/dias	1	fish	:
+pane	sibguti	2	0	:	2	~	:/home/dias	0	fish	:
+pane	sibguti	3	0	:	1	~/dotfiles	:/home/dias/dotfiles	1	fish	:
+pane	sibguti	4	0	:	1	~	:/home/dias	1	fish	:
+pane	sibguti	5	1	:*	1	~	:/home/dias	1	fish	:
+pane	sibguti	6	0	:-	1	~	:/home/dias	1	fish	:
+pane	sibguti	7	0	:	1	~	:/home/dias	1	fish	:
+window	protei	1	:common	1	:*	c717,239x51,0,0{151x51,0,0,1,87x51,152,0,2}	off
+window	protei	2	:core	0	:-	4189,239x51,0,0{119x51,0,0,3,119x51,120,0,4}	off
+window	protei	3	:unicom	0	:	b5e2,239x51,0,0,5	off
+window	protei	4	:python3	0	:	b5e3,239x51,0,0,6	off
+window	sibguti	1	:tlp	0	:	b5e4,239x51,0,0,7	off
+window	sibguti	2	:crypto	0	:	f3a8,239x51,0,0{116x51,0,0,8,122x51,117,0,9}	off
+window	sibguti	3	:bd	0	:	5b1f,239x51,0,0,10	off
+window	sibguti	4	:pmu	0	:	5b20,239x51,0,0,11	off
+window	sibguti	5	:stp	1	:*	5b21,239x51,0,0,12	off
+window	sibguti	6	:mmo	0	:-	5b22,239x51,0,0,13	off
+window	sibguti	7	:osrv	0	:	5b23,239x51,0,0,14	off
+state	protei	sibguti
