@@ -7,9 +7,6 @@
 [submodule ".oh-my-zsh/custom/themes/spaceship-prompt"]
 	path = .oh-my-zsh/custom/themes/spaceship-prompt
 	url = https://github.com/spaceship-prompt/spaceship-prompt
-[submodule "nvim"]
-	path = nvim
-	url = git@github.com:Raimguzhinov/NvChad.git
 [submodule "pinentry-tem"]
 	path = pinentry-tem
 	url = https://github.com/notpushkin/pinentry-tem.git

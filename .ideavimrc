@@ -37,6 +37,8 @@ map <leader>x <Action>(CloseContent)
 map <leader>+ <Action>(Run)
 map <leader>sv <Action>(SplitVertically)
 map <leader>sh <Action>(SplitHorizontally)
+map <C-o> <Action>(Back)
+map <C-i> <Action>(Forward)
 
 " Search
 map <leader>fa <Action>(SearchEverywhere)
