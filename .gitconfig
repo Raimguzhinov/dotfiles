@@ -28,3 +28,8 @@
     hunk-header-style = file line-number syntax
 [url "ssh://git@git.protei.ru/"]
     insteadOf = https://git.protei.ru/
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true

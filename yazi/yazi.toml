@@ -1,15 +1,20 @@
-[preview]
-ueberzug_scale = 1.8
-ueberzug_offset = [-14, 3, 0, 0]
+# [preview]
+# ueberzug_scale = 1.8
+# ueberzug_offset = [-14, 3, 0, 0]
 
 [plugin]
 prepend_previewers = [
 	# HEIC previewer
 	{ mime = "image/heic", run = "heic" },
-	{ mime = "video/x-matroska", run = "vlc '$@'" },
+	{ mime = "video/x-matroska", run = "/var/lib/flatpak/exports/bin/org.kde.haruna '$@'" },
 ]
 
 append_previewers = [
 	# My fallback previewer
 	{ name = "*" , run = "binary" },
+]
+
+[opener]
+text = [
+	{ run = 'nvim "$@"', block = true },
 ]

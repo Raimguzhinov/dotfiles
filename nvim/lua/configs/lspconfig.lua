@@ -67,14 +67,14 @@ end
 -- }
 
 lspconfig.clangd.setup {
-    on_attach = function(client, bufnr)
-        require("inlay-hints").on_attach(client, bufnr)
-        if client.server_capabilities.documentSymbolProvider then
-            breadcrumb.attach(client, bufnr)
-        end
-        client.server_capabilities.signatureHelpProvider = false
-        on_attach(client, bufnr)
-    end,
+    -- on_attach = function(client, bufnr)
+        -- require("inlay-hints").on_attach(client, bufnr)
+        -- if client.server_capabilities.documentSymbolProvider then
+        --     breadcrumb.attach(client, bufnr)
+        -- end
+        -- client.server_capabilities.signatureHelpProvider = false
+        -- on_attach(client, bufnr)
+    -- end,
     capabilities = capabilities,
     cmd = { "clangd" },
     filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "hpp", "h" },
