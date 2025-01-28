@@ -87,7 +87,7 @@ map <leader>/ :Commentary<CR>
 "" Map \r to the Reformat Code action
 "map \r <Action>(ReformatCode)
 map <leader>ra <Action>(RenameElement)
-map <leader>k <Action>(QuickJavaDoc)
+map <leader>K <Action>(QuickJavaDoc)
 
 "" Debug
 map <leader>dr <Action>(Debug)

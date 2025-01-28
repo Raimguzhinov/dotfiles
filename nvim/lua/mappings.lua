@@ -61,9 +61,6 @@ map("n", "<leader>l", ":GoLint<CR>", { desc = "GoLint" })
 map("n", "<leader>ra", ":GoRename<CR>", { desc = "GoRename" })
 
 -- Debug
-map("n", "<leader>du", function()
-    require("dapui").toggle()
-end, { desc = "Toggle Debug UI" })
 map("n", "<leader>db", function()
     require("dap").toggle_breakpoint()
 end, { desc = "Toggle Breakpoint" })
