@@ -1,5 +1,2 @@
 [flavor]
 deps = [{ use = "dangooddd/kanagawa", rev = "d98f0c3" }]
-
-[plugin]
-deps = [{ use = "Reledia/glow", rev = "5ce76dc" }]
