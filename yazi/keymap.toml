@@ -1,4 +1,22 @@
 [[manager.prepend_keymap]]
+on = [ "<C-/>" ]
+run = '''
+    shell '"$1"' --block --interactive
+''' 
+
+[[manager.prepend_keymap]]
+on = [ "<C-\\>" ]
+run = '''
+    shell 'dragon -x -i -T "$1"' --confirm
+''' 
+
+[[manager.prepend_keymap]]
+on  = "y"
+run = [ '''
+    shell 'for path in "$@"; do echo "file://$path"; done | wl-copy -t text/uri-list' --confirm
+''', "yank" ]
+
+[[manager.prepend_keymap]]
 on   = [ "g", "d" ]
 run  = "cd ~/Downloads"
 desc = "Go to ~/Downloads"
@@ -12,3 +30,50 @@ desc = "Go to local Protei services"
 on   = [ "g", "S" ]
 run  = "cd /home/protei/Protei-UC/"
 desc = "Go to root Protei services"
+
+# [[manager.prepend_keymap]]
+# on   = [ "g", "i" ]
+# run  = "plugin lazygit"
+# desc = "run lazygit"
+
+[[manager.prepend_keymap]]
+on   = [ "u", "z" ]
+run = '''
+    shell 'unzip "$1"' --confirm
+''' 
+desc = "Unpack zip archive"
+
+[[manager.prepend_keymap]]
+on   = [ "u", "t" ]
+run = '''
+    shell 'tar xvf "$1"' --confirm
+''' 
+desc = "Unpack tar archive"
+
+[[manager.prepend_keymap]]
+on   = [ "u", "g" ]
+run = '''
+    shell 'tar xzvf "$1"' --confirm
+''' 
+desc = "Unpack tar[.gz|.bz2|.xz] archive"
+
+[[manager.prepend_keymap]]
+on   = [ "c", "a" ]
+run  = "plugin compress"
+desc = "Compress archive"
+
+[[manager.prepend_keymap]]
+on = [ ":" ]
+run = "plugin shell --args=--block"
+desc = "Default shell with blocking"
+
+[[manager.prepend_keymap]]
+on = [ ";" ]
+run  = '''plugin shell --args='fish --drop'
+'''
+desc = "Drop to shell"
+
+[[manager.prepend_keymap]]
+on = [ "<C-;>" ]
+run  = "plugin command"
+desc = "Yazi command prompt"
