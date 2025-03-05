@@ -23,8 +23,8 @@
 /* Reset all styles */
 * {
     border: none;
-    border-radius: 4;
-    min-height: 0;
+    border-radius: 20px;
+    min-height: 20px;
     margin: 0;
     padding: 0;
 }
@@ -34,7 +34,7 @@
     background: @theme_bg_color;
     color: @theme_fg_color;
     font-family: "Ubuntu", "Font Awesome";
-    font-size: 13px;
+    font-size: 14px;
 }
 
 #window {
@@ -53,7 +53,7 @@ window#waybar.hidden {
 #workspaces button {
     /* To compensate for the top border and still have vertical centering */
     padding: 0 0.5em;
-    margin: 4px 3px;
+    margin: 4px 2px;
     color: @wm_icon_bg;
 }
 
@@ -87,10 +87,11 @@ window#waybar.hidden {
 #tray,
 #mode,
 #idle_inhibitor,
+#custom-color-picker,
 #custom-notification {
-    padding-left: 10px;
-    padding-right: 10px;
-    margin: 4px 3px;
+    padding-left: 7px;
+    padding-right: 7px;
+    margin: 4px 2px;
 }
 
 #clock {
@@ -114,8 +115,8 @@ window#waybar.hidden {
 }
 
 #custom-color-picker {
-    padding-left: 10px;
-    /*padding-right: 10px;*/
+    background: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
 }
 
 #custom-clipboard {

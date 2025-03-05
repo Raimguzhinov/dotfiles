@@ -1,16 +1,16 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 20,//30,
+    "height": 30,//30,
     "modules-left": ["custom/menu", "sway/workspaces", "sway/window"],
     "modules-center": ["sway/mode"],
     "modules-right": [
         "custom/wf-recorder",
-        "custom/color-picker",
         "tray",
         "custom/weather",
         "custom/playerctl",
         "idle_inhibitor",
+        "custom/color-picker",
         "custom/notification",
         "sway/language",
         "custom/clipboard",
@@ -236,7 +236,7 @@
     },
     
     "tray": {
-        "icon-size": 21,
-        "spacing": 10
+        "icon-size": 16,
+        "spacing": 5
     }
 }
