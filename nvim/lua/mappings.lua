@@ -15,8 +15,8 @@ endfunction
 )
 vim.g.mkdp_browserfunc = 'OpenMarkdownPreview'
 
-local api = require("nvim-tree.api")
-api.tree.toggle({ focus = false })
+-- local api = require("nvim-tree.api")
+-- api.tree.toggle({ focus = false })
 
 -- General
 map("n", ";", ":", { desc = "CMD enter command mode" })

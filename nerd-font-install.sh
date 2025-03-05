@@ -4,14 +4,14 @@ declare -a fonts=(
     # BitstreamVeraSansMono
     # CodeNewRoman
     # DroidSansMono
-    FiraCode
+    # FiraCode
     # FiraMono
     # Go-Mono
     # Hack
     # Hermit
-    JetBrainsMono
+    # JetBrainsMono
     # Meslo
-    # Noto
+    Noto
     # Overpass
     # ProggyClean
     # RobotoMono

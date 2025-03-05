@@ -1,32 +1,44 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 30,
+    "height": 20,//30,
     "modules-left": ["custom/menu", "sway/workspaces", "sway/window"],
-    "modules-center": ["custom/wf-recorder", "sway/mode"],
+    "modules-center": ["sway/mode"],
     "modules-right": [
+        "custom/wf-recorder",
+        "custom/color-picker",
+        "tray",
         "custom/weather",
-        "custom/wlsunset",
         "custom/playerctl",
-        "custom/help",
         "idle_inhibitor",
-        "custom/dnd",
+        "custom/notification",
         "sway/language",
         "custom/clipboard",
         "cpu",
         "memory",
         "battery",
         "network",
-        "bluetooth",
         "pulseaudio",
         "clock",
-        "custom/power",
-        "tray"
+        "custom/power"
     ],
     
     "sway/workspaces": {
-         "disable-scroll": true,
-         "all-outputs": true
+         "disable-scroll": false,
+         "all-outputs": false,
+         "format": "{name}: {icon}",
+         "format-icons": {
+             "0": "󰇮   󰋗",
+             "1": "",
+             "2": "",
+             "3": "󰈹",
+             "4": "",
+             "5": "",
+             "6": "",
+             "urgent": "",
+             "focused": "",
+             "default": ""
+         }
     },
     
     "sway/language": {
@@ -53,6 +65,12 @@
         "on-click": "exec nwg-drawer",
         "tooltip": false
     },
+
+    "custom/color-picker": {
+        "format": "",
+        "on-click": "exec wl-color-picker",
+        "tooltip": false
+    },
     
     "sway/mode": {
         "format": "<span style=\"italic\">{}</span>",
@@ -70,11 +88,28 @@
         "format-icons": {
             "activated": "",
             "deactivated": ""
+        }
+    },
+
+    "custom/notification": {
+        "tooltip": false,
+        "format": "{icon}",
+        "format-icons": {
+            "notification": "",
+            "none": "",
+            "dnd-notification": "",
+            "dnd-none": "",
+            "inhibited-notification": "",
+            "inhibited-none": "",
+            "dnd-inhibited-notification": "",
+            "dnd-inhibited-none": ""
         },
-        "start-activated": true,
-        "tooltip": true,
-        "tooltip-format-activated": "power-saving disabled",
-        "tooltip-format-deactivated": "power-saving enabled"
+        "return-type": "json",
+        "exec-if": "which swaync-client",
+        "exec": "swaync-client -swb",
+        "on-click": "swaync-client -t -sw",
+        "on-click-right": "swaync-client -d -sw",
+        "escape": true
     },
 
     "pulseaudio": {
@@ -85,7 +120,6 @@
        "format-source-muted": "",
        "format-icons": {
            "headphone": "",
-           "headset": "",
            "default": ["", "", ""]
        },
        "tooltip-format": "{icon}  {volume}% {format_source}",
@@ -103,31 +137,17 @@
     
     "network": {
        "format-wifi": " ({signalStrength}%)",
-       "format-ethernet": "",
+       "format-ethernet": "",
        "format-disconnected": "",
        "tooltip-format": "{ifname} ({essid}): {ipaddr}",
-       "tooltip-format": "{icon} {ifname}: {ipaddr}",
-       "tooltip-format-ethernet": "{icon} {ifname}: {ipaddr}",
-       "tooltip-format-wifi": "{icon} {ifname} ({essid}): {ipaddr}",
-       "tooltip-format-disconnected": "{icon} disconnected",
-       "tooltip-format-disabled": "{icon} disabled",
-       "on-click": "swaymsg exec \\$flock \\$term_float nmtui connect"
-    },
-
-    "bluetooth": {
-        "format": "",
-        "format-disabled": "",
-        "format-no-controller": "",
-        "on-click": "swaymsg exec \\$bluetooth",
-        "on-click-right": "rfkill toggle bluetooth",
-        "tooltip-format": "{}"
+       "on-click": "swaymsg exec \\$term_float nmtui"
     },
     
     "clock": {
         "format": "{:%e %b %H:%M}",
         "tooltip": true,
-        "tooltip-format": "{:%d.%m.%Y %H:%M}",
-        "interval": 5,
+        "tooltip-format": "{:%A %d.%m.%Y %H:%M:%S}",
+        "interval": 1,
         "on-click": "swaymsg exec \\$calendar"
     },
     
@@ -143,7 +163,7 @@
     
     "memory": {
         "interval": 30,
-        "format": " {}%",
+        "format": " {}%",
         "states": {
           "warning": 70,
           "critical": 90
@@ -182,20 +202,7 @@
 
     "custom/power": {
         "format": "",
-        "on-click": "nwg-bar -x"
-    },
-
-    "custom/dnd": {
-        "interval": "once",
-        "return-type": "json",
-        "format": "{}{icon}",
-        "format-icons": {
-            "default": "",
-            "dnd": ""
-        },
-        "on-click": "makoctl mode | grep 'do-not-disturb' && makoctl mode -r do-not-disturb || makoctl mode -a do-not-disturb; pkill -RTMIN+11 waybar",
-        "exec": "printf '{\"alt\":\"%s\",\"tooltip\":\"Notification mode: %s\"}' $(makoctl mode | grep -q 'do-not-disturb' && echo dnd || echo default) $(makoctl mode | tail -1)",
-        "signal": 11
+        "on-click": "wlogout -p layer-shell"
     },
     
     "custom/weather": {
@@ -226,28 +233,6 @@
            "ThunderySnowShowers": "⛈",
            "VeryCloudy": ""
         }
-    },
-
-    "custom/wlsunset": {
-        "interval": "once",
-        "tooltip": true,
-        "tooltip-format": "{tooltip}",
-        "return-type": "json",
-        "format": "{icon}",
-        "format-icons": {
-            "on": "",
-            "off": ""
-        },
-        "exec": "fallback_latitude=50.1 fallback_longitude=8.7 latitude= longitude= /usr/share/sway/scripts/sunset.sh",
-        "on-click": "/usr/share/sway/scripts/sunset.sh toggle; pkill -RTMIN+6 waybar",
-        "exec-if": "/usr/share/sway/scripts/sunset.sh check",
-        "signal": 6
-    },
-
-    "custom/help": {
-        "format": "",
-        "on-click": "/usr/share/sway/scripts/help.sh --toggle",
-        "tooltip": "false"
     },
     
     "tray": {

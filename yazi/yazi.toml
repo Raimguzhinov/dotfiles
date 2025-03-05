@@ -9,13 +9,32 @@ prepend_previewers = [
 	{ mime = "video/x-matroska", run = "/var/lib/flatpak/exports/bin/org.kde.haruna '$@'" },
     { name = "*.md", run = "glow" },
 ]
-
 append_previewers = [
 	# My fallback previewer
 	{ name = "*" , run = "binary" },
 ]
 
 [opener]
-text = [
-	{ run = 'nvim "$@"', block = true },
+edit = [
+	{ run = 'nvim "$@"', block = true, for = "unix" },
 ]
+markdown = [
+	{ run = 'glow', block = true },
+]
+open = [
+	{ run = 'xdg-open "$@"', desc = "Open" },
+]
+
+[open]
+prepend_rules = [
+	{ name = "*.md", use = "markdown" },
+]
+append_rules = [
+	{ name = "*", use = [ "open", "text" ] },
+]
+#
+# [open]
+# rules = [
+# 	{ name = "*.md", use = "markdown" },
+#     { name = "*", use = "text" },
+# ]

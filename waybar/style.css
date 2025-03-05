@@ -33,8 +33,8 @@
 #waybar {
     background: @theme_bg_color;
     color: @theme_fg_color;
-    font-family: "Ubuntu", "Font Awesome 6 Free", "Font Awesome";
-    font-size: 14px;
+    font-family: "Ubuntu", "Font Awesome";
+    font-size: 13px;
 }
 
 #window {
@@ -73,24 +73,21 @@ window#waybar.hidden {
 }
 
 #clock,
-#custom-help,
 #custom-playerctl,
 #custom-power,
 #custom-weather,
-#custom-wlsunset,
 #custom-clipboard,
 #custom-menu,
-#custom-dnd,
 #battery,
 #cpu,
 #language,
 #memory,
 #network,
-#bluetooth,
 #pulseaudio,
 #tray,
 #mode,
-#idle_inhibitor {
+#idle_inhibitor,
+#custom-notification {
     padding-left: 10px;
     padding-right: 10px;
     margin: 4px 3px;
@@ -106,17 +103,7 @@ window#waybar.hidden {
     color: @theme_selected_fg_color;
 }
 
-#custom-wlsunset {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
-}
-
 #custom-playerctl {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
-}
-
-#custom-help {
     background: @theme_selected_bg_color;
     color: @theme_selected_fg_color;
 }
@@ -126,17 +113,17 @@ window#waybar.hidden {
     color: @theme_selected_fg_color;
 }
 
+#custom-color-picker {
+    padding-left: 10px;
+    /*padding-right: 10px;*/
+}
+
 #custom-clipboard {
     background: @theme_selected_bg_color;
     color: @theme_selected_fg_color;
 }
 
 #custom-menu {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
-}
-
-#custom-dnd {
     background: @theme_selected_bg_color;
     color: @theme_selected_fg_color;
 }
@@ -196,16 +183,6 @@ label:focus {
     color: @theme_selected_fg_color;
 }
 
-#bluetooth {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
-}
-
-#bluetooth.disabled {
-    background: @theme_bg_color;
-    color: @wm_icon_bg;
-}
-
 #network.disconnected {
     background: @theme_bg_color;
     color: @wm_icon_bg
@@ -223,7 +200,12 @@ label:focus {
 
 #custom-wf-recorder {
     color: @error_color;
-    padding-right: 10px;
+    padding-right: 5px;
+}
+
+#custom-notification {
+    background: @theme_selected_bg_color;
+    color: @theme_selected_fg_color;
 }
 
 #tray {
