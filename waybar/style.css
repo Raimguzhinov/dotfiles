@@ -1,3 +1,6 @@
+@define-color theme_selected_my_bg_color #2a2f41;
+@define-color theme_selected_my_fg_color #73daca;
+
 @keyframes blink-warning {
     70% {
         color: @wm_icon_bg;
@@ -27,12 +30,17 @@
     min-height: 20px;
     margin: 0;
     padding: 0;
+    /*color: #cad3f5;*/
+    /*color: #3ec669;*/
 }
 
 /* The whole bar */
 #waybar {
-    background: @theme_bg_color;
-    color: @theme_fg_color;
+    /*background: @theme_bg_color;*/
+    /*color: @theme_fg_color;*/
+    /*background-color: shade(#24273a, 0.9);*/
+    background-color: #1f1e25;
+    /*border: 2px solid alpha(#181926, 0.3);*/
     font-family: "Ubuntu", "Font Awesome";
     font-size: 14px;
 }
@@ -46,6 +54,11 @@ window#waybar {
     border-radius: 0;
 }
 
+window#waybar.solo {
+    /*background-color: shade(#161616, 0.9);*/
+    background-color: #161616;
+}
+
 window#waybar.hidden {
     opacity: 0.2;
 }
@@ -55,12 +68,18 @@ window#waybar.hidden {
     padding: 0 0.5em;
     margin: 4px 2px;
     color: @wm_icon_bg;
+    background-color: @theme_selected_my_bg_color;
 }
 
 #workspaces button.focused {
-    border-color: @theme_selected_bg_color;
-    color: @wm_icon_bg;
-    background-color: @theme_selected_bg_color;
+    border-color: @theme_selected_my_bg_color;
+    color: @theme_selected_my_bg_color;
+    background-color: #7aa2f7;
+}
+
+#workspaces button.visible:not(.focused) {
+    border-color: @theme_selected_my_bg_color;
+  color: #ffa148;
 }
 
 #workspaces button.urgent {
@@ -95,46 +114,46 @@ window#waybar.hidden {
 }
 
 #clock {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-weather {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-playerctl {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-power {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-color-picker {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-clipboard {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-menu {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #battery {
     animation-timing-function: linear;
     animation-iteration-count: infinite;
     animation-direction: alternate;
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #battery.warning {
@@ -160,28 +179,28 @@ label:focus {
 }
 
 #cpu {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #language {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #memory {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-gpu-usage {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #network {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #network.disconnected {
@@ -190,8 +209,8 @@ label:focus {
 }
 
 #pulseaudio {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #pulseaudio.muted {
@@ -205,8 +224,8 @@ label:focus {
 }
 
 #custom-notification {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #tray {
@@ -215,10 +234,11 @@ label:focus {
 }
 
 #idle_inhibitor {
-    background: @theme_selected_bg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #idle_inhibitor.activated {
-    background: @theme_selected_bg_color;
-    color: @theme_selected_fg_color;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
