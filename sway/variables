@@ -22,8 +22,9 @@ set $pass tessen
 
 # Your preferred application launcher
 #set $menu wofi --show drun --allow-images --allow-markup --hide-scroll --no-actions -theme-str $wofi_theme -lines 10 -width 35
-set $menu rofi -show drun -modes combi -combi-modes "drun,run" -terminal "$term" -show-icons
-set $calc rofi -show calc -modi calc -no-show-match -no-sort -calc-command "echo -n '{result}' | wl-copy"
+# set $menu rofi -show drun -modes combi -combi-modes "drun,run" -terminal "$term" -show-icons -theme "$HOME/.config/rofi/launchers/type-7/style-2.rasi"
+set $menu rofi -show drun -terminal "$term" -show-icons -theme "$HOME/.config/rofi/launchers/type-7/style-2.rasi"
+set $calc rofi -show calc -modi calc -no-show-match -no-sort -calc-command "echo -n '{result}' | wl-copy" -theme "$HOME/.config/rofi/launchers/type-7/style-2.rasi"
 
 # Add --to-code to bindsym, support for non-latin layouts
 set $bindsym bindsym --to-code
@@ -42,8 +43,8 @@ set $volume_up pulsemixer --change-volume +5 && $onscreen_bar $(pulsemixer --get
 set $volume_mute pulsemixer --toggle-mute && $(pulsemixer --get-volume)
 
 # clipboard history
-set $clipboard cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 -width 35 | cliphist decode | wl-copy
-set $clipboard-del cliphist list | rofi -dmenu -p "Select item to delete" -lines 10 -width 35 | cliphist delete
+set $clipboard cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 -width 35 -theme "$HOME/.config/rofi/launchers/type-7/style-2.rasi" | cliphist decode | wl-copy
+set $clipboard-del cliphist list | rofi -dmenu -p "Select item to delete" -lines 10 -width 35 -theme "$HOME/.config/rofi/launchers/type-7/style-2.rasi" | cliphist delete
 
 ### Idle configuration
 # This will lock your screen after 300 seconds of inactivity, then turn off

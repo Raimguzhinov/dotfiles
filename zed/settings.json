@@ -37,7 +37,7 @@
     "line_height": "standard"
   },
   "theme": {
-    "mode": "system",
+    "mode": "dark",
     "light": "One Light",
     "dark": "JetBrains New Dark"
   },

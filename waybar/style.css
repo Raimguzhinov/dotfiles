@@ -26,8 +26,8 @@
 /* Reset all styles */
 * {
     border: none;
-    border-radius: 20px;
-    min-height: 20px;
+    border-radius: 4;
+    min-height: 0;
     margin: 0;
     padding: 0;
     /*color: #cad3f5;*/
@@ -67,6 +67,8 @@ window#waybar.hidden {
     /* To compensate for the top border and still have vertical centering */
     padding: 0 0.5em;
     margin: 4px 2px;
+    border-radius: 20px;
+    min-height: 20px;
     color: @wm_icon_bg;
     background-color: @theme_selected_my_bg_color;
 }
@@ -79,7 +81,13 @@ window#waybar.hidden {
 
 #workspaces button.visible:not(.focused) {
     border-color: @theme_selected_my_bg_color;
-  color: #ffa148;
+    color: #ffa148;
+}
+
+#workspaces button:hover {
+    background: @theme_selected_my_fg_color;
+    color: @theme_selected_my_bg_color;
+    border-color: @theme_selected_my_bg_color;
 }
 
 #workspaces button.urgent {
@@ -108,7 +116,9 @@ window#waybar.hidden {
 #idle_inhibitor,
 #custom-color-picker,
 #custom-notification {
+    border-radius: 20px;
     padding-left: 7px;
+    min-height: 20px;
     padding-right: 7px;
     margin: 4px 2px;
 }
@@ -204,8 +214,8 @@ label:focus {
 }
 
 #network.disconnected {
-    background: @theme_bg_color;
-    color: @wm_icon_bg
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #pulseaudio {
@@ -214,8 +224,8 @@ label:focus {
 }
 
 #pulseaudio.muted {
-    background: @theme_bg_color;
-    color: @wm_icon_bg;
+    background: @theme_selected_my_bg_color;
+    color: @theme_selected_my_fg_color;
 }
 
 #custom-wf-recorder {
