@@ -22,3 +22,6 @@
 [submodule ".tmux/plugins/tokyo-night-tmux"]
 	path = .tmux/plugins/tokyo-night-tmux
 	url = https://github.com/janoamaral/tokyo-night-tmux
+[submodule "yazi/plugins/omp.yazi"]
+	path = yazi/plugins/omp.yazi
+	url = https://github.com/saumyajyoti/omp.yazi

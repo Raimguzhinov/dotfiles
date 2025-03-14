@@ -1,14 +1,16 @@
 [[manager.prepend_keymap]]
-on = [ "<C-/>" ]
+on = [ "e", "s" ]
 run = '''
     shell '"$1"' --block --interactive
 ''' 
+desc = "Exec scipt"
 
 [[manager.prepend_keymap]]
-on = [ "<C-\\>" ]
+on = [ "e", "d" ]
 run = '''
     shell 'dragon -x -i -T "$1"' --confirm
 ''' 
+desc = "Exec drag and drop"
 
 [[manager.prepend_keymap]]
 on  = "y"
@@ -51,10 +53,15 @@ on   = [ "g", "S" ]
 run  = "cd /home/protei/Protei-UC/"
 desc = "Go to root Protei services"
 
-# [[manager.prepend_keymap]]
-# on   = [ "g", "i" ]
-# run  = "plugin lazygit"
-# desc = "run lazygit"
+[[manager.prepend_keymap]]
+on   = [ "g", "r" ]
+run  = "cd /root"
+desc = "Go to root home"
+
+[[manager.prepend_keymap]]
+on   = [ "g", "i" ]
+run  = "plugin lazygit"
+desc = "run lazygit"
 
 [[manager.prepend_keymap]]
 on   = [ "u", "z" ]
