@@ -1,6 +1,8 @@
 jorgebucaran/fisher
 jorgebucaran/nvm.fish
-patrickf1/fzf.fish
 plttn/fish-eza
+franciscolourenco/done
+jorgebucaran/replay.fish
 jethrokuan/z
-ilancosman/tide@v6
+acomagu/fish-async-prompt
+jethrokuan/fzf
