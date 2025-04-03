@@ -17,6 +17,7 @@ include $HOME/.config/sway/variables
 include $HOME/.config/sway/variables.d/*.conf
 
 include $HOME/.config/sway/outputs
+include $HOME/.config/sway/workspaces.d/*.conf
 include $HOME/.config/sway/workspaces
 include $HOME/.config/sway/outputs.d/*.conf
 include $HOME/.config/sway/inputs/*.conf
