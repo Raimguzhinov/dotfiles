@@ -43,6 +43,7 @@ configuration {
 		parse-user:   true;
 		/** Parse system desktop files. */
 		parse-system: true;
+		fallback-icon: "application-x-addon";
     }
 
 	/*---------- Run settings ----------*/
@@ -51,7 +52,7 @@ configuration {
 	run-shell-command: "{terminal} -e {cmd}";
 
 	/*---------- Fallback Icon ----------*/
-	run,drun {
+	run {
 		fallback-icon: "application-x-addon";
 	}
 

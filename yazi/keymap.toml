@@ -1,7 +1,7 @@
 [[manager.prepend_keymap]]
 on = [ "e", "s" ]
 run = '''
-    shell '"$1"' --block --interactive
+    shell '"$1"' --block
 ''' 
 desc = "Exec scipt"
 
@@ -45,7 +45,7 @@ desc = "Go to ~/Downloads"
 
 [[manager.prepend_keymap]]
 on   = [ "g", "s" ]
-run  = "cd /home/dias/ProteiWorkProj/core/services"
+run  = "cd /home/dias/Work/core/services"
 desc = "Go to local Protei services"
 
 [[manager.prepend_keymap]]
@@ -90,13 +90,9 @@ run  = "plugin compress"
 desc = "Compress archive"
 
 [[manager.prepend_keymap]]
-on = [ ":" ]
-run = "plugin shell --args=--block"
-desc = "Default shell with blocking"
-
-[[manager.prepend_keymap]]
 on = [ ";" ]
-run  = '''plugin shell --args='fish --drop'
+run  = '''
+    shell 'tmux popup -d "#{pane_current_path}" -xC -yC -w 80% -h 75% -E "tmux attach-session -t popup || tmux new-session -s popup"'
 '''
 desc = "Drop to shell"
 

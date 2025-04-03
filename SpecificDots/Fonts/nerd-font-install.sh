@@ -3,21 +3,21 @@
 declare -a fonts=(
     # BitstreamVeraSansMono
     # CodeNewRoman
-    # DroidSansMono
-    # FiraCode
+    DroidSansMono
+    FiraCode
     # FiraMono
     # Go-Mono
-    # Hack
+    Hack
     # Hermit
-    # JetBrainsMono
-    # Meslo
+    JetBrainsMono
+    Meslo
     Noto
     # Overpass
     # ProggyClean
     # RobotoMono
     # SourceCodePro
     # SpaceMono
-    # Ubuntu
+    Ubuntu
     # UbuntuMono
 )
 
