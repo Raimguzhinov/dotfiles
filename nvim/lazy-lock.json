@@ -13,7 +13,7 @@
   "darcula-dark.nvim": { "branch": "main", "commit": "82fd4acffadb7e1e0d24fe81648b0557c201a4e1" },
   "diffview.nvim": { "branch": "main", "commit": "4516612fe98ff56ae0415a259ff6361a89419b0a" },
   "friendly-snippets": { "branch": "main", "commit": "efff286dd74c22f731cdec26a70b46e5b203c619" },
-  "gitsigns.nvim": { "branch": "main", "commit": "3c76f7fabac723aa682365ef782f88a83ccdb4ac" },
+  "gitsigns.nvim": { "branch": "main", "commit": "17ab794b6fce6fce768430ebc925347e349e1d60" },
   "go.nvim": { "branch": "master", "commit": "c6d5ca26377d01c4de1f7bff1cd62c8b43baa6bc" },
   "goto-preview": { "branch": "main", "commit": "4972fcd01c568c2ae981f3f48182e7832ed544ec" },
   "guihua.lua": { "branch": "master", "commit": "d783191eaa75215beae0c80319fcce5e6b3beeda" },
