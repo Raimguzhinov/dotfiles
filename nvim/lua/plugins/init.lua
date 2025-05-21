@@ -1,40 +1,34 @@
 return {
     {
-        "Raimguzhinov/darcula-dark.nvim",
-        dependencies = {
-            "nvim-treesitter/nvim-treesitter",
-        },
-    },
-    {
-      "hrsh7th/nvim-cmp",
-      opts = function()
-        local cmp = require("cmp")
-        local conf = require("nvchad.configs.cmp")
+        "hrsh7th/nvim-cmp",
+        opts = function()
+            local cmp = require "cmp"
+            local conf = require "nvchad.configs.cmp"
 
-        local mymappings = {
-          ["<Up>"] = cmp.mapping.select_prev_item(),
-          ["<Down>"] = cmp.mapping.select_next_item(),
-          ["<Tab>"] = cmp.mapping.confirm {
-            behavior = cmp.ConfirmBehavior.Replace,
-            select = true,
-          },
-        }
-        conf.mapping = vim.tbl_deep_extend("force", conf.mapping, mymappings)
-        return conf
-      end,
+            local mymappings = {
+                ["<Up>"] = cmp.mapping.select_prev_item(),
+                ["<Down>"] = cmp.mapping.select_next_item(),
+                ["<Tab>"] = cmp.mapping.confirm {
+                    behavior = cmp.ConfirmBehavior.Replace,
+                    select = true,
+                },
+            }
+            conf.mapping = vim.tbl_deep_extend("force", conf.mapping, mymappings)
+            return conf
+        end,
     },
     {
         "stevearc/conform.nvim",
-        event = 'BufWritePre', -- uncomment for format on save
+        event = "BufWritePre", -- uncomment for format on save
         config = function()
             require "configs.conform"
         end,
     },
     {
-      "neovim/nvim-lspconfig",
-      config = function()
-        require "configs.lspconfig"
-      end,
+        "neovim/nvim-lspconfig",
+        config = function()
+            require "configs.lspconfig"
+        end,
     },
     {
         "nvim-tree/nvim-tree.lua",
@@ -105,11 +99,11 @@ return {
                     telescope = require("telescope.themes").get_dropdown { hide_preview = false },
                 },
                 -- These two configs can also be passed down to the goto-preview definition and implementation calls for one off "peak" functionality.
-                focus_on_open = true,                                        -- Focus the floating window when opening it.
-                dismiss_on_move = false,                                     -- Dismiss the floating window when moving the cursor.
-                force_close = true,                                          -- passed into vim.api.nvim_win_close's second argument. See :h nvim_win_close
-                bufhidden = "wipe",                                          -- the bufhidden option to set on the floating window. See :h bufhidden
-                stack_floating_preview_windows = true,                       -- Whether to nest floating windows
+                focus_on_open = true, -- Focus the floating window when opening it.
+                dismiss_on_move = false, -- Dismiss the floating window when moving the cursor.
+                force_close = true, -- passed into vim.api.nvim_win_close's second argument. See :h nvim_win_close
+                bufhidden = "wipe", -- the bufhidden option to set on the floating window. See :h bufhidden
+                stack_floating_preview_windows = true, -- Whether to nest floating windows
                 preview_window_title = { enable = true, position = "left" }, -- Whether
             }
         end,
@@ -120,11 +114,11 @@ return {
         lazy = true,
         ft = "markdown",
         keys = {
-            { "<leader>on", "<cmd>ObsidianNew<cr>",         desc = "New Obsidian note",               mode = "n" },
-            { "<leader>oo", "<cmd>ObsidianSearch<cr>",      desc = "Search Obsidian notes",           mode = "n" },
-            { "<leader>os", "<cmd>ObsidianQuickSwitch<cr>", desc = "Quick Switch",                    mode = "n" },
-            { "<leader>ob", "<cmd>ObsidianBacklinks<cr>",   desc = "Show location list of backlinks", mode = "n" },
-            { "<leader>ot", "<cmd>ObsidianTemplate<cr>",    desc = "Follow link under cursor",        mode = "n" },
+            { "<leader>on", "<cmd>ObsidianNew<cr>", desc = "New Obsidian note", mode = "n" },
+            { "<leader>oo", "<cmd>ObsidianSearch<cr>", desc = "Search Obsidian notes", mode = "n" },
+            { "<leader>os", "<cmd>ObsidianQuickSwitch<cr>", desc = "Quick Switch", mode = "n" },
+            { "<leader>ob", "<cmd>ObsidianBacklinks<cr>", desc = "Show location list of backlinks", mode = "n" },
+            { "<leader>ot", "<cmd>ObsidianTemplate<cr>", desc = "Follow link under cursor", mode = "n" },
         },
         config = function()
             require "configs.obsidian"
@@ -143,7 +137,7 @@ return {
     {
         "kristijanhusak/vim-dadbod-ui",
         dependencies = {
-            { "tpope/vim-dadbod",                     event = "VeryLazy" },
+            { "tpope/vim-dadbod", event = "VeryLazy" },
             { "kristijanhusak/vim-dadbod-completion", ft = { "sql", "mysql", "plsql" }, lazy = true },
         },
         cmd = {
@@ -155,7 +149,7 @@ return {
         init = function()
             -- Your DBUI configuration
             vim.g.db_ui_use_nerd_fonts = 1
-            vim.g.db_ui_win_position = 'right'
+            vim.g.db_ui_win_position = "right"
         end,
     },
     {
@@ -239,70 +233,70 @@ return {
             require("vgit").setup()
         end,
     },
-    {
-        "ray-x/go.nvim",
-        dependencies = { -- optional packages
-            "ray-x/guihua.lua",
-            "neovim/nvim-lspconfig",
-            "nvim-treesitter/nvim-treesitter",
-        },
-        config = function()
-            -- local capabilities = require('cmp_nvim_lsp').default_capabilities(vim.lsp.protocol.make_client_capabilities())
-            -- local breadcrumb = require "breadcrumb"
-            -- local on_attach = require("nvchad.configs.lspconfig").on_attach
-            require('go').setup({
-                lsp_cfg = false,
-                lsp_inlay_hints = {
-                    enable = false, -- this is the only field apply to neovim > 0.10
-                    -- following are used for neovim < 0.10 which does not implement inlay hints
-                    -- hint style, set to 'eol' for end-of-line hints, 'inlay' for inline hints
-                    style = 'inlay',
-                    -- Note: following setup only works for style = 'eol', you do not need to set it for 'inlay'
-                    -- Only show inlay hints for the current line
-                    only_current_line = false,
-                    -- Event which triggers a refersh of the inlay hints.
-                    -- You can make this "CursorMoved" or "CursorMoved,CursorMovedI" but
-                    -- not that this may cause higher CPU usage.
-                    -- This option is only respected when only_current_line and
-                    -- autoSetHints both are true.
-                    only_current_line_autocmd = "CursorHold",
-                    -- whether to show variable name before type hints with the inlay hints or not
-                    -- default: false
-                    show_variable_name = true,
-                    -- prefix for parameter hints
-                    parameter_hints_prefix = "󰊕 ",
-                    show_parameter_hints = true,
-                    -- prefix for all the other hints (type, chaining)
-                    other_hints_prefix = "=> ",
-                    -- whether to align to the length of the longest line in the file
-                    max_len_align = false,
-                    -- padding from the left if max_len_align is true
-                    max_len_align_padding = 1,
-                    -- whether to align to the extreme right or not
-                    right_align = false,
-                    -- padding from the right if right_align is true
-                    right_align_padding = 6,
-                    -- The color of the hints
-                    highlight = "Comment",
-                },
-                -- {
-                --     on_attach = function(client, bufnr)
-                --         if client.server_capabilities.documentSymbolProvider then
-                --             breadcrumb.attach(client, bufnr)
-                --         end
-                --         client.server_capabilities.signatureHelpProvider = false
-                --         -- on_attach(client, bufnr)
-                --     end,
-                --     capabilities = capabilities,
-                -- },
-            })
-            local cfg = require 'go.lsp'.config()
-            require('lspconfig').gopls.setup(cfg)
-        end,
-        event = { "CmdlineEnter" },
-        ft = { "go", "gomod" },
-        build = ':lua require("go.install").update_all_sync()', -- if you need to install/update all binaries
-    },
+    -- {
+    --     "ray-x/go.nvim",
+    --     dependencies = { -- optional packages
+    --         "ray-x/guihua.lua",
+    --         "neovim/nvim-lspconfig",
+    --         "nvim-treesitter/nvim-treesitter",
+    --     },
+    --     config = function()
+    --         -- local capabilities = require('cmp_nvim_lsp').default_capabilities(vim.lsp.protocol.make_client_capabilities())
+    --         -- local breadcrumb = require "breadcrumb"
+    --         -- local on_attach = require("nvchad.configs.lspconfig").on_attach
+    --         require('go').setup({
+    --             lsp_cfg = false,
+    --             lsp_inlay_hints = {
+    --                 enable = false, -- this is the only field apply to neovim > 0.10
+    --                 -- following are used for neovim < 0.10 which does not implement inlay hints
+    --                 -- hint style, set to 'eol' for end-of-line hints, 'inlay' for inline hints
+    --                 style = 'inlay',
+    --                 -- Note: following setup only works for style = 'eol', you do not need to set it for 'inlay'
+    --                 -- Only show inlay hints for the current line
+    --                 only_current_line = false,
+    --                 -- Event which triggers a refersh of the inlay hints.
+    --                 -- You can make this "CursorMoved" or "CursorMoved,CursorMovedI" but
+    --                 -- not that this may cause higher CPU usage.
+    --                 -- This option is only respected when only_current_line and
+    --                 -- autoSetHints both are true.
+    --                 only_current_line_autocmd = "CursorHold",
+    --                 -- whether to show variable name before type hints with the inlay hints or not
+    --                 -- default: false
+    --                 show_variable_name = true,
+    --                 -- prefix for parameter hints
+    --                 parameter_hints_prefix = "󰊕 ",
+    --                 show_parameter_hints = true,
+    --                 -- prefix for all the other hints (type, chaining)
+    --                 other_hints_prefix = "=> ",
+    --                 -- whether to align to the length of the longest line in the file
+    --                 max_len_align = false,
+    --                 -- padding from the left if max_len_align is true
+    --                 max_len_align_padding = 1,
+    --                 -- whether to align to the extreme right or not
+    --                 right_align = false,
+    --                 -- padding from the right if right_align is true
+    --                 right_align_padding = 6,
+    --                 -- The color of the hints
+    --                 highlight = "Comment",
+    --             },
+    --             -- {
+    --             --     on_attach = function(client, bufnr)
+    --             --         if client.server_capabilities.documentSymbolProvider then
+    --             --             breadcrumb.attach(client, bufnr)
+    --             --         end
+    --             --         client.server_capabilities.signatureHelpProvider = false
+    --             --         -- on_attach(client, bufnr)
+    --             --     end,
+    --             --     capabilities = capabilities,
+    --             -- },
+    --         })
+    --         local cfg = require 'go.lsp'.config()
+    --         require('lspconfig').gopls.setup(cfg)
+    --     end,
+    --     event = { "CmdlineEnter" },
+    --     ft = { "go", "gomod" },
+    --     build = ':lua require("go.install").update_all_sync()', -- if you need to install/update all binaries
+    -- },
     {
         "mfussenegger/nvim-dap",
         config = function()
@@ -316,8 +310,8 @@ return {
         "rcarriga/nvim-dap-ui",
         dependencies = {
             "mfussenegger/nvim-dap",
-            "nvim-neotest/nvim-nio"
-        }
+            "nvim-neotest/nvim-nio",
+        },
     },
     {
         "neovim/nvim-lspconfig",
@@ -330,20 +324,36 @@ return {
         "williamboman/mason.nvim",
         opts = {
             ensure_installed = {
-                "lua-language-server", "stylua",
-                "html-lsp", "css-lsp", "prettier",
-                "clangd", "clang-format", "codelldb",
-                "black", "debugpy", "mypy", "ruff", "pyright",
-                "rust-analyzer", "cpptools", "gopls",
+                "lua-language-server",
+                "stylua",
+                "prettier",
+                "clangd",
+                "clang-format",
+                "codelldb",
+                "black",
+                "debugpy",
+                "mypy",
+                "ruff",
+                "pyright",
+                "rust-analyzer",
+                "cpptools",
+                "gopls",
+                "tinymist",
             },
+            automatic_installation = true,
         },
     },
     {
         "nvim-treesitter/nvim-treesitter",
         opts = {
             ensure_installed = {
-                "vim", "lua", "vimdoc",
-                "html", "css", "go", "cpp",
+                "vim",
+                "lua",
+                "vimdoc",
+                "html",
+                "css",
+                "go",
+                "cpp",
             },
         },
     },
@@ -351,20 +361,20 @@ return {
         "Civitasv/cmake-tools.nvim",
         init = function()
             require("cmake-tools").setup {
-                cmake_command = "cmake",                                          -- this is used to specify cmake command path
-                cmake_regenerate_on_save = true,                                  -- auto generate when save CMakeLists.txt
+                cmake_command = "cmake", -- this is used to specify cmake command path
+                cmake_regenerate_on_save = true, -- auto generate when save CMakeLists.txt
                 cmake_generate_options = { "-DCMAKE_EXPORT_COMPILE_COMMANDS=1" }, -- this will be passed when invoke `CMakeGenerate`
-                cmake_build_options = {},                                         -- this will be passed when invoke `CMakeBuild`
-                cmake_build_directory = "build",                                  -- this is used to specify generate directory for cmake
-                cmake_build_directory_prefix = "cmake_build_",                    -- when cmake_build_directory is set to "", this option will be activated
-                cmake_soft_link_compile_commands = true,                          -- this will automatically make a soft link from compile commands file to project root dir
-                cmake_compile_commands_from_lsp = false,                          -- this will automatically set compile commands file location using lsp, to use it, please set `cmake_soft_link_compile_commands` to false
-                cmake_kits_path = nil,                                            -- this is used to specify global cmake kits path, see CMakeKits for detailed usage
+                cmake_build_options = {}, -- this will be passed when invoke `CMakeBuild`
+                cmake_build_directory = "build", -- this is used to specify generate directory for cmake
+                cmake_build_directory_prefix = "cmake_build_", -- when cmake_build_directory is set to "", this option will be activated
+                cmake_soft_link_compile_commands = true, -- this will automatically make a soft link from compile commands file to project root dir
+                cmake_compile_commands_from_lsp = false, -- this will automatically set compile commands file location using lsp, to use it, please set `cmake_soft_link_compile_commands` to false
+                cmake_kits_path = nil, -- this is used to specify global cmake kits path, see CMakeKits for detailed usage
                 cmake_variants_message = {
-                    short = { show = true },                                      -- whether to show short message
-                    long = { show = true, max_length = 40 },                      -- whether to show long message
+                    short = { show = true }, -- whether to show short message
+                    long = { show = true, max_length = 40 }, -- whether to show long message
                 },
-                cmake_dap_configuration = {                                       -- debug settings for cmake
+                cmake_dap_configuration = { -- debug settings for cmake
                     name = "cpp",
                     -- type = "cppdbg",
                     type = "codelldb",
@@ -373,20 +383,20 @@ return {
                     runInTerminal = true,
                     console = "integratedTerminal",
                 },
-                cmake_executor = {                   -- executor to use
-                    name = "quickfix",               -- name of the executor
-                    opts = {},                       -- the options the executor will get, possible values depend on the executor type. See `default_opts` for possible values.
-                    default_opts = {                 -- a list of default and possible values for executors
+                cmake_executor = { -- executor to use
+                    name = "quickfix", -- name of the executor
+                    opts = {}, -- the options the executor will get, possible values depend on the executor type. See `default_opts` for possible values.
+                    default_opts = { -- a list of default and possible values for executors
                         quickfix = {
-                            show = "always",         -- "always", "only_on_error"
+                            show = "always", -- "always", "only_on_error"
                             position = "belowright", -- "bottom", "top"
                             size = 10,
                         },
                         overseer = {
-                            new_task_opts = {},               -- options to pass into the `overseer.new_task` command
+                            new_task_opts = {}, -- options to pass into the `overseer.new_task` command
                             on_new_task = function(task) end, -- a function that gets overseer.Task when it is created, before calling `task:start`
                         },
-                        terminal = {},                        -- terminal executor uses the values in cmake_terminal
+                        terminal = {}, -- terminal executor uses the values in cmake_terminal
                     },
                 },
                 cmake_terminal = {
@@ -394,19 +404,19 @@ return {
                     opts = {
                         name = "Main Terminal",
                         prefix_name = "[CMakeTools]: ", -- This must be included and must be unique, otherwise the terminals will not work. Do not use a simple spacebar " ", or any generic name
-                        split_direction = "vertical",   -- "horizontal", "vertical"
+                        split_direction = "vertical", -- "horizontal", "vertical"
                         split_size = 46,
 
                         -- Window handling
-                        single_terminal_per_instance = true,  -- Single viewport, multiple windows
-                        single_terminal_per_tab = true,       -- Single viewport per tab
+                        single_terminal_per_instance = true, -- Single viewport, multiple windows
+                        single_terminal_per_tab = true, -- Single viewport per tab
                         keep_terminal_static_location = true, -- Static location of the viewport if avialable
 
                         -- Running Tasks
                         start_insert_in_launch_task = true, -- If you want to enter terminal with :startinsert upon using :CMakeRun
                         start_insert_in_other_tasks = true, -- If you want to enter terminal with :startinsert upon launching all other cmake tasks in the terminal. Generally set as false
-                        focus_on_main_terminal = true,      -- Focus on cmake terminal when cmake task is launched. Only used if executor is terminal.
-                        focus_on_launch_terminal = true,    -- Focus on cmake launch terminal when executable target in launched.
+                        focus_on_main_terminal = true, -- Focus on cmake terminal when cmake task is launched. Only used if executor is terminal.
+                        focus_on_launch_terminal = true, -- Focus on cmake launch terminal when executable target in launched.
                     },
                 },
                 cmake_notifications = {
@@ -610,7 +620,7 @@ return {
                             function()
                                 return icons.ui.Line
                             end,
-                            color = { fg = colors.blue },      -- Sets highlighting of component
+                            color = { fg = colors.blue }, -- Sets highlighting of component
                             padding = { left = 0, right = 1 }, -- We don't need space before this
                         },
                     },
@@ -658,7 +668,7 @@ return {
                 function()
                     return icons.ui.Line
                 end,
-                color = { fg = colors.blue },      -- Sets highlighting of component
+                color = { fg = colors.blue }, -- Sets highlighting of component
                 padding = { left = 0, right = 1 }, -- We don't need space before this
             }
             ins_left {
@@ -782,7 +792,7 @@ return {
                 end,
             }
             ins_right {
-                "o:encoding",       -- option component same as &encoding in viml
+                "o:encoding", -- option component same as &encoding in viml
                 fmt = string.upper, -- I'm not sure why it's upper case either ;)
                 cond = conditions.hide_in_width,
                 icon = icons.ui.NewFile,

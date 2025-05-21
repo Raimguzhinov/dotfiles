@@ -5,18 +5,12 @@ require "nvchad.mappings"
 local map = vim.keymap.set
 
 -- cross-platform pasting
-vim.cmd("inoremap <C-v> <C-r>+")
-vim.cmd(
-    [[
+vim.cmd "inoremap <C-v> <C-r>+"
+vim.cmd [[
 function OpenMarkdownPreview (url)
   execute "silent ! firefox --private-window " . a:url
 endfunction
 ]]
-)
-vim.g.mkdp_browserfunc = 'OpenMarkdownPreview'
-
--- local api = require("nvim-tree.api")
--- api.tree.toggle({ focus = false })
 
 -- General
 map("n", ";", ":", { desc = "CMD enter command mode" })
@@ -30,7 +24,6 @@ map("n", "<leader>wa", ":wa <CR>", { desc = "Save all" })
 map("n", "<leader>cx", function()
     require("nvchad.tabufline").closeAllBufs()
 end, { desc = "Close All Buffers" })
-
 -- switch between windows
 map("n", "th", "<C-w>h", { desc = "Window left" })
 map("n", "tl", "<C-w>l", { desc = "Window right" })
@@ -58,7 +51,7 @@ map("n", "<leader>+t", ":GoTest -F<CR>", { desc = "GoTest" })
 map("n", "<leader>++", ":CMakeRun<CR>", { desc = "CMakeRun" })
 map("n", "<leader>k", ":GoDoc<CR>", { desc = "GoDoc" })
 map("n", "<leader>l", ":GoLint<CR>", { desc = "GoLint" })
-map("n", "<leader>ra", ":GoRename<CR>", { desc = "GoRename" })
+-- map("n", "<leader>ra", ":GoRename<CR>", { desc = "GoRename" })
 
 -- Debug
 map("n", "<leader>db", function()

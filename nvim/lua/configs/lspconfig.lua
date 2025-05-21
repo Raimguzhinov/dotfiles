@@ -31,54 +31,70 @@ for _, lsp in ipairs(servers) do
     }
 end
 
--- lspconfig.gopls.setup {
---     on_attach = function(client, bufnr)
---         require("inlay-hints").on_attach(client, bufnr)
---         if client.server_capabilities.documentSymbolProvider then
---             breadcrumb.attach(client, bufnr)
---         end
---         client.server_capabilities.signatureHelpProvider = false
---         on_attach(client, bufnr)
---     end,
---     capabilities = capabilities,
---     cmd = { "gopls" },
---     filetypes = { "go", "gomod", "gowork", "gotmpl" },
---     root_dir = util.root_pattern("go.work", "go.mod", ".git"),
---     settings = {
---         gopls = {
---             completeUnimported = true,
---             usePlaceholders = true,
---             analyses = {
---                 unusedparams = true,
---                 shadow = true,
---             },
---             staticcheck = true,
---         },
---         hints = {
---             rangeVariableTypes = true,
---             parameterNames = true,
---             constantValues = true,
---             assignVariableTypes = true,
---             compositeLiteralFields = true,
---             compositeLiteralTypes = true,
---             functionTypeParameters = true,
---         },
---     },
--- }
+lspconfig.gopls.setup {
+    on_attach = function(client, bufnr)
+        if client.server_capabilities.documentSymbolProvider then
+            breadcrumb.attach(client, bufnr)
+        end
+        client.server_capabilities.signatureHelpProvider = false
+        on_attach(client, bufnr)
+    end,
+    capabilities = capabilities,
+    cmd = { "gopls" },
+    filetypes = { "go", "gomod", "gowork", "gotmpl" },
+    root_dir = util.root_pattern("go.work", "go.mod", ".git"),
+    settings = {
+        env = {
+            GO111MODULE = "on",
+            GONOPROXY = "git.protei.ru",
+            GONOSUMDB = "git.protei.ru",
+            GOPROXY = "https://repo.protei.ru/repository/go-modules",
+        },
+        gopls = {
+            completeUnimported = true,
+            usePlaceholders = true,
+            analyses = {
+                unusedparams = true,
+                shadow = true,
+            },
+            staticcheck = true,
+        },
+        formatting = {
+            gofumpt = true,
+        },
+        hints = {
+            rangeVariableTypes = true,
+            parameterNames = true,
+            constantValues = true,
+            assignVariableTypes = true,
+            compositeLiteralFields = true,
+            compositeLiteralTypes = true,
+            functionTypeParameters = true,
+        },
+    },
+}
 
 lspconfig.clangd.setup {
     -- on_attach = function(client, bufnr)
-        -- require("inlay-hints").on_attach(client, bufnr)
-        -- if client.server_capabilities.documentSymbolProvider then
-        --     breadcrumb.attach(client, bufnr)
-        -- end
-        -- client.server_capabilities.signatureHelpProvider = false
-        -- on_attach(client, bufnr)
+    -- require("inlay-hints").on_attach(client, bufnr)
+    -- if client.server_capabilities.documentSymbolProvider then
+    --     breadcrumb.attach(client, bufnr)
+    -- end
+    -- client.server_capabilities.signatureHelpProvider = false
+    -- on_attach(client, bufnr)
     -- end,
     capabilities = capabilities,
     cmd = { "clangd" },
     filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "hpp", "h" },
-    root_dir = util.root_pattern('.clangd', '.clang-tidy', '.clang-format', 'compile_commands.json', 'compile_flags.txt', 'configure.ac', '.git'),
+    root_dir = util.root_pattern(
+        ".clangd",
+        ".clang-tidy",
+        ".clang-format",
+        "compile_commands.json",
+        "compile_flags.txt",
+        "configure.ac",
+        ".git"
+    ),
     on_new_config = function(new_config, new_cwd)
         local status, cmake = pcall(require, "cmake-tools")
         if status then
@@ -94,6 +110,23 @@ lspconfig.clangd.setup {
                 DeducedTypes = true,
             },
             fallbackFlags = { "-std=c++20" },
+        },
+    },
+}
+
+lspconfig.tinymist.setup {
+    capabilities = capabilities,
+    cmd = { "tinymist" },
+    filetypes = { "typst" },
+    single_file_support = true,
+    root_dir = function()
+        return vim.fn.getcwd()
+    end,
+    settings = {
+        tinymist = {
+            formatterMode = "typstyle",
+            exportPdf = "onType",
+            semanticTokens = "disable",
         },
     },
 }

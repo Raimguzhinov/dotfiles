@@ -9,10 +9,15 @@ M.treesitter = {
         "markdown",
         "markdown_inline",
         "go",
+        "typst",
     },
-    indent = {
+    highlight = {
         enable = true,
+        use_languagetree = true,
     },
+    indent = { enable = true },
+    auto_install = true,
+    sync_install = true,
 }
 
 M.mason = {
@@ -20,7 +25,9 @@ M.mason = {
         "lua-language-server",
         "clangd",
         "clang-format",
+        "gofumpt",
         "gopls",
+        "tinymist",
     },
 }
 
