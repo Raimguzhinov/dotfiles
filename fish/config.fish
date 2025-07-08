@@ -33,7 +33,6 @@ set -gx PATH $PATH $GOPATH/bin
 set -U fish_key_bindings fish_default_key_bindings
 oh-my-posh init fish --config $HOME/.config/oh-my-posh/themes/amro.omp.json | source
 zoxide init --cmd cd fish | source
-thefuck --alias | source 
 
 # Generated for envman. Do not edit.
 test -s /home/dias/config/envman/load.fish; and source /home/dias/.config/envman/load.fish

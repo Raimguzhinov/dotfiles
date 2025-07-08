@@ -26,7 +26,7 @@
 /* Reset all styles */
 * {
     border: none;
-    border-radius: 4;
+    border-radius: 4px;
     min-height: 0;
     margin: 0;
     padding: 0;
@@ -103,7 +103,7 @@ window#waybar.hidden {
 #language,
 #memory,
 #network,
-#pulseaudio,
+#wireplumber,
 #tray,
 #mode,
 #idle_inhibitor,
@@ -211,12 +211,12 @@ label:focus {
     color: @theme_selected_my_fg_color;
 }
 
-#pulseaudio {
+#wireplumber {
     background: @theme_selected_my_bg_color;
     color: @theme_selected_my_fg_color;
 }
 
-#pulseaudio.muted {
+#wireplumber.muted {
     background: @theme_selected_my_bg_color;
     color: @theme_selected_my_fg_color;
 }
@@ -232,8 +232,19 @@ label:focus {
 }
 
 #tray {
+    background-color: transparent;
     padding-left: 10px;
     padding-right: 10px;
+}
+
+#tray>.passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray>.needs-attention {
+    -gtk-icon-effect: highlight;
+    color: @red;
+    border-bottom-color: @red;
 }
 
 #idle_inhibitor {

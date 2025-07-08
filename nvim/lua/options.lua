@@ -31,3 +31,18 @@ vim.api.nvim_create_user_command("OpenPdf", function()
         vim.system { "open", pdf_path }
     end
 end, {})
+
+vim.api.nvim_create_autocmd("BufWritePost", {
+    pattern = "*.typ",
+    callback = function()
+        local filepath = vim.api.nvim_buf_get_name(0)
+        vim.system { "typst", "compile", filepath }
+    end,
+})
+
+vim.api.nvim_create_autocmd("BufEnter", {
+    pattern = "*",
+    callback = function()
+        vim.cmd ":lua require'rooter'.root()"
+    end,
+})

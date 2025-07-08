@@ -125,8 +125,8 @@ lspconfig.tinymist.setup {
     settings = {
         tinymist = {
             formatterMode = "typstyle",
-            exportPdf = "onType",
-            semanticTokens = "disable",
+            exportPdf = "never",
+            semanticTokens = "true",
         },
     },
 }
