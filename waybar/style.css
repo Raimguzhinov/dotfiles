@@ -1,5 +1,5 @@
 @define-color theme_selected_my_bg_color #2a2f41;
-@define-color theme_selected_my_fg_color #73daca;
+@define-color theme_selected_my_fg_color #7fc8ff; /* old green version: #73daca */
 
 @keyframes blink-warning {
     70% {
@@ -56,7 +56,7 @@ window#waybar.hidden {
     opacity: 0.2;
 }
 
-#workspaces button {
+#custom-niri-workspaces button {
     /* To compensate for the top border and still have vertical centering */
     padding: 0 0.5em;
     margin: 4px 2px;
@@ -66,24 +66,24 @@ window#waybar.hidden {
     background-color: @theme_selected_my_bg_color;
 }
 
-#workspaces button.focused {
+#custom-niri-workspaces button.focused {
     border-color: @theme_selected_my_bg_color;
     color: @theme_selected_my_bg_color;
     background-color: #7aa2f7;
 }
 
-#workspaces button.visible:not(.focused) {
+#custom-niri-workspaces button.visible:not(.focused) {
     border-color: @theme_selected_my_bg_color;
     color: #ffa148;
 }
 
-#workspaces button:hover {
+#custom-niri-workspaces button:hover {
     background: @theme_selected_my_fg_color;
     color: @theme_selected_my_bg_color;
     border-color: @theme_selected_my_bg_color;
 }
 
-#workspaces button.urgent {
+#custom-niri-workspaces button.urgent {
     border-color: @error_color;
     color: @error_color;
 }
@@ -109,11 +109,11 @@ window#waybar.hidden {
 #idle_inhibitor,
 #custom-color-picker,
 #custom-notification {
-    border-radius: 20px;
-    padding-left: 7px;
-    min-height: 20px;
-    padding-right: 7px;
-    margin: 4px 2px;
+    border-radius: 3px;
+    padding-left: 5px;
+    min-height: 35px;
+    padding-right: 5px;
+    margin: 2px 2px;
 }
 
 #clock {
@@ -235,6 +235,7 @@ label:focus {
     background-color: transparent;
     padding-left: 10px;
     padding-right: 10px;
+    margin-bottom: 10px;
 }
 
 #tray>.passive {

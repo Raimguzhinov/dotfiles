@@ -1,25 +1,25 @@
 {
     "layer": "top",
-    "position": "top",
-    "height": 30,//30,
+    "position": "right",
+    "width": 30,//30,
     "modules-left": ["custom/menu", "custom/niri-workspaces", "niri/window"],
     "modules-center": ["niri/mode"],
     "modules-right": [
         "custom/wf-recorder",
         "tray",
+        "niri/language",
+        "clock",
+        "wireplumber#sink",
+        "battery",
         "custom/weather",
         "custom/playerctl",
+        "cpu",
+        "memory",
+        //"network",
         "idle_inhibitor",
         "custom/color-picker",
         "custom/notification",
-        "niri/language",
         "custom/clipboard",
-        "cpu",
-        "memory",
-        "battery",
-        "network",
-        "wireplumber#sink",
-        "clock",
         "custom/power"
     ],
 
@@ -107,7 +107,7 @@
     },
 
     "wireplumber#sink": {
-        "format": "{icon} {volume}%",
+        "format": "{icon} {volume}",
         "format-muted": "",
         "format-icons": [
             "",
@@ -120,8 +120,8 @@
     },
 
     "battery": {
-        "format": "{icon} {capacity}%",
-        "format-icons": ["", "", "", "", ""]
+        "format": "{icon} {capacity}",
+        "format-icons": ["󰁻", "󰁾", "󰁿", "󰂁", "󰂄"]
     },
 
     "network": {
@@ -133,7 +133,7 @@
     },
 
     "clock": {
-        "format": "{:%e %b %H:%M}",
+        "format": "{:%H:%M}",
         "tooltip": true,
         "tooltip-format": "{:%A %d.%m.%Y %H:%M:%S}",
         "interval": 1,
@@ -142,7 +142,7 @@
 
     "cpu": {
         "interval": 5,
-        "format": " {usage}%",
+        "format": " {usage}",
         "states": {
           "warning": 70,
           "critical": 90
@@ -152,7 +152,7 @@
 
     "memory": {
         "interval": 30,
-        "format": " {}%",
+        "format": " {}",
         "states": {
           "warning": 70,
           "critical": 90
@@ -195,7 +195,7 @@
     },
 
     "custom/weather": {
-        "icon-size": 42,
+        "icon-size": 10,
         "format": "{icon} {}",
         "tooltip": true,
         "interval": 3600,
@@ -226,6 +226,6 @@
 
     "tray": {
         "icon-size": 16,
-        "spacing": 5
+        "spacing": 10
     }
 }

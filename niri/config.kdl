@@ -266,11 +266,12 @@ layout {
 // spawn-at-startup "waybar"
 // spawn-at-startup "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK"
 // spawn-at-startup "dbus-update-activation-environment 2>/dev/null && dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK"
-spawn-at-startup "wl-paste --watch cliphist store"
+spawn-at-startup "bash" "-c" "wl-paste --watch cliphist store"
 spawn-at-startup "systemd-inhibit --what=handle-power-key sleep infinity"
 spawn-at-startup "mako"
 spawn-at-startup "lxpolkit"
 spawn-at-startup "xwayland-satellite"
+spawn-at-startup "~/.config/niri/scripts/wallp.sh"
 
 environment {
     DISPLAY ":0"
@@ -300,6 +301,13 @@ animations {
 
     // Slow down all animations by this factor. Values below 1 speed them up instead.
     // slowdown 3.0
+}
+
+switch-events {
+    lid-close { spawn "bash" "-c" "tuned-adm profile laptop-ac-powersave && systemctl suspend-then-hibernate"; }
+    lid-open { spawn "bash" "-c" "tuned-adm profile latency-performance && cpupower frequency-set -g performance"; }
+    tablet-mode-on { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true"; }
+    tablet-mode-off { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false"; }
 }
 
 // Window rules let you adjust behavior for individual windows.
