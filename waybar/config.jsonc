@@ -2,8 +2,8 @@
     "layer": "top",
     "position": "right",
     "width": 30,//30,
-    "modules-left": ["custom/menu", "custom/niri-workspaces", "niri/window"],
-    "modules-center": ["niri/mode"],
+    "modules-left": ["custom/menu", "niri/workspaces"],
+    "modules-center": ["niri/mode", "niri/window"],
     "modules-right": [
         "custom/wf-recorder",
         "tray",
@@ -15,7 +15,7 @@
         "custom/playerctl",
         "cpu",
         "memory",
-        //"network",
+        // "network",
         "idle_inhibitor",
         "custom/color-picker",
         "custom/notification",
@@ -23,14 +23,24 @@
         "custom/power"
     ],
 
-    "custom/niri-workspaces": {
-        "format": "{}",
-        "exec": "$HOME/dotfiles/niri-workspace-indicator.sh",
-        "interval": 1,
-        "return-type": "json",
-        "on-scroll-down": "niri msg action focus-window-or-workspace-down",
-        "on-scroll-up": "niri msg action focus-window-or-workspace-up",
-        "smooth-scrolling-threshold":2.0
+//    "custom/niri-workspaces": {
+//        "format": "{}",
+//        "exec": "$HOME/dotfiles/niri-workspace-indicator.sh",
+//        "interval": 1,
+//        "return-type": "json",
+//        "on-scroll-down": "niri msg action focus-window-or-workspace-down",
+//        "on-scroll-up": "niri msg action focus-window-or-workspace-up",
+//        "smooth-scrolling-threshold":2.0
+//    },
+    "niri/workspaces": {
+        "format": "{icon}",
+        "format-icons": {
+            "active": "",
+	    "focused": "",
+	    "urgent": "",
+            "default": ""
+        },
+        "expand": true
     },
 
     "niri/language": {
@@ -73,8 +83,9 @@
 
     "niri/window": {
         "format": "{}",
-        "max-length": 50,
-        "tooltip": true
+        "max-length": 20,
+        "tooltip": true,
+        "rotate": 270
     },
 
     "idle_inhibitor": {

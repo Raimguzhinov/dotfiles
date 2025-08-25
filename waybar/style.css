@@ -1,6 +1,12 @@
 @define-color theme_selected_my_bg_color #2a2f41;
 @define-color theme_selected_my_fg_color #7fc8ff; /* old green version: #73daca */
 
+@keyframes blink {
+    to {
+        opacity: 0.6;
+    }
+}
+
 @keyframes blink-warning {
     70% {
         color: @wm_icon_bg;
@@ -32,6 +38,10 @@
     padding: 0;
 }
 
+#window {
+	padding: 1px 0;
+}
+
 /* The whole bar */
 #waybar {
     background-color: #1f1e25;
@@ -40,7 +50,8 @@
 }
 
 #window {
-    margin-left: 10px;
+    margin-left: 5px;
+    margin-bottom: 30px;
 }
 
 window#waybar {
@@ -56,37 +67,55 @@ window#waybar.hidden {
     opacity: 0.2;
 }
 
-#custom-niri-workspaces button {
-    /* To compensate for the top border and still have vertical centering */
+/* Рабочие столы */
+#workspaces button {
+    color: rgba(205, 214, 244, 0.6);
+    transition: all 0.2s ease;
     padding: 0 0.5em;
     margin: 4px 2px;
-    border-radius: 20px;
-    min-height: 20px;
-    color: @wm_icon_bg;
-    background-color: @theme_selected_my_bg_color;
+}
+#workspaces button:hover {
+    color: #f5c2e7;
 }
 
-#custom-niri-workspaces button.focused {
-    border-color: @theme_selected_my_bg_color;
-    color: @theme_selected_my_bg_color;
-    background-color: #7aa2f7;
+#workspaces button.active {
+    color: @theme_selected_my_fg_color;
 }
 
-#custom-niri-workspaces button.visible:not(.focused) {
-    border-color: @theme_selected_my_bg_color;
-    color: #ffa148;
+#workspaces button.urgent {
+    color: #a6e3a1;
 }
 
-#custom-niri-workspaces button:hover {
-    background: @theme_selected_my_fg_color;
-    color: @theme_selected_my_bg_color;
-    border-color: @theme_selected_my_bg_color;
-}
-
-#custom-niri-workspaces button.urgent {
-    border-color: @error_color;
-    color: @error_color;
-}
+/* #custom-niri-workspaces button { */
+/* To compensate for the top border and still have vertical centering */
+/*     padding: 0 0.5em; */
+/*     margin: 4px 2px; */
+/*     border-radius: 20px; */
+/*     min-height: 20px; */
+/*     color: @wm_icon_bg; */
+/*     background-color: @theme_selected_my_bg_color; */
+/* } */
+/* #custom-niri-workspaces button.focused { */
+/*     border-color: @theme_selected_my_bg_color; */
+/*     color: @theme_selected_my_bg_color; */
+/*     background-color: #7aa2f7; */
+/* } */
+/**/
+/* #custom-niri-workspaces button.visible:not(.focused) { */
+/*     border-color: @theme_selected_my_bg_color; */
+/*     color: #ffa148; */
+/* } */
+/**/
+/* #custom-niri-workspaces button:hover { */
+/*     background: @theme_selected_my_fg_color; */
+/*     color: @theme_selected_my_bg_color; */
+/*     border-color: @theme_selected_my_bg_color; */
+/* } */
+/**/
+/* #custom-niri-workspaces button.urgent { */
+/*     border-color: @error_color; */
+/*     color: @error_color; */
+/* } */
 
 #mode {
     background: @background_color;
@@ -149,6 +178,7 @@ window#waybar.hidden {
 #custom-menu {
     background: @theme_selected_my_bg_color;
     color: @theme_selected_my_fg_color;
+    margin-bottom: 10px;
 }
 
 #battery {

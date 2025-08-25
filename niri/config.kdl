@@ -14,7 +14,7 @@ input {
 
             // For example:
             layout "us,ru"
-            options "grp:alt_space_toggle,grp:ralt_space_toggle"
+            options "grp:alt_space_toggle,grp:ralt_space_toggle,caps:ctrl_modifier"
         }
 
         // Enable numlock on startup, omitting this setting disables it.
@@ -140,7 +140,7 @@ layout {
     // preset-window-heights { }
 
     // You can change the default width of the new windows.
-    default-column-width { proportion 0.98; }
+    default-column-width { proportion 0.985; }
     // If you leave the brackets empty, the windows themselves will decide their initial width.
     // default-column-width {}
 
@@ -266,12 +266,16 @@ layout {
 // spawn-at-startup "waybar"
 // spawn-at-startup "systemctl --user import-environment DISPLAY WAYLAND_DISPLAY SWAYSOCK"
 // spawn-at-startup "dbus-update-activation-environment 2>/dev/null && dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK"
+spawn-at-startup "bash" "-c" "foot --server"
 spawn-at-startup "bash" "-c" "wl-paste --watch cliphist store"
 spawn-at-startup "systemd-inhibit --what=handle-power-key sleep infinity"
 spawn-at-startup "mako"
 spawn-at-startup "lxpolkit"
 spawn-at-startup "xwayland-satellite"
 spawn-at-startup "~/.config/niri/scripts/wallp.sh"
+spawn-at-startup "bash" "-c" "niri-float-sticky -debug >> /tmp/niri-float-sticky.log"
+spawn-at-startup "niri-screen-time" "-daemon"
+// spawn-at-startup "bash" "-c" "ghostty --gtk-single-instance=true --quit-after-last-window-closed=false --initial-window=false"
 
 environment {
     DISPLAY ":0"
@@ -304,7 +308,7 @@ animations {
 }
 
 switch-events {
-    lid-close { spawn "bash" "-c" "tuned-adm profile laptop-ac-powersave && systemctl suspend-then-hibernate"; }
+    lid-close { spawn "bash" "-c" "tuned-adm profile laptop-ac-powersave"; }
     lid-open { spawn "bash" "-c" "tuned-adm profile latency-performance && cpupower frequency-set -g performance"; }
     tablet-mode-on { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true"; }
     tablet-mode-off { spawn "bash" "-c" "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false"; }
@@ -325,8 +329,35 @@ window-rule {
 }
 
 window-rule {
-    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    match app-id=r#"zen$"# title="^Картинка в картинке$"
+	default-column-width { fixed 350; }
+    default-window-height { fixed 200; }
+	default-floating-position x=32 y=32 relative-to="bottom-left"
     open-floating true
+	geometry-corner-radius 12
+    clip-to-geometry true
+	shadow {
+        on
+    }
+}
+
+// Indicate screencasted windows with red colors.
+window-rule {
+    match is-window-cast-target=true
+    focus-ring {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
+    border {
+        inactive-color "#7d0d2d"
+    }
+    shadow {
+        color "#7d0d2d70"
+    }
+    tab-indicator {
+        active-color "#f38ba8"
+        inactive-color "#7d0d2d"
+    }
 }
 
 // Example: block out two password managers from screen capture.
@@ -346,6 +377,13 @@ window-rule {
 /-window-rule {
     geometry-corner-radius 12
     clip-to-geometry true
+}
+
+// Block out mako notifications from screencasts.
+layer-rule {
+    match namespace="^notifications$"
+    block-out-from "screen-capture"
+    // block-out-from "screencast"
 }
 
 binds {
