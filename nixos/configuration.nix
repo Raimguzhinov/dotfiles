@@ -2,13 +2,19 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 
-{ config, pkgs, niri, home-manager, ... }:
+{
+  config,
+  pkgs,
+  niri,
+  home-manager,
+  ...
+}:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  imports = [
+    # Include the results of the hardware scan.
+    ./hardware-configuration.nix
+  ];
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -16,18 +22,20 @@
 
   # Flakes
   nix.settings = {
-    experimental-features = ["nix-command" "flakes"];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
     auto-optimise-store = true;
   };
-    
-  # Garbage collector 
+
+  # Garbage collector
   nix.gc = {
     automatic = true;
     dates = "weekly";
     options = "--delete-older-than 30d";
   };
 
-  
   # Install niri.
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
@@ -38,57 +46,61 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
-    users.dias = { config, lib, ... }: {
-  	imports =
-    	[ 
-	    ./niri.nix
-    	];
-      	home.username = "dias";
-      	home.homeDirectory = "/home/dias";
-      	home.stateVersion = "25.05";
-  
-	# Install firefox.
-  	programs.firefox.enable = true;
+    users.dias =
+      { config, lib, ... }:
+      {
+        home.username = "dias";
+        home.homeDirectory = "/home/dias";
+        home.stateVersion = "25.05";
 
-  	programs.home-manager.enable = true;
-        
+        imports = [
+          ./niri.nix
+        ];
+
+        programs.firefox.enable = true;
+
+        programs.home-manager.enable = true;
+
         programs.git = {
           enable = true;
           userName = "Dias B. Raimguzhinov";
           userEmail = "raimguzhinov@protei-lab.ru";
-	  aliases = {
-		co = "checkout";
-		br = "branch";
-		ci = "commit";
-		st = "status";
-		hist = "log --oneline --decorate --graph --all";
-		bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
-	  };
-	  lfs.enable = true;
-	  extraConfig = {
-	      init.defaultBranch = "main";
-	      url."ssh://git@git.protei.ru/" = {
-		insteadOf = [ "https://git.protei.ru/" ];
-	      };
-	  };
+          aliases = {
+            co = "checkout";
+            br = "branch";
+            ci = "commit";
+            st = "status";
+            hist = "log --oneline --decorate --graph --all";
+            bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
+          };
+          lfs.enable = true;
+          extraConfig = {
+            init.defaultBranch = "main";
+            url."ssh://git@git.protei.ru/" = {
+              insteadOf = [ "https://git.protei.ru/" ];
+            };
+          };
         };
 
         programs.zsh = {
           enable = true;
           enableCompletion = true;
-	  autosuggestion.enable = true;
+          autosuggestion.enable = true;
           syntaxHighlighting.enable = true;
-          
           oh-my-zsh = {
             enable = true;
-            plugins = [ "git" "sudo" "docker" ];
+            plugins = [
+              "git"
+              "sudo"
+              "docker"
+            ];
             theme = "robbyrussell";
           };
-          
           shellAliases = {
             ll = "ls -l";
             la = "ls -la";
-	    e = "exit";
+            e = "exit";
+            clr = "clear";
           };
         };
 
@@ -97,7 +109,7 @@
           viAlias = true;
           vimAlias = true;
         };
-    };
+      };
   };
 
   networking.hostName = "nixos"; # Define your hostname.
@@ -153,26 +165,31 @@
     #media-session.enable = true;
   };
   services.cron = {
-      enable = true;
+    enable = true;
   };
-  
+
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
   # For global user
-  users.defaultUserShell=pkgs.zsh; 
+  users.defaultUserShell = pkgs.zsh;
   programs.zsh.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.dias = {
     isNormalUser = true;
     description = "dias";
-    extraGroups = [ "networkmanager" "wheel" "docker" "wireshark" ];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "docker"
+      "wireshark"
+    ];
     shell = pkgs.zsh;
   };
 
   security.polkit.enable = true; # polkit
-  security.pam.services.swaylock = {};
+  security.pam.services.swaylock = { };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -187,12 +204,13 @@
     docker-compose
     fuzzel
     gcc
-    gdu 
+    gdu
     git
     gnumake
     imagemagick
-    mako    
+    mako
     neovim
+    nixfmt-rfc-style
     obs-studio
     obsidian
     pfetch
@@ -201,7 +219,7 @@
     swaylock
     telegram-desktop
     thinkfan
-    vim 
+    vim
     vk-messenger
     waybar
     wget
@@ -209,10 +227,10 @@
     xwayland-satellite
     wireshark
   ];
-  
+
   fonts.packages = with pkgs; [
-     nerd-fonts.fira-code
-     nerd-fonts.roboto-mono
+    nerd-fonts.fira-code
+    nerd-fonts.roboto-mono
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -222,13 +240,13 @@
   #   enable = true;
   #   enableSSHSupport = true;
   # };
- 
+
   # List services that you want to enable:
   services.gnome.gnome-keyring.enable = true;
-  
+
   hardware.bluetooth.enable = true; # enables support for Bluetooth
   hardware.bluetooth.powerOnBoot = true; # powers up the default Bluetooth controller on boot
-  
+
   services.blueman.enable = true;
 
   # Enable the OpenSSH daemon.
