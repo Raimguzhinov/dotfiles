@@ -36,7 +36,7 @@
     options = "--delete-older-than 30d";
   };
 
-  # Install niri.
+  # Niri
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
   # nixpkgs.overlays = [niri.overlays.niri];
@@ -174,6 +174,7 @@
   # For global user
   users.defaultUserShell = pkgs.zsh;
   programs.zsh.enable = true;
+  programs.wireshark.enable = true;
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.dias = {
@@ -223,9 +224,9 @@
     vk-messenger
     waybar
     wget
+    wireshark
     wl-clipboard
     xwayland-satellite
-    wireshark
   ];
 
   fonts.packages = with pkgs; [

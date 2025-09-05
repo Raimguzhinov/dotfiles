@@ -30,6 +30,8 @@
     spawn-at-startup = [
       { command = [ "waybar" ]; }
       { command = [ "mako" ]; }
+      { command = [ "xwayland-satellite" ]; }
+      { command = [ "AmneziaVPN-service" ]; }
       # { argv = ["swaybg" "--image" "/path/to/wallpaper.jpg"]; }
       # { argv = ["~/.config/niri/scripts/startup.sh"]; }
       # { sh = "echo $NIRI_SOCKET > ~/.niri-socket"; }
