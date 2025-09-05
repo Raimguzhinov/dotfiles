@@ -11,7 +11,7 @@
 [core]
     pager = delta
     autocrlf = input
-	editor = /usr/bin/nvim
+    editor = /usr/bin/nvim
 [interactive]
     diffFilter = delta --color-only --features=interactive
 [delta]
@@ -31,9 +31,7 @@
 [url "ssh://git@git.protei.ru/"]
     insteadOf = https://git.protei.ru/
 [filter "lfs"]
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
-	process = git-lfs filter-process
-	required = true
-[safe]
-	directory = /home/dias/Work/uc-test-framework/
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
