@@ -26,6 +26,9 @@
         click-method = "clickfinger";
       };
     };
+    layout = {
+      default-column-width.proportion = 0.95;
+    };
     prefer-no-csd = true;
     spawn-at-startup = [
       { command = [ "waybar" ]; }

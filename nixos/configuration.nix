@@ -4,6 +4,7 @@
 
 {
   config,
+  lib,
   pkgs,
   niri,
   home-manager,
@@ -101,6 +102,7 @@
             la = "ls -la";
             e = "exit";
             clr = "clear";
+            pass = "gopass";
           };
         };
 
@@ -108,6 +110,7 @@
           enable = true;
           viAlias = true;
           vimAlias = true;
+          defaultEditor = true;
         };
       };
   };
@@ -195,40 +198,6 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  # List packages installed in system profile. To search, run:
-  # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    alacritty
-    amnezia-vpn
-    brightnessctl
-    chafa # terminal image viewer
-    docker-compose
-    fuzzel
-    gcc
-    gdu
-    git
-    gnumake
-    imagemagick
-    mako
-    neovim
-    nixfmt-rfc-style
-    obs-studio
-    obsidian
-    pfetch
-    swaybg
-    swayidle
-    swaylock
-    telegram-desktop
-    thinkfan
-    vim
-    vk-messenger
-    waybar
-    wget
-    wireshark
-    wl-clipboard
-    xwayland-satellite
-  ];
-
   fonts.packages = with pkgs; [
     nerd-fonts.fira-code
     nerd-fonts.roboto-mono
@@ -236,11 +205,13 @@
 
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
-  # programs.mtr.enable = true;
-  # programs.gnupg.agent = {
-  #   enable = true;
-  #   enableSSHSupport = true;
-  # };
+  programs.mtr.enable = true;
+  services.pcscd.enable = true;
+  programs.gnupg.agent = {
+    enable = true;
+    enableSSHSupport = true;
+    pinentryPackage = pkgs.pinentry-gnome3;
+  };
 
   # List services that you want to enable:
   services.gnome.gnome-keyring.enable = true;
@@ -269,4 +240,40 @@
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "25.05"; # Did you read the comment?
 
+  # List packages installed in system profile. To search, run:
+  # $ nix search wget
+  environment.systemPackages = with pkgs; [
+    alacritty
+    amnezia-vpn
+    brightnessctl
+    chafa # terminal image viewer
+    docker-compose
+    fuzzel
+    gcc
+    gdu
+    git
+    gnumake
+    gnupg
+    gopass
+    imagemagick
+    mako
+    neovim
+    nixfmt-rfc-style
+    obs-studio
+    obsidian
+    pfetch
+    #pinentry-gtk2
+    swaybg
+    swayidle
+    swaylock
+    telegram-desktop
+    thinkfan
+    vim
+    vk-messenger
+    waybar
+    wget
+    wireshark
+    wl-clipboard
+    xwayland-satellite
+  ];
 }
