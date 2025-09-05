@@ -7,6 +7,7 @@
   lib,
   pkgs,
   niri,
+  zen-browser,
   home-manager,
   ...
 }:
@@ -55,6 +56,8 @@
         home.stateVersion = "25.05";
 
         imports = [
+          zen-browser.homeModules.beta
+          ./zen-browser.nix
           ./niri.nix
         ];
 
@@ -262,7 +265,6 @@
     obs-studio
     obsidian
     pfetch
-    #pinentry-gtk2
     swaybg
     swayidle
     swaylock
