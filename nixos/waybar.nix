@@ -8,12 +8,12 @@
         layer = "top";
         position = "right";
         width = 50;
+
         modules-left = [
           "custom/menu"
           "niri/workspaces"
         ];
         modules-center = [
-          "niri/mode"
           "niri/window"
         ];
         modules-right = [
@@ -22,15 +22,19 @@
           "clock"
           "wireplumber#sink"
           "battery"
-          # "cpu"
-          # "memory"
-          # "network"
+          "cpu"
+          "memory"
           "idle_inhibitor"
-          # "custom/color-picker"
-          # "custom/notification"
-          # "custom/clipboard"
-          # "custom/power"
+          "custom/color-picker"
+          "custom/clipboard"
+          "custom/power"
         ];
+
+        "custom/menu" = {
+          format = "";
+          on-click = "exec nwg-drawer";
+          tooltip = false;
+        };
 
         "niri/workspaces" = {
           format = "{icon}";
@@ -43,6 +47,18 @@
           expand = true;
         };
 
+        "niri/window" = {
+          format = "{}";
+          max-length = 20;
+          tooltip = true;
+          rotate = 270;
+        };
+
+        "tray" = {
+          icon-size = 14;
+          spacing = 10;
+        };
+
         "niri/language" = {
           format = "  {}";
           on-click = "niri msg action switch-layout next";
@@ -52,23 +68,18 @@
           tooltip = false;
         };
 
-        "niri/mode" = {
-          format = "<span style=\"italic\">{}</span>";
-          tooltip = false;
-        };
-
-        "niri/window" = {
-          format = "{}";
-          max-length = 20;
+        "clock" = {
           tooltip = true;
-          rotate = 270;
-        };
-	
-        "idle_inhibitor" = {
-          format = "{icon}";
-          format-icons = {
-            "activated" = "";
-            "deactivated" = "";
+          tooltip-format = "<big>{:%A %H:%M:%S}</big>\n<tt><small>{calendar}</small></tt>";
+          interval = 1;
+          calendar = {
+            mode = "month";
+            format = {
+              "months" = "<span color='#ff6699'><b>{}</b></span>";
+              "days" = "<span color='#cdd6f4'><b>{}</b></span>";
+              "weekdays" = "<span color='#7CD37C'><b>{}</b></span>";
+              "today" = "<span color='#ffcc66'><b>{}</b></span>";
+            };
           };
         };
 
@@ -81,13 +92,8 @@
             ""
           ];
           on-click = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
-          on-scroll-down = "wpctl set-volume @DEFAULT_SINK@ 1%-";
-          on-scroll-up = "wpctl set-volume @DEFAULT_SINK@ 1%+";
-        };
-
-        "clock" = {
-          tooltip-format = "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>";
-          format-alt = "{:%Y-%m-%d}";
+          on-scroll-down = "wpctl set-volume @DEFAULT_SINK@ 0.1%-";
+          on-scroll-up = "wpctl set-volume @DEFAULT_SINK@ 0.1%+";
         };
 
         "battery" = {
@@ -101,10 +107,57 @@
           ];
         };
 
-        "tray" = {
-          icon-size = 16;
-          spacing = 10;
+        "cpu" = {
+          interval = 5;
+          format = " {usage}";
+          states = {
+            "warning" = 70;
+            "critical" = 90;
+          };
+          on-click = "alacritty -e htop";
         };
+
+        "memory" = {
+          interval = 30;
+          format = " {}";
+          states = {
+            "warning" = 70;
+            "critical" = 90;
+          };
+          on-click = "alacritty -e htop";
+        };
+
+        "idle_inhibitor" = {
+          format = "{icon}";
+          format-icons = {
+            "activated" = "";
+            "deactivated" = "";
+          };
+        };
+
+        "custom/color-picker" = {
+          format = "";
+          on-click = "exec wl-color-picker";
+          tooltip = false;
+        };
+
+        "custom/clipboard" = {
+          format = "";
+          interval = "once";
+          return-type = "json";
+          on-click = "swaymsg -q exec '$clipboard'; pkill -RTMIN+9 waybar";
+          on-click-right = "swaymsg -q exec '$clipboard-del'; pkill -RTMIN+9 waybar";
+          on-click-middle = "rm -f ~/.cache/cliphist/db; pkill -RTMIN+9 waybar";
+          exec = "printf '{\"tooltip\":\"%s\"}' $(cliphist list | wc -l)' item(s) in the clipboard\r(Mid click to clear)'";
+          exec-if = "[ -x \"$(command -v cliphist)\" ] && [ $(cliphist list | wc -l) -gt 0 ]";
+          signal = 9;
+        };
+
+        "custom/power" = {
+          format = "";
+          on-click = "wlogout -p layer-shell";
+        };
+
       }
     ];
     style = ''
@@ -201,22 +254,17 @@
       }
 
       #clock,
-      #custom-playerctl,
       #custom-power,
-      #custom-weather,
       #custom-clipboard,
       #custom-menu,
       #battery,
       #cpu,
       #language,
       #memory,
-      #network,
       #wireplumber,
       #tray,
-      #mode,
       #idle_inhibitor,
-      #custom-color-picker,
-      #custom-notification {
+      #custom-color-picker {
           border-radius: 3px;
           padding-left: 5px;
           min-height: 35px;
@@ -225,16 +273,6 @@
       }
 
       #clock {
-          background: @theme_selected_my_bg_color;
-          color: @theme_selected_my_fg_color;
-      }
-
-      #custom-weather {
-          background: @theme_selected_my_bg_color;
-          color: @theme_selected_my_fg_color;
-      }
-
-      #custom-playerctl {
           background: @theme_selected_my_bg_color;
           color: @theme_selected_my_fg_color;
       }
@@ -305,37 +343,12 @@
           color: @theme_selected_my_fg_color;
       }
 
-      #custom-gpu-usage {
-          background: @theme_selected_my_bg_color;
-          color: @theme_selected_my_fg_color;
-      }
-
-      #network {
-          background: @theme_selected_my_bg_color;
-          color: @theme_selected_my_fg_color;
-      }
-
-      #network.disconnected {
-          background: @theme_selected_my_bg_color;
-          color: @theme_selected_my_fg_color;
-      }
-
       #wireplumber {
           background: @theme_selected_my_bg_color;
           color: @theme_selected_my_fg_color;
       }
 
       #wireplumber.muted {
-          background: @theme_selected_my_bg_color;
-          color: @theme_selected_my_fg_color;
-      }
-
-      #custom-wf-recorder {
-          color: @error_color;
-          padding-right: 5px;
-      }
-
-      #custom-notification {
           background: @theme_selected_my_bg_color;
           color: @theme_selected_my_fg_color;
       }

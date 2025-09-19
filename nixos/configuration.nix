@@ -55,9 +55,9 @@
         home.homeDirectory = "/home/dias";
         home.stateVersion = "25.05";
         programs.home-manager.enable = true;
-	home.packages = with pkgs; [
-	  networkmanagerapplet
-	];
+        home.packages = with pkgs; [
+          networkmanagerapplet
+        ];
 
         dconf = {
           enable = true;
@@ -100,8 +100,20 @@
             bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
           };
           lfs.enable = true;
+          delta.enable = true;
+          delta.options = {
+            line-numbers = true;
+            side-by-side = true;
+          };
           extraConfig = {
+            core.editor = "nvim";
             init.defaultBranch = "main";
+            pull.rebase = true;
+            rebase = {
+              autoSquash = true;
+              autoStash = true;
+              updateRefs = true;
+            };
             url."ssh://git@git.protei.ru/" = {
               insteadOf = [ "https://git.protei.ru/" ];
             };
@@ -164,7 +176,7 @@
   time.timeZone = "Asia/Novosibirsk";
 
   # Select internationalisation properties.
-  i18n.defaultLocale = "en_US.UTF-8";
+  i18n.defaultLocale = "ru_RU.UTF-8";
 
   i18n.extraLocaleSettings = {
     LC_ADDRESS = "ru_RU.UTF-8";
@@ -289,6 +301,7 @@
     alacritty
     brightnessctl
     chafa # terminal image viewer
+    cliphist
     docker-compose
     fuzzel
     gcc
@@ -303,6 +316,7 @@
     mako
     neovim
     nixfmt-rfc-style
+    nwg-drawer
     obs-studio
     obsidian
     pfetch
@@ -317,6 +331,8 @@
     wget
     wireshark
     wl-clipboard
+    wl-color-picker
+    wlogout
     xwayland-satellite
     zip
   ];
