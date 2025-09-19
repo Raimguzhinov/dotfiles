@@ -54,16 +54,38 @@
         home.username = "dias";
         home.homeDirectory = "/home/dias";
         home.stateVersion = "25.05";
+        programs.home-manager.enable = true;
+	home.packages = with pkgs; [
+	  networkmanagerapplet
+	];
+
+        dconf = {
+          enable = true;
+          settings = {
+            "org/gnome/desktop/interface" = {
+              color-scheme = "prefer-dark";
+            };
+          };
+        };
+
+        gtk = {
+          enable = true;
+          theme = {
+            name = "Adwaita-dark";
+            package = pkgs.gnome-themes-extra;
+          };
+          iconTheme = {
+            package = pkgs.adwaita-icon-theme;
+            name = "adwaita-icon-theme";
+          };
+        };
 
         imports = [
           zen-browser.homeModules.beta
           ./zen-browser.nix
           ./niri.nix
+          ./waybar.nix
         ];
-
-        programs.firefox.enable = true;
-
-        programs.home-manager.enable = true;
 
         programs.git = {
           enable = true;
@@ -115,7 +137,14 @@
           vimAlias = true;
           defaultEditor = true;
         };
+
       };
+  };
+
+  qt = {
+    enable = true;
+    platformTheme = "gnome";
+    style = "adwaita-dark";
   };
 
   networking.hostName = "nixos"; # Define your hostname.
@@ -126,7 +155,10 @@
   # networking.proxy.noProxy = "127.0.0.1,localhost,internal.domain";
 
   # Enable networking
-  networking.networkmanager.enable = true;
+  networking.networkmanager = {
+    enable = true;
+    wifi.powersave = true;
+  };
 
   # Set your time zone.
   time.timeZone = "Asia/Novosibirsk";
@@ -179,8 +211,13 @@
 
   # For global user
   users.defaultUserShell = pkgs.zsh;
-  programs.zsh.enable = true;
-  programs.wireshark.enable = true;
+  programs = {
+    zsh.enable = true;
+    wireshark.enable = true;
+    amnezia-vpn.enable = true;
+    thunderbird.enable = true;
+    nm-applet.enable = true;
+  };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.dias = {
@@ -204,6 +241,9 @@
   fonts.packages = with pkgs; [
     nerd-fonts.fira-code
     nerd-fonts.roboto-mono
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.zed-mono
+    nerd-fonts.ubuntu-sans
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -247,7 +287,6 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     alacritty
-    amnezia-vpn
     brightnessctl
     chafa # terminal image viewer
     docker-compose
@@ -258,7 +297,9 @@
     gnumake
     gnupg
     gopass
+    htop
     imagemagick
+    jq
     mako
     neovim
     nixfmt-rfc-style
@@ -270,12 +311,13 @@
     swaylock
     telegram-desktop
     thinkfan
+    unzip
     vim
     vk-messenger
-    waybar
     wget
     wireshark
     wl-clipboard
     xwayland-satellite
+    zip
   ];
 }

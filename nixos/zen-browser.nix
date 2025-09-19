@@ -31,25 +31,24 @@
           Fingerprinting = true;
         };
         ExtensionSettings = mkExtensionSettings {
-          "wappalyzer@crunchlabz.com" = "wappalyzer";
-          "{85860b32-02a8-431a-b2b1-40fbd64c9c69}" = "github-file-icons";
+	  "firefox@tampermonkey.net" = "tampermonkey";
         };
       };
     profiles."default" = {
       containersForce = true;
       containers = {
         Personal = {
-          color = "purple";
+          color = "blue";
           icon = "fingerprint";
           id = 1;
         };
         Work = {
-          color = "blue";
+          color = "yellow";
           icon = "briefcase";
           id = 2;
         };
         Shopping = {
-          color = "yellow";
+          color = "purple";
           icon = "dollar";
           id = 3;
         };
@@ -60,20 +59,21 @@
           containers = config.programs.zen-browser.profiles."default".containers;
         in
         {
-          "Space" = {
+          "tmp" = {
             id = "c6de089c-410d-4206-961d-ab11f988d40a";
+	    icon = "👽";
             position = 1000;
           };
-          "Work" = {
+          "dev" = {
             id = "cdd10fab-4fc5-494b-9041-325e5759195b";
-            icon = "chrome://browser/skin/zen-icons/selectable/star-2.svg";
+            icon = "🔨";
             container = containers."Work".id;
             position = 2000;
           };
-          "Shopping" = {
+          "study" = {
             id = "78aabdad-8aae-4fe0-8ff0-2a0c6c4ccc24";
-            icon = "💸";
-            container = containers."Shopping".id;
+            icon = "📚";
+            container = containers."Personal".id;
             position = 3000;
           };
         };
