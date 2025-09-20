@@ -4,7 +4,7 @@
   programs.niri.settings = {
     environment = {
       CLUTTER_BACKEND = "wayland";
-      DISPLAY = null;
+      DISPLAY = ":0";
       GTK_BACKEND = "wayland,x11";
       MOZ_ENABLE_WAYLAND = "1";
       NIXOS_OZONE_WL = "1";
@@ -34,9 +34,7 @@
       { command = [ "waybar" ]; }
       { command = [ "mako" ]; }
       { command = [ "xwayland-satellite" ]; }
-      # { argv = ["swaybg" "--image" "/path/to/wallpaper.jpg"]; }
-      # { argv = ["~/.config/niri/scripts/startup.sh"]; }
-      # { sh = "echo $NIRI_SOCKET > ~/.niri-socket"; }
+      { command = [ "bash" "-c" "wl-paste --watch cliphist store"]; }
     ];
     binds =
       with pkgs.lib;
@@ -174,34 +172,4 @@
         })
       ];
   };
-
-  #  environment.systemPackages = with pkgs; [
-  #    alacritty
-  #    amnezia-vpn
-  #    chafa # terminal image viewer
-  #    docker-compose
-  #    fuzzel
-  #    gcc
-  #    gdu
-  #    git
-  #    gnumake
-  #    imagemagick
-  #    mako
-  #    neovim
-  #    obs-studio
-  #    obsidian
-  #    pfetch
-  #    swaybg
-  #    swayidle
-  #    swaylock
-  #    telegram-desktop
-  #    thinkfan
-  #    vim
-  #    vk-messenger
-  #    waybar
-  #    wget
-  #    wl-clipboard
-  #    xwayland-satellite
-  #    wireshark
-  #  ];
 }

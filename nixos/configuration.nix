@@ -1,17 +1,16 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
-
 {
   config,
   lib,
   pkgs,
   niri,
+  nvf,
   zen-browser,
   home-manager,
   ...
 }:
-
 {
   imports = [
     # Include the results of the hardware scan.
@@ -81,10 +80,13 @@
         };
 
         imports = [
+          nvf.homeManagerModules.default
           zen-browser.homeModules.beta
           ./zen-browser.nix
+          ./neovim.nix
           ./niri.nix
           ./waybar.nix
+          ./jetbrains.nix
         ];
 
         programs.git = {
@@ -143,13 +145,10 @@
           };
         };
 
-        programs.neovim = {
+        programs.direnv = {
           enable = true;
-          viAlias = true;
-          vimAlias = true;
-          defaultEditor = true;
+          nix-direnv.enable = true;
         };
-
       };
   };
 
@@ -302,6 +301,7 @@
     brightnessctl
     chafa # terminal image viewer
     cliphist
+    delve
     docker-compose
     fuzzel
     gcc
@@ -314,7 +314,6 @@
     imagemagick
     jq
     mako
-    neovim
     nixfmt-rfc-style
     nwg-drawer
     obs-studio
@@ -327,7 +326,6 @@
     thinkfan
     unzip
     vim
-    vk-messenger
     wget
     wireshark
     wl-clipboard

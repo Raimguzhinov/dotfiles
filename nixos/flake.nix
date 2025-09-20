@@ -4,6 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     niri.url = "github:sodiboo/niri-flake";
+    nvf.url = "github:notashelf/nvf";
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -19,6 +20,7 @@
       self,
       nixpkgs,
       niri,
+      nvf,
       zen-browser,
       home-manager,
       ...
