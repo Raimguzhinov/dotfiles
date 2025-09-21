@@ -34,7 +34,25 @@
       { command = [ "waybar" ]; }
       { command = [ "mako" ]; }
       { command = [ "xwayland-satellite" ]; }
-      { command = [ "bash" "-c" "wl-paste --watch cliphist store"]; }
+      {
+        command = [
+          "bash"
+          "-c"
+          "wl-paste --watch cliphist store"
+        ];
+      }
+      {
+        command = [
+          "bash"
+          "-c"
+          # bash
+          ''
+            ${pkgs.swww}/bin/swww-daemon &
+            sleep 0.5
+            ${pkgs.swww}/bin/swww img $HOME/dotfiles/SpecificDots/Wallpaper/nixos.png
+          ''
+        ];
+      }
     ];
     binds =
       with pkgs.lib;

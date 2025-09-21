@@ -31,7 +31,7 @@
           Fingerprinting = true;
         };
         ExtensionSettings = mkExtensionSettings {
-	  "firefox@tampermonkey.net" = "tampermonkey";
+          "firefox@tampermonkey.net" = "tampermonkey";
         };
       };
     profiles."default" = {
@@ -61,7 +61,7 @@
         {
           "tmp" = {
             id = "c6de089c-410d-4206-961d-ab11f988d40a";
-	    icon = "👽";
+            icon = "👽";
             position = 1000;
           };
           "dev" = {

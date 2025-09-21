@@ -143,6 +143,7 @@
             e = "exit";
             clr = "clear";
             pass = "gopass";
+            open = "xdg-open";
           };
         };
 
@@ -155,7 +156,7 @@
     style = "adwaita-dark";
   };
 
-  networking.hostName = "nixos"; # Define your hostname.
+  networking.hostName = "raimguzhinov"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
@@ -295,6 +296,7 @@
   # $ nix search wget
   environment.systemPackages = with pkgs; [
     alacritty
+    alsa-utils
     brightnessctl
     chafa # terminal image viewer
     cliphist
@@ -320,6 +322,7 @@
     swaybg
     swayidle
     swaylock
+    swww
     telegram-desktop
     thinkfan
     unzip
