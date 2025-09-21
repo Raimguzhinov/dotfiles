@@ -87,6 +87,7 @@
           ./niri.nix
           ./waybar.nix
           ./jetbrains.nix
+          ./development.nix
         ];
 
         programs.git = {
@@ -145,10 +146,6 @@
           };
         };
 
-        programs.direnv = {
-          enable = true;
-          nix-direnv.enable = true;
-        };
       };
   };
 
@@ -313,6 +310,7 @@
     htop
     imagemagick
     jq
+    lazygit
     mako
     nixfmt-rfc-style
     nwg-drawer
