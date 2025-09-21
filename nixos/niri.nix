@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   programs.niri.settings = {
@@ -97,8 +102,39 @@
       mergeAttrsList [
         {
           "Mod+Shift+Slash".action = show-hotkey-overlay;
-          "Mod+Return".action = spawn "alacritty";
-          "Mod+A".action = spawn "fuzzel";
+          "Mod+Return" = {
+            action = spawn "alacritty";
+            hotkey-overlay.title = "Open a Terminal: alacritty";
+          };
+          "Mod+A" = {
+            action = spawn "rofi" "-show" "drun";
+            hotkey-overlay.title = "Run an Application: rofi";
+          };
+          "Mod+O" = {
+            action =
+              let
+                rofiCalc = pkgs.writeShellScriptBin "rofiCalc" ''
+                  rofi -show calc -no-show-match -no-sort -calc-command "echo -n '{result}' | wl-copy"
+                '';
+              in
+              spawn "${lib.getExe rofiCalc}";
+            hotkey-overlay.title = "Calculator: rofi-calc";
+          };
+          "Mod+V" = {
+            action =
+              let
+                cliphistRofi = pkgs.writeShellScriptBin "cliphistRofi" ''
+                  cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 \
+                  -width 35 | cliphist decode | wl-copy
+                '';
+              in
+              spawn "${lib.getExe cliphistRofi}";
+            hotkey-overlay.title = "Clipboard: cliphist";
+          };
+          "Mod+Shift+P" = {
+            action = spawn "tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
+            hotkey-overlay.title = "Password Manager: tessen";
+          };
           # "Mod+L".action = spawn "swaylock";
 
           XF86AudioRaiseVolume = {

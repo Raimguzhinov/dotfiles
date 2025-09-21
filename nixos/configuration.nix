@@ -86,6 +86,7 @@
           ./neovim.nix
           ./niri.nix
           ./waybar.nix
+          ./rofi.nix
           ./jetbrains.nix
           ./development.nix
         ];
@@ -302,7 +303,7 @@
     cliphist
     delve
     docker-compose
-    fuzzel
+    fzf
     gcc
     gdu
     git
@@ -324,6 +325,7 @@
     swaylock
     swww
     telegram-desktop
+    tessen
     thinkfan
     unzip
     vim
