@@ -32,7 +32,7 @@
       };
     };
     layout = {
-      default-column-width.proportion = 0.95;
+      default-column-width.proportion = 0.975;
     };
     prefer-no-csd = true;
     spawn-at-startup = [
