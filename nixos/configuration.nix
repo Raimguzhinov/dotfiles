@@ -303,6 +303,7 @@
     cliphist
     delve
     docker-compose
+    firefoxpwa
     fzf
     gcc
     gdu
