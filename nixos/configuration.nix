@@ -79,6 +79,33 @@
           };
         };
 
+        services.mako = {
+          enable = true;
+          settings = {
+            border-radius = 5;
+            border-size = 3;
+            default-timeout = 4000;
+            ignore-timeout = 1;
+            icons = 1;
+            layer = "overlay";
+            sort = "-time";
+            "urgency=low" = {
+              border-color = lib.mkForce "#cccccc";
+            };
+            "urgency=normal" = {
+              border-color = lib.mkForce "#7fc8ff";
+            };
+            "urgency=high" = {
+              border-color = lib.mkForce "#bf616a";
+              default-timeout = 5000;
+            };
+            "category=mpd" = {
+              default-timeout = 2000;
+              group-by = "category";
+            };
+          };
+        };
+
         imports = [
           nvf.homeManagerModules.default
           zen-browser.homeModules.beta
@@ -147,6 +174,8 @@
             open = "xdg-open";
           };
         };
+
+        programs.yazi.enable = true;
 
       };
   };
@@ -276,7 +305,11 @@
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
-  services.gvfs.enable = true; # for nautilus
+
+  # Nautilus
+  services.gvfs.enable = true;
+  environment.pathsToLink = [ "share/thumbnailers" ];
+
   virtualisation.docker.enable = true;
 
   # Open ports in the firewall.
@@ -315,7 +348,10 @@
     imagemagick
     jq
     lazygit
-    mako
+    libnotify
+    libheif
+    libheif.out
+    nautilus
     nixfmt-rfc-style
     nwg-drawer
     obs-studio

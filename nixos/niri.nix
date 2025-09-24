@@ -59,6 +59,12 @@
         ];
       }
     ];
+    layer-rules = [
+      {
+        matches = [ { namespace = "^notifications$"; } ];
+        block-out-from = "screen-capture";
+      }
+    ];
     binds =
       with pkgs.lib;
       let
@@ -208,6 +214,15 @@
           prefixes."Mod+Alt" = "move-window-up-or-to-workspace";
           prefixes."Mod+Shift" = "focus-monitor";
           prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
+          substitutions."monitor-column" = "monitor";
+          substitutions."monitor-window" = "monitor";
+        })
+        (binds {
+          suffixes.MouseForward = "column-left";
+          suffixes.MouseBack = "column-right";
+          suffixes.WheelScrollUp = "workspace-up";
+          suffixes.WheelScrollDown = "workspace-down";
+          prefixes.Mod = "focus";
           substitutions."monitor-column" = "monitor";
           substitutions."monitor-window" = "monitor";
         })

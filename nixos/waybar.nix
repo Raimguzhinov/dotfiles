@@ -209,7 +209,7 @@
       #waybar {
           background-color: #1f1e25;
           font-family: "UbuntuSans Nerd Font", "UbuntuSansMono NF";
-          font-size: 12px;
+          font-size: 14px;
       }
 
       #window {
