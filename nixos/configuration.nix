@@ -55,6 +55,7 @@
         home.stateVersion = "25.05";
         programs.home-manager.enable = true;
         home.packages = with pkgs; [
+          amnezia-vpn
           chromium
           networkmanagerapplet
         ];
@@ -178,7 +179,10 @@
 
         programs.yazi.enable = true;
 
-        programs.chromium.enable = true;
+        programs.chromium = {
+          enable = true;
+          extensions = [ ];
+        };
 
       };
   };
@@ -364,7 +368,7 @@
     swayidle
     swaylock
     swww
-    telegram-desktop
+    tdesktop
     tessen
     thinkfan
     unzip
