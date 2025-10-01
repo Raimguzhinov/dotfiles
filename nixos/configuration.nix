@@ -50,10 +50,10 @@
     users.dias =
       { config, lib, ... }:
       {
+        programs.home-manager.enable = true;
         home.username = "dias";
         home.homeDirectory = "/home/dias";
         home.stateVersion = "25.05";
-        programs.home-manager.enable = true;
         home.packages = with pkgs; [
           amnezia-vpn
           chromium
@@ -76,8 +76,8 @@
             package = pkgs.gnome-themes-extra;
           };
           iconTheme = {
-            package = pkgs.adwaita-icon-theme;
-            name = "adwaita-icon-theme";
+            name = "Papirus-Dark";
+            package = pkgs.papirus-icon-theme;
           };
         };
 
@@ -165,16 +165,31 @@
               "sudo"
               "docker"
             ];
-            theme = "robbyrussell";
+            # theme = "robbyrussell";
           };
           shellAliases = {
             ll = "ls -l";
             la = "ls -la";
             e = "exit";
             clr = "clear";
+            cat = "bat";
             pass = "gopass";
             open = "xdg-open";
+            dbui = "nvim +DBUI";
           };
+        };
+
+        programs.zoxide = {
+          enable = true;
+          enableBashIntegration = true;
+          enableZshIntegration = true;
+          options = [ "--cmd cd" ];
+        };
+
+        programs.atuin = {
+          enable = true;
+          enableBashIntegration = true;
+          enableZshIntegration = true;
         };
 
         programs.zellij = {
@@ -183,7 +198,12 @@
             theme = "ao";
             # default_layout = "compact"; # Hide the bar
             default_shell = "zsh";
-            ui.pane_frames.hide_session_name = true;
+            simplified_ui = true;
+            show_startup_tips = true;
+            ui.pane_frames = {
+              rounded_corners = false;
+              hide_session_name = true;
+            };
           };
         };
 
@@ -196,6 +216,9 @@
             mgr = {
               show_hidden = true;
             };
+          };
+          plugins = {
+            sudo = pkgs.yaziPlugins.sudo;
           };
           keymap = {
             mgr.prepend_keymap = [
@@ -216,6 +239,49 @@
                 desc = "Go to docker Protei services";
               }
             ];
+          };
+        };
+
+        programs.eza = {
+          enable = true;
+          enableZshIntegration = true;
+          enableBashIntegration = true;
+          colors = "auto";
+          icons = "auto";
+        };
+
+        programs.starship = {
+          enable = true;
+          enableInteractive = true;
+          enableTransience = true;
+          enableZshIntegration = true;
+        };
+
+        programs.bat = {
+          enable = true;
+          extraPackages = with pkgs.bat-extras; [
+            batgrep
+            batman
+            batpipe
+            batwatch
+          ];
+        };
+
+        programs.fd.enable = true;
+        programs.ripgrep.enable = true;
+        programs.lazygit.enable = true;
+
+        programs.pgcli = {
+          enable = true;
+          settings = {
+            main = {
+              smart_completion = true;
+              vi = true;
+            };
+            "named queries" = {
+              company0 = "SET search_path TO company0";
+              public = "SET search_path TO public";
+            };
           };
         };
 
@@ -263,6 +329,8 @@
     LC_TELEPHONE = "ru_RU.UTF-8";
     LC_TIME = "ru_RU.UTF-8";
   };
+
+  services.dbus.enable = true;
 
   # Enable the X11 windowing system.
   services.xserver.enable = true;
@@ -388,28 +456,34 @@
     gcc
     gdu
     git
+    gnome-themes-extra
     gnumake
     gnupg
     gopass
+    gtk3
+    hicolor-icon-theme
     htop
     imagemagick
     jq
     lazygit
-    libnotify
     libheif
     libheif.out
+    libnotify
+    libsForQt5.qt5.qtwayland # для Qt приложений
     nautilus
     nixfmt-rfc-style
     nurl # nix fetcher
     nwg-drawer
     obs-studio
     obsidian
+    papirus-icon-theme
     pfetch
+    postgresql
     swaybg
     swayidle
     swaylock
     swww
-    tdesktop
+    telegram-desktop
     tessen
     thinkfan
     unzip
