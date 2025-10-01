@@ -31,6 +31,11 @@
         click-method = "clickfinger";
       };
     };
+    outputs = {
+      eDP-1 = {
+        scale = 1.25;
+      };
+    };
     layout = {
       default-column-width.proportion = 0.975;
     };

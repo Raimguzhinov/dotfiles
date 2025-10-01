@@ -177,7 +177,47 @@
           };
         };
 
-        programs.yazi.enable = true;
+        programs.zellij = {
+          enable = true;
+          settings = {
+            theme = "ao";
+            # default_layout = "compact"; # Hide the bar
+            default_shell = "zsh";
+            ui.pane_frames.hide_session_name = true;
+          };
+        };
+
+        programs.yazi = {
+          enable = true;
+          enableZshIntegration = true;
+          enableBashIntegration = true;
+          shellWrapperName = "rr";
+          settings = {
+            mgr = {
+              show_hidden = true;
+            };
+          };
+          keymap = {
+            mgr.prepend_keymap = [
+              {
+                on = [
+                  "g"
+                  "s"
+                ];
+                run = "cd /home/dias/Work/core/services";
+                desc = "Go to local Protei services";
+              }
+              {
+                on = [
+                  "g"
+                  "S"
+                ];
+                run = "cd /var/lib/docker/volumes";
+                desc = "Go to docker Protei services";
+              }
+            ];
+          };
+        };
 
         programs.chromium = {
           enable = true;
@@ -360,6 +400,7 @@
     libheif.out
     nautilus
     nixfmt-rfc-style
+    nurl # nix fetcher
     nwg-drawer
     obs-studio
     obsidian
