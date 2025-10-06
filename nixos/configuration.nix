@@ -47,6 +47,19 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
+    users.root =
+      { config, lib, ... }:
+      {
+        programs.home-manager.enable = true;
+        home.username = "root";
+        home.homeDirectory = "/root";
+        home.stateVersion = "25.05";
+        imports = [
+          nvf.homeManagerModules.default
+          ./neovim.nix
+          ./tools.nix
+        ];
+      };
     users.dias =
       { config, lib, ... }:
       {
@@ -118,172 +131,8 @@
           ./rofi.nix
           ./jetbrains.nix
           ./development.nix
+          ./tools.nix
         ];
-
-        programs.git = {
-          enable = true;
-          userName = "Dias B. Raimguzhinov";
-          userEmail = "raimguzhinov@protei-lab.ru";
-          aliases = {
-            co = "checkout";
-            br = "branch";
-            ci = "commit";
-            st = "status";
-            hist = "log --oneline --decorate --graph --all";
-            bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
-          };
-          lfs.enable = true;
-          delta.enable = true;
-          delta.options = {
-            line-numbers = true;
-            side-by-side = true;
-          };
-          extraConfig = {
-            core.editor = "nvim";
-            init.defaultBranch = "main";
-            pull.rebase = true;
-            rebase = {
-              autoSquash = true;
-              autoStash = true;
-              updateRefs = true;
-            };
-            url."ssh://git@git.protei.ru/" = {
-              insteadOf = [ "https://git.protei.ru/" ];
-            };
-          };
-        };
-
-        programs.zsh = {
-          enable = true;
-          enableCompletion = true;
-          autosuggestion.enable = true;
-          syntaxHighlighting.enable = true;
-          oh-my-zsh = {
-            enable = true;
-            plugins = [
-              "git"
-              "sudo"
-              "docker"
-            ];
-            # theme = "robbyrussell";
-          };
-          shellAliases = {
-            ll = "ls -l";
-            la = "ls -la";
-            e = "exit";
-            clr = "clear";
-            cat = "bat";
-            pass = "gopass";
-            open = "xdg-open";
-            dbui = "nvim +DBUI";
-          };
-        };
-
-        programs.zoxide = {
-          enable = true;
-          enableBashIntegration = true;
-          enableZshIntegration = true;
-          options = [ "--cmd cd" ];
-        };
-
-        programs.atuin = {
-          enable = true;
-          enableBashIntegration = true;
-          enableZshIntegration = true;
-        };
-
-        programs.zellij = {
-          enable = true;
-          settings = {
-            theme = "ao";
-            # default_layout = "compact"; # Hide the bar
-            default_shell = "zsh";
-            simplified_ui = true;
-            show_startup_tips = true;
-            ui.pane_frames = {
-              rounded_corners = false;
-              hide_session_name = true;
-            };
-          };
-        };
-
-        programs.yazi = {
-          enable = true;
-          enableZshIntegration = true;
-          enableBashIntegration = true;
-          shellWrapperName = "rr";
-          settings = {
-            mgr = {
-              show_hidden = true;
-            };
-          };
-          plugins = {
-            sudo = pkgs.yaziPlugins.sudo;
-          };
-          keymap = {
-            mgr.prepend_keymap = [
-              {
-                on = [
-                  "g"
-                  "s"
-                ];
-                run = "cd /home/dias/Work/core/services";
-                desc = "Go to local Protei services";
-              }
-              {
-                on = [
-                  "g"
-                  "S"
-                ];
-                run = "cd /var/lib/docker/volumes";
-                desc = "Go to docker Protei services";
-              }
-            ];
-          };
-        };
-
-        programs.eza = {
-          enable = true;
-          enableZshIntegration = true;
-          enableBashIntegration = true;
-          colors = "auto";
-          icons = "auto";
-        };
-
-        programs.starship = {
-          enable = true;
-          enableInteractive = true;
-          enableTransience = true;
-          enableZshIntegration = true;
-        };
-
-        programs.bat = {
-          enable = true;
-          extraPackages = with pkgs.bat-extras; [
-            batgrep
-            batman
-            batpipe
-            batwatch
-          ];
-        };
-
-        programs.fd.enable = true;
-        programs.ripgrep.enable = true;
-        programs.lazygit.enable = true;
-
-        programs.pgcli = {
-          enable = true;
-          settings = {
-            main = {
-              smart_completion = true;
-              vi = true;
-            };
-            "named queries" = {
-              company0 = "SET search_path TO company0";
-              public = "SET search_path TO public";
-            };
-          };
-        };
 
         programs.chromium = {
           enable = true;
@@ -443,57 +292,71 @@
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    alacritty
-    alsa-utils
-    brightnessctl
-    chafa # terminal image viewer
-    cliphist
-    delve
-    docker-compose
-    firefoxpwa
-    fzf
-    gcc
-    gdu
-    git
-    gnome-themes-extra
-    gnumake
-    gnupg
-    gopass
-    gtk3
-    hicolor-icon-theme
-    htop
-    imagemagick
-    jq
-    lazygit
-    libheif
-    libheif.out
-    libnotify
-    libsForQt5.qt5.qtwayland # для Qt приложений
-    nautilus
-    nixfmt-rfc-style
-    nurl # nix fetcher
-    nwg-drawer
-    obs-studio
-    obsidian
-    papirus-icon-theme
-    pfetch
-    postgresql
-    swaybg
-    swayidle
-    swaylock
-    swww
-    telegram-desktop
-    tessen
-    thinkfan
-    unzip
-    vim
-    wget
-    wireshark
-    wl-clipboard
-    wl-color-picker
-    wlogout
-    xwayland-satellite
-    zip
-  ];
+  environment.systemPackages =
+    with pkgs;
+    let
+      rr = writeShellScriptBin "rr" ''
+        tmp="$(mktemp -t "yazi-cwd.XXXXX")"
+        yazi "$@" --cwd-file="$tmp"
+        if cwd="$(cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+            builtin cd -- "$cwd"
+        fi
+        rm -f -- "$tmp"
+      '';
+    in
+    [
+      alacritty
+      alsa-utils
+      apache-directory-studio
+      brightnessctl
+      chafa # terminal image viewer
+      cliphist
+      delve
+      docker-compose
+      firefoxpwa
+      fzf
+      gcc
+      gdu
+      git
+      gnome-themes-extra
+      gnumake
+      gnupg
+      gopass
+      gtk3
+      hicolor-icon-theme
+      htop
+      imagemagick
+      jq
+      lazygit
+      libheif
+      libheif.out
+      libnotify
+      libsForQt5.qt5.qtwayland # для Qt приложений
+      nautilus
+      nixfmt-rfc-style
+      nurl # nix fetcher
+      nwg-drawer
+      obs-studio
+      obsidian
+      papirus-icon-theme
+      pfetch
+      postgresql
+      rr
+      swaybg
+      swayidle
+      swaylock
+      swww
+      telegram-desktop
+      tessen
+      thinkfan
+      unzip
+      vim
+      wget
+      wireshark
+      wl-clipboard
+      wl-color-picker
+      wlogout
+      xwayland-satellite
+      zip
+    ];
 }
