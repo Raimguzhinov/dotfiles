@@ -134,8 +134,8 @@
     with pkgs;
     let
       fetch-srv-from-docker = pkgs.writeShellScriptBin "fetch-srv-from-docker" ''
-        echo "docker cp core-$(basename "$PWD")-1:/home/uc/services/$(basename "$PWD")/$(basename "$PWD") ."
-        docker cp core-$(basename "$PWD")-1:/home/uc/services/$(basename "$PWD")/$(basename "$PWD") .
+        echo "docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") ."
+        docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") .
       '';
     in
     [

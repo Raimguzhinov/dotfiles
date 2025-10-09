@@ -69,7 +69,6 @@
         home.stateVersion = "25.05";
         home.packages = with pkgs; [
           amnezia-vpn
-          chromium
           networkmanagerapplet
         ];
 
@@ -131,14 +130,9 @@
           ./rofi.nix
           ./jetbrains.nix
           ./development.nix
+          ./chromium.nix
           ./tools.nix
         ];
-
-        programs.chromium = {
-          enable = true;
-          extensions = [ ];
-        };
-
       };
   };
 
