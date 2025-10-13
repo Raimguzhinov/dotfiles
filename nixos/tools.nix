@@ -160,8 +160,9 @@
         vi = true;
       };
       "named queries" = {
-        company0 = "SET search_path TO company0";
-        public = "SET search_path TO public";
+        # \n company0 -- or -- \n public
+        company0 = "SET search_path TO 'company_0'";
+        public = "SET search_path TO 'public'";
       };
     };
   };

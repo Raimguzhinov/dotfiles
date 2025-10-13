@@ -120,6 +120,15 @@
           };
         };
 
+        programs.obs-studio = {
+          enable = true;
+          plugins = with pkgs.obs-studio-plugins; [
+            wlrobs
+            obs-backgroundremoval
+            obs-pipewire-audio-capture
+          ];
+        };
+
         imports = [
           nvf.homeManagerModules.default
           zen-browser.homeModules.beta
@@ -214,6 +223,7 @@
     amnezia-vpn.enable = true;
     thunderbird.enable = true;
     nm-applet.enable = true;
+    virt-manager.enable = true;
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -269,6 +279,14 @@
   environment.pathsToLink = [ "share/thumbnailers" ];
 
   virtualisation.docker.enable = true;
+
+  virtualisation.libvirtd.enable = true;
+  virtualisation.libvirtd.qemu.vhostUserPackages = with pkgs; [ virtiofsd ];
+  virtualisation.spiceUSBRedirection.enable = true;
+
+  services.qemuGuest.enable = true;
+  services.spice-vdagentd.enable = true;
+  services.spice-autorandr.enable = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
@@ -330,7 +348,6 @@
       nixfmt-rfc-style
       nurl # nix fetcher
       nwg-drawer
-      obs-studio
       obsidian
       papirus-icon-theme
       pfetch

@@ -113,6 +113,11 @@
         '';
       envrcRaw = # bash
         ''
+          count=$(find . -type s -name 'mgmt.sock' -printf . | wc -c)
+          if [ "$count" -gt 0 ]; then
+              sudo find . -type s -name 'mgmt.sock' -delete
+              echo "Cleaned up $count mgmt.sock file(s)"
+          fi
           use flake
           export GOPATH="$HOME/go"
           export PATH="$GOPATH/bin:$PATH"
