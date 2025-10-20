@@ -147,8 +147,17 @@
 
   qt = {
     enable = true;
-    platformTheme = "gnome";
-    style = "adwaita-dark";
+    platformTheme = "qt5ct";
+  };
+  xdg = {
+    portal = {
+      enable = true;
+      extraPortals = with pkgs; [
+        xdg-desktop-portal-gtk
+        xdg-desktop-portal-gnome
+      ];
+      config.common.default = "*";
+    };
   };
 
   networking.hostName = "raimguzhinov"; # Define your hostname.
@@ -193,6 +202,8 @@
       clear_password = true;
     };
   };
+  # Ensure services start properly
+  systemd.services.display-manager.environment.XDG_CURRENT_DESKTOP = "X-NIXOS-SYSTEMD-AWARE";
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
