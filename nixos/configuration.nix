@@ -184,11 +184,15 @@
 
   services.dbus.enable = true;
 
-  # Enable the X11 windowing system.
-  services.xserver.enable = true;
-
-  # Enable the GNOME Desktop Environment.
-  services.xserver.displayManager.gdm.enable = true;
+  # Enable the Ly Display Manager.
+  services.displayManager.ly = {
+    enable = true;
+    settings = {
+      animation = "matrix";
+      bigclock = true;
+      clear_password = true;
+    };
+  };
 
   # Enable CUPS to print documents.
   services.printing.enable = true;
@@ -257,18 +261,18 @@
   # started in user sessions.
   programs.mtr.enable = true;
   services.pcscd.enable = true;
+
+  # Password store
   programs.gnupg.agent = {
     enable = true;
     enableSSHSupport = true;
     pinentryPackage = pkgs.pinentry-gnome3;
   };
-
-  # List services that you want to enable:
   services.gnome.gnome-keyring.enable = true;
 
+  # Bluetooth
   hardware.bluetooth.enable = true; # enables support for Bluetooth
   hardware.bluetooth.powerOnBoot = true; # powers up the default Bluetooth controller on boot
-
   services.blueman.enable = true;
 
   # Enable the OpenSSH daemon.
@@ -277,13 +281,18 @@
   # Nautilus
   services.gvfs.enable = true;
   environment.pathsToLink = [ "share/thumbnailers" ];
+  services.gnome.sushi.enable = true;
+  programs.file-roller.enable = true;
+  programs.nautilus-open-any-terminal = {
+    enable = true;
+    terminal = "alacritty";
+  };
 
+  # Virtualisation
   virtualisation.docker.enable = true;
-
   virtualisation.libvirtd.enable = true;
   virtualisation.libvirtd.qemu.vhostUserPackages = with pkgs; [ virtiofsd ];
   virtualisation.spiceUSBRedirection.enable = true;
-
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
@@ -323,6 +332,7 @@
       brightnessctl
       chafa # terminal image viewer
       cliphist
+      cmatrix
       delve
       docker-compose
       firefoxpwa
@@ -337,6 +347,8 @@
       gtk3
       hicolor-icon-theme
       htop
+      httpie
+      httpie-desktop
       imagemagick
       jq
       lazygit
@@ -344,15 +356,18 @@
       libheif.out
       libnotify
       libsForQt5.qt5.qtwayland # для Qt приложений
+      loupe # image viewer
       nautilus
       nixfmt-rfc-style
       nurl # nix fetcher
       nwg-drawer
       obsidian
+      papers
       papirus-icon-theme
       pfetch
       postgresql
       rr
+      showtime
       swaybg
       swayidle
       swaylock

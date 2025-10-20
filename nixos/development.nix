@@ -135,15 +135,81 @@
       EOF
     '';
 
+  # Scripts
   home.packages =
-    with pkgs;
     let
       fetch-srv-from-docker = pkgs.writeShellScriptBin "fetch-srv-from-docker" ''
         echo "docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") ."
-        docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") .
+        ${pkgs.docker}/bin/docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") .
+      '';
+      ssh-setup-dlv = pkgs.writeShellScriptBin "ssh-setup-dlv" ''
+        if [ $# -eq 0 ]; then
+            echo "Usage: $0 user@hostname"
+            exit 1
+        fi
+        HOST="$1"
+        ssh -t "$HOST" "cd /tmp && wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz >/dev/null && \
+            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go1.21.13.linux-amd64.tar.gz >/dev/null && \
+            echo '\nexport PATH=\$PATH:/usr/local/go/bin' | sudo tee -a /root/.bashrc > /dev/null && \
+            echo 'export GOROOT=/home/support/go' | sudo tee -a /root/.bashrc > /dev/null && \
+            echo 'export PATH=\$PATH:\$GOROOT/bin' | sudo tee -a /root/.bashrc > /dev/null && \
+            echo '\nexport PATH=\$PATH:/usr/local/go/bin' | tee -a /home/support/.bashrc > /dev/null && \
+            echo 'export GOROOT=/home/support/go' | tee -a /home/support/.bashrc > /dev/null && \
+            echo 'export PATH=\$PATH:\$GOROOT/bin' | tee -a /home/support/.bashrc > /dev/null && \
+            sudo rm /tmp/go1.21.13.linux-amd64.tar.gz && \
+            mkdir -p /home/support/go/bin
+            /usr/local/go/bin/go install github.com/go-delve/delve/cmd/dlv@v1.22.1"
+        echo "✅ delve для дебага настроен на $HOST."
+        echo "Goland -> Run/Debug Configurations -> Add New Configuration -> Go Remote"
+        echo "Далее следуйте инструкциям"
+      '';
+      ssh-copy-vimrc = pkgs.writeShellScriptBin "ssh-copy-vimrc" ''
+        if [ $# -eq 0 ]; then
+            echo "Usage: $0 user@hostname"
+            exit 1
+        fi
+        HOST="$1"
+        VIMRC_CONTENT='let mapleader = " "
+        set scrolloff=5
+        set incsearch
+        set number
+        set relativenumber
+        set clipboard=unnamedplus
+        map Q gq
+        vmap v V
+        imap jk <Esc>
+        map <leader>w :w<CR>
+        map <leader>q :q<CR>
+        map <leader>sv :vsplit<CR>
+        map <leader>sh :split<CR>
+        map <tab> :tabnext<CR>
+        map <S-tab> :tabprevious<CR>
+        map <leader>ff :find<space>'
+        ssh "$HOST" "echo '\nalias nvim=vim' >> ~/.bashrc && \
+                     echo 'alias clr=clear' >> ~/.bashrc && \
+                     echo 'alias rr=lf' >> ~/.bashrc && \
+                     cat > ~/.vimrc" <<< "$VIMRC_CONTENT"
+        scp ${pkgs.lf}/bin/lf "$HOST":~/
+        ssh -t "$HOST" "echo '\nalias nvim=vim' | sudo tee -a /root/.bashrc > /dev/null && \
+                        echo 'alias clr=clear' | sudo tee -a /root/.bashrc > /dev/null && \
+                        echo 'alias rr=lf' | sudo tee -a /root/.bashrc > /dev/null && \
+                        sudo mv /home/support/lf /usr/bin/lf > /dev/null && \
+                        sudo chmod +x /usr/bin/lf > /dev/null && \
+                        echo '$VIMRC_CONTENT' | sudo tee /root/.vimrc > /dev/null"
+        echo "✅ .vimrc установлен для пользователя и root на $HOST"
+      '';
+      ssh-run-debugger = pkgs.writeShellScriptBin "ssh-run-debugger" ''
+        if [ $# -eq 0 ]; then
+            echo "Usage: $0 user@hostname"
+            exit 1
+        fi
+        HOST="$1"
       '';
     in
     [
       fetch-srv-from-docker
+      ssh-setup-dlv
+      ssh-copy-vimrc
+      ssh-run-debugger
     ];
 }
