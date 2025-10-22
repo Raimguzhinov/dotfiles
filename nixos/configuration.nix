@@ -373,6 +373,7 @@
       nurl # nix fetcher
       nwg-drawer
       obsidian
+      onlyoffice-bin
       papers
       papirus-icon-theme
       pfetch
