@@ -341,6 +341,7 @@
       alsa-utils
       apache-directory-studio
       brightnessctl
+      bruno # lightweight insomnia
       chafa # terminal image viewer
       cliphist
       cmatrix
@@ -359,7 +360,6 @@
       hicolor-icon-theme
       htop
       httpie
-      httpie-desktop
       imagemagick
       jq
       lazygit
@@ -387,6 +387,8 @@
       telegram-desktop
       tessen
       thinkfan
+      tig
+      tlrc
       unzip
       vim
       wget

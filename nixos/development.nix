@@ -139,8 +139,8 @@
   home.packages =
     let
       fetch-srv-from-docker = pkgs.writeShellScriptBin "fetch-srv-from-docker" ''
-        echo "docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") ."
-        ${pkgs.docker}/bin/docker cp core-$(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") .
+        echo "docker cp $(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") ."
+        ${pkgs.docker}/bin/docker cp $(basename "$PWD"):/home/uc/services/$(basename "$PWD")/$(basename "$PWD") .
       '';
       ssh-setup-dlv = pkgs.writeShellScriptBin "ssh-setup-dlv" ''
         if [ $# -eq 0 ]; then

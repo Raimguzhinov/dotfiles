@@ -71,6 +71,11 @@
     enable = true;
     enableBashIntegration = true;
     enableZshIntegration = true;
+    settings = {
+      keymap_mode = "auto";
+      inline_height = 20;
+      enter_accept = false;
+    };
   };
 
   programs.zellij = {
