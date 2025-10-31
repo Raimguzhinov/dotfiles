@@ -149,15 +149,13 @@
     enable = true;
     platformTheme = "qt5ct";
   };
-  xdg = {
-    portal = {
-      enable = true;
-      extraPortals = with pkgs; [
-        xdg-desktop-portal-gtk
-        xdg-desktop-portal-gnome
-      ];
-      config.common.default = "*";
-    };
+  xdg.portal = {
+    enable = true;
+    xdgOpenUsePortal = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gtk
+      xdg-desktop-portal-gnome
+    ];
   };
 
   networking.hostName = "raimguzhinov"; # Define your hostname.
@@ -395,6 +393,8 @@
       wl-clipboard
       wl-color-picker
       wlogout
+      xdg-desktop-portal-gnome
+      xdg-desktop-portal-gtk
       xwayland-satellite
       zip
     ];

@@ -16,6 +16,7 @@
       QT_QPA_PLATFORM = "wayland;xcb";
       QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
       SDL_VIDEODRIVER = "wayland";
+      ELECTRON_OZONE_PLATFORM_HINT = "auto";
     };
     input = {
       keyboard.xkb = {
