@@ -187,9 +187,9 @@
           "Mod+Shift+Minus".action = set-window-height "-10%";
           "Mod+Shift+Equal".action = set-window-height "+10%";
 
-          Print.action = screenshot;
+          Print.action.screenshot = [ ];
           "Ctrl+Print".action.screenshot-screen = [ ];
-          "Alt+Print".action = screenshot-window;
+          "Alt+Print".action.screenshot-window = [ ];
 
           # "Mod+Shift+E".action = quit;
           # "Mod+Shift+P".action = power-off-monitors;

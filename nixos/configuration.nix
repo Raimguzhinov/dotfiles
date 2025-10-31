@@ -339,7 +339,6 @@
     [
       alacritty
       alsa-utils
-      apache-directory-studio
       brightnessctl
       bruno # lightweight insomnia
       chafa # terminal image viewer
