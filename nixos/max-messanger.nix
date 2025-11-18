@@ -1,7 +1,7 @@
 { pkgs, lib, ... }:
 let
   pname = "MAX";
-  version = "25.8.0";
+  version = "25.11.2";
 
   src = pkgs.fetchurl {
     url = "https://trk.mail.ru/c/wj6ww9";
