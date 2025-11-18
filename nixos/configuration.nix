@@ -7,6 +7,7 @@
   pkgs,
   niri,
   nvf,
+  max-messanger,
   zen-browser,
   home-manager,
   ...
@@ -338,7 +339,6 @@
         fi
         rm -f -- "$tmp"
       '';
-      maxMessanger = import ./max-messanger.nix { inherit pkgs lib; };
     in
     [
       alacritty
@@ -373,7 +373,7 @@
       libsForQt5.qt5.qtwayland # для Qt приложений
       libwebp
       loupe # image viewer
-      maxMessanger
+      max-messanger.packages.${system}.default
       nautilus
       nixfmt-rfc-style
       nurl # nix fetcher
