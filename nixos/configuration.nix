@@ -266,6 +266,11 @@
     nerd-fonts.ubuntu-sans
   ];
 
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
+
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   programs.mtr.enable = true;
@@ -333,6 +338,7 @@
         fi
         rm -f -- "$tmp"
       '';
+      maxMessanger = import ./max-messanger.nix { inherit pkgs lib; };
     in
     [
       alacritty
@@ -363,8 +369,11 @@
       libheif
       libheif.out
       libnotify
+      libpng
       libsForQt5.qt5.qtwayland # для Qt приложений
+      libwebp
       loupe # image viewer
+      maxMessanger
       nautilus
       nixfmt-rfc-style
       nurl # nix fetcher
