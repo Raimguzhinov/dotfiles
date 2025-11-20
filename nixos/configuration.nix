@@ -253,6 +253,10 @@
     shell = pkgs.zsh;
   };
 
+  # Yubikey
+  services.udev.packages = [ pkgs.yubikey-personalization ];
+  services.pcscd.enable = true;
+
   security.polkit.enable = true; # polkit
   security.pam.services.swaylock = { };
 
@@ -275,7 +279,6 @@
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
   programs.mtr.enable = true;
-  services.pcscd.enable = true;
 
   # Password store
   programs.gnupg.agent = {
@@ -341,6 +344,7 @@
       '';
     in
     [
+      aichat
       alacritty
       alsa-utils
       brightnessctl
@@ -405,6 +409,9 @@
       xdg-desktop-portal-gnome
       xdg-desktop-portal-gtk
       xwayland-satellite
+      yubikey-manager
+      yubikey-personalization
+      yubioath-flutter
       zip
     ];
 }
