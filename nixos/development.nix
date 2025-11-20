@@ -148,17 +148,20 @@
             exit 1
         fi
         HOST="$1"
-        ssh -t "$HOST" "cd /tmp && wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz >/dev/null && \
-            sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go1.21.13.linux-amd64.tar.gz >/dev/null && \
-            echo '\nexport PATH=\$PATH:/usr/local/go/bin' | sudo tee -a /root/.bashrc > /dev/null && \
-            echo 'export GOROOT=/home/support/go' | sudo tee -a /root/.bashrc > /dev/null && \
-            echo 'export PATH=\$PATH:\$GOROOT/bin' | sudo tee -a /root/.bashrc > /dev/null && \
-            echo '\nexport PATH=\$PATH:/usr/local/go/bin' | tee -a /home/support/.bashrc > /dev/null && \
-            echo 'export GOROOT=/home/support/go' | tee -a /home/support/.bashrc > /dev/null && \
-            echo 'export PATH=\$PATH:\$GOROOT/bin' | tee -a /home/support/.bashrc > /dev/null && \
-            sudo rm /tmp/go1.21.13.linux-amd64.tar.gz && \
-            mkdir -p /home/support/go/bin
-            /usr/local/go/bin/go install github.com/go-delve/delve/cmd/dlv@v1.22.1"
+        scp ${pkgs.delve}/bin/dlv "$HOST":~/
+        ssh -t "$HOST" "sudo mv /home/support/dlv /usr/bin/dlv > /dev/null && \
+                        sudo chmod +x /usr/bin/dlv > /dev/null"
+        # ssh -t "$HOST" "cd /tmp && wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz >/dev/null && \
+        #     sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf /tmp/go1.21.13.linux-amd64.tar.gz >/dev/null && \
+        #     echo '\nexport PATH=\$PATH:/usr/local/go/bin' | sudo tee -a /root/.bashrc > /dev/null && \
+        #     echo 'export GOROOT=/home/support/go' | sudo tee -a /root/.bashrc > /dev/null && \
+        #     echo 'export PATH=\$PATH:\$GOROOT/bin' | sudo tee -a /root/.bashrc > /dev/null && \
+        #     echo '\nexport PATH=\$PATH:/usr/local/go/bin' | tee -a /home/support/.bashrc > /dev/null && \
+        #     echo 'export GOROOT=/home/support/go' | tee -a /home/support/.bashrc > /dev/null && \
+        #     echo 'export PATH=\$PATH:\$GOROOT/bin' | tee -a /home/support/.bashrc > /dev/null && \
+        #     sudo rm /tmp/go1.21.13.linux-amd64.tar.gz && \
+        #     mkdir -p /home/support/go/bin
+        #     /usr/local/go/bin/go install github.com/go-delve/delve/cmd/dlv@v1.22.1"
         echo "✅ delve для дебага настроен на $HOST."
         echo "Goland -> Run/Debug Configurations -> Add New Configuration -> Go Remote"
         echo "Далее следуйте инструкциям"
