@@ -27,6 +27,7 @@
     extraConfig = {
       core.editor = "nvim";
       init.defaultBranch = "main";
+      gpg.format = "openpgp";
       pull.rebase = true;
       rebase = {
         autoSquash = true;
@@ -36,7 +37,6 @@
       url."ssh://git@git.protei.ru/" = {
         insteadOf = [ "https://git.protei.ru/" ];
       };
-      gpg.format = "openpgp";
       color.ui = true;
     };
   };
