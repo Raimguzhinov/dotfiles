@@ -19,6 +19,10 @@
       line-numbers = true;
       side-by-side = true;
     };
+    signing = {
+      key = "${config.home.homeDirectory}/.ssh/id_ed25519_sk.pub";
+      signByDefault = true;
+    };
     extraConfig = {
       core.editor = "nvim";
       init.defaultBranch = "main";
@@ -31,10 +35,7 @@
       url."ssh://git@git.protei.ru/" = {
         insteadOf = [ "https://git.protei.ru/" ];
       };
-      user.signingkey = "${config.home.homeDirectory}/.ssh/id_ed25519_sk.pub";
-      gpg.ssh.allowedSignersFile = "${config.home.homeDirectory}/.ssh/allowed_signers";
       gpg.format = "ssh";
-      commit.gpgsign = true;
       color.ui = true;
     };
   };
