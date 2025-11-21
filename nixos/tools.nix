@@ -10,8 +10,8 @@
       br = "branch";
       ci = "commit";
       st = "status";
-      # hist = "log --oneline --decorate --graph --all";
       hist = "log --oneline --decorate --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an> %G?'%Creset --abbrev-commit --date=relative";
+      hist-full = "log --oneline --decorate --graph --all";
       bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
     };
     lfs.enable = true;
