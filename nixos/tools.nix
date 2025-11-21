@@ -21,7 +21,7 @@
       side-by-side = true;
     };
     signing = {
-      key = "6E06AD1573F0D606704F4A32719B8382A9DBA991";
+      key = "raimguzhinov@protei-lab.ru";
       signByDefault = true;
     };
     extraConfig = {
