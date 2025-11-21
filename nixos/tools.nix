@@ -20,7 +20,7 @@
       side-by-side = true;
     };
     signing = {
-      key = "${config.home.homeDirectory}/.ssh/id_ed25519_sk.pub";
+      key = "6E06AD1573F0D606704F4A32719B8382A9DBA991";
       signByDefault = true;
     };
     extraConfig = {
@@ -35,7 +35,6 @@
       url."ssh://git@git.protei.ru/" = {
         insteadOf = [ "https://git.protei.ru/" ];
       };
-      gpg.format = "ssh";
       color.ui = true;
     };
   };
