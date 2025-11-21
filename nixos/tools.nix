@@ -20,14 +20,9 @@
       line-numbers = true;
       side-by-side = true;
     };
-    signing = {
-      key = "raimguzhinov@protei-lab.ru";
-      signByDefault = true;
-    };
     extraConfig = {
       init.defaultBranch = "main";
       core.editor = "nvim";
-      gpg.format = "openpgp";
       pull.rebase = true;
       color.ui = true;
       rebase = {
