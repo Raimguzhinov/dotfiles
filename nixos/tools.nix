@@ -29,6 +29,7 @@
       init.defaultBranch = "main";
       gpg.format = "openpgp";
       pull.rebase = true;
+      color.ui = true;
       rebase = {
         autoSquash = true;
         autoStash = true;
@@ -37,7 +38,6 @@
       url."ssh://git@git.protei.ru/" = {
         insteadOf = [ "https://git.protei.ru/" ];
       };
-      color.ui = true;
     };
   };
 
