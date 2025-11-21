@@ -25,8 +25,8 @@
       signByDefault = true;
     };
     extraConfig = {
-      core.editor = "nvim";
       init.defaultBranch = "main";
+      core.editor = "nvim";
       gpg.format = "openpgp";
       pull.rebase = true;
       color.ui = true;
