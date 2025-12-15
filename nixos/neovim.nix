@@ -44,7 +44,7 @@
         go.enable = true;
         go.dap.enable = true;
         nix.enable = true;
-        nix.format.type = "nixfmt";
+        nix.format.type = [ "nixfmt" ];
         bash.enable = true;
         python.enable = true;
         yaml.enable = true;

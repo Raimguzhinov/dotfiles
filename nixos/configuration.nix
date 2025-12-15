@@ -264,13 +264,17 @@
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
-  fonts.packages = with pkgs; [
-    nerd-fonts.fira-code
-    nerd-fonts.roboto-mono
-    nerd-fonts.jetbrains-mono
-    nerd-fonts.zed-mono
-    nerd-fonts.ubuntu-sans
-  ];
+  fonts = {
+    fontconfig.enable = true;
+    fontDir.enable = true;
+    packages = with pkgs; [
+      nerd-fonts.fira-code
+      nerd-fonts.roboto-mono
+      nerd-fonts.jetbrains-mono
+      nerd-fonts.zed-mono
+      nerd-fonts.ubuntu-sans
+    ];
+  };
 
   # Appimage
   programs.appimage = {
