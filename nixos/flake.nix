@@ -2,7 +2,7 @@
   description = "NixOS configuration";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/1ebf2de9af636a5752c15b4f40e504183f0b2ec8";
     niri.url = "github:sodiboo/niri-flake";
     nvf.url = "github:notashelf/nvf";
@@ -12,7 +12,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     home-manager = {
-      url = "github:nix-community/home-manager/release-25.05";
+      url = "github:nix-community/home-manager/release-25.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -35,16 +35,7 @@
         specialArgs = inputs;
         modules = [
           ./configuration.nix
-          (
-            { config, pkgs, ... }:
-            {
-              nixpkgs.overlays = [
-                (final: prev: {
-                  amnezia-vpn = nixpkgs-unstable.legacyPackages.${prev.system}.amnezia-vpn;
-                })
-              ];
-            }
-          )
+          ./overlays.nix
           home-manager.nixosModules.home-manager
           niri.nixosModules.niri
         ];

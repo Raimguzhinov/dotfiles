@@ -31,7 +31,7 @@
         -Dawt.toolkit.name=WLToolkit
       '';
     })
-    (jetbrains.pycharm-professional.override {
+    (jetbrains.pycharm.override {
       vmopts = ''
         -Xms128m
         -Xmx4096m

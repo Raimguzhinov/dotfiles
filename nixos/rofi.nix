@@ -13,8 +13,6 @@ in
     enable = true;
     cycle = false;
 
-    package = pkgs.rofi-wayland;
-
     plugins = with pkgs; [
       rofi-calc
     ];

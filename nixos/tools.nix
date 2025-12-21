@@ -3,24 +3,19 @@
 {
   programs.git = {
     enable = true;
-    userName = "Dias B. Raimguzhinov";
-    userEmail = "raimguzhinov@protei-lab.ru";
-    aliases = {
-      co = "checkout";
-      br = "branch";
-      ci = "commit";
-      st = "status";
-      hist = "log --oneline --decorate --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an> %G?'%Creset --abbrev-commit --date=relative";
-      hist-full = "log --oneline --decorate --graph --all";
-      bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
-    };
     lfs.enable = true;
-    delta.enable = true;
-    delta.options = {
-      line-numbers = true;
-      side-by-side = true;
-    };
-    extraConfig = {
+    settings = {
+      user.name = "Dias B. Raimguzhinov";
+      user.email = "raimguzhinov@protei-lab.ru";
+      alias = {
+        co = "checkout";
+        br = "branch";
+        ci = "commit";
+        st = "status";
+        hist = "log --oneline --decorate --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an> %G?'%Creset --abbrev-commit --date=relative";
+        hist-full = "log --oneline --decorate --graph --all";
+        bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
+      };
       init.defaultBranch = "main";
       core.editor = "nvim";
       pull.rebase = true;
@@ -33,6 +28,15 @@
       url."ssh://git@git.protei.ru/" = {
         insteadOf = [ "https://git.protei.ru/" ];
       };
+    };
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      line-numbers = true;
+      side-by-side = true;
     };
   };
 

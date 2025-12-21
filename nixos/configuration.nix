@@ -54,7 +54,7 @@
         programs.home-manager.enable = true;
         home.username = "root";
         home.homeDirectory = "/root";
-        home.stateVersion = "25.05";
+        home.stateVersion = "25.11";
         imports = [
           nvf.homeManagerModules.default
           ./neovim.nix
@@ -67,7 +67,7 @@
         programs.home-manager.enable = true;
         home.username = "dias";
         home.homeDirectory = "/home/dias";
-        home.stateVersion = "25.05";
+        home.stateVersion = "25.11";
         home.packages = with pkgs; [
           amnezia-vpn
           networkmanagerapplet
@@ -128,6 +128,10 @@
             obs-backgroundremoval
             obs-pipewire-audio-capture
           ];
+        };
+
+        programs.zed-editor = {
+          enable = true;
         };
 
         imports = [
@@ -249,6 +253,9 @@
       "wheel"
       "docker"
       "wireshark"
+      "libvirtd"
+      "kvm"
+      "qemu"
     ];
     shell = pkgs.zsh;
   };
@@ -306,7 +313,6 @@
   services.gvfs.enable = true;
   environment.pathsToLink = [ "share/thumbnailers" ];
   services.gnome.sushi.enable = true;
-  programs.file-roller.enable = true;
   programs.nautilus-open-any-terminal = {
     enable = true;
     terminal = "alacritty";
@@ -333,7 +339,7 @@
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.05"; # Did you read the comment?
+  system.stateVersion = "25.11"; # Did you read the comment?
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -360,6 +366,7 @@
       cmatrix
       delve
       docker-compose
+      file-roller
       firefoxpwa
       fzf
       gcc
@@ -383,19 +390,20 @@
       libsForQt5.qt5.qtwayland # для Qt приложений
       libwebp
       loupe # image viewer
-      max-messanger.packages.${system}.default
+      max-messanger.packages.${stdenv.hostPlatform.system}.default
       nautilus
       nixfmt-rfc-style
       nurl # nix fetcher
       nwg-drawer
       obsidian
-      onlyoffice-bin
+      onlyoffice-desktopeditors
       papers
       papirus-icon-theme
       pfetch
       postgresql
       rr
       showtime
+      spotify
       swaybg
       swayidle
       swaylock
