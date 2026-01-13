@@ -9,6 +9,7 @@
   nvf,
   max-messanger,
   zen-browser,
+  noctalia,
   home-manager,
   ...
 }:
@@ -95,7 +96,7 @@
         };
 
         services.mako = {
-          enable = true;
+          enable = false;
           settings = {
             border-radius = 5;
             border-size = 3;
@@ -131,13 +132,15 @@
         };
 
         programs.zed-editor = {
-          enable = false;
+          enable = true;
         };
 
         imports = [
           nvf.homeManagerModules.default
           zen-browser.homeModules.beta
+          noctalia.homeModules.default
           ./zen-browser.nix
+          ./noctalia.nix
           ./neovim.nix
           ./niri.nix
           ./waybar.nix
@@ -245,6 +248,7 @@
     thunderbird.enable = true;
     nm-applet.enable = true;
     virt-manager.enable = true;
+    localsend.enable = true;
   };
 
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -308,6 +312,10 @@
   hardware.bluetooth.enable = true; # enables support for Bluetooth
   hardware.bluetooth.powerOnBoot = true; # powers up the default Bluetooth controller on boot
   services.blueman.enable = true;
+
+  # Power
+  services.tuned.enable = true;
+  services.upower.enable = true;
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;

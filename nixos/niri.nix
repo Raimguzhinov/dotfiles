@@ -31,6 +31,10 @@
         accel-speed = 0.2;
         click-method = "clickfinger";
       };
+      warp-mouse-to-focus = {
+        enable = true;
+        mode = "center-xy";
+      };
     };
     outputs = {
       eDP-1 = {
@@ -42,8 +46,11 @@
     };
     prefer-no-csd = true;
     spawn-at-startup = [
-      { command = [ "waybar" ]; }
-      { command = [ "mako" ]; }
+      {
+        command = [ "noctalia-shell" ];
+      }
+      # { command = [ "waybar" ]; }
+      # { command = [ "mako" ]; }
       { command = [ "xwayland-satellite" ]; }
       {
         command = [
