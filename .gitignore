@@ -1,3 +1,4 @@
-.tmux/reccurect/*
+.idea
+.tmux/resurrect
 .DS_Store
 SpecificDots/Fonts/nerd-fonts
