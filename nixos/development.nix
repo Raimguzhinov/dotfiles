@@ -91,12 +91,18 @@
                       protobuf23
                       pkgs-go21.protoc-gen-go
                       pkgs-gen-go-grpc1_3_0.protoc-gen-go-grpc
+                      libwebp
+                      pkg-config
                     ];
 
                     shellHook = ${"''"}
                       export GOPATH="$HOME/go"
                       export GOBIN="$GOPATH/bin"
                       export PATH="$GOBIN:$PATH"
+                      export CGO_CFLAGS="-I${pkgs.libwebp}/include"
+                      export CGO_LDFLAGS="-L${pkgs.libwebp}/lib"
+                      export LD_LIBRARY_PATH="${pkgs.libwebp}/lib:$LD_LIBRARY_PATH"
+                      export PKG_CONFIG_PATH="${pkgs.libwebp}/lib/pkgconfig:$PKG_CONFIG_PATH"
                       echo "Using Go version: $(go version)"
                     ${"''"};
                   };

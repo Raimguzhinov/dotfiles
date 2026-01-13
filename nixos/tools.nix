@@ -60,6 +60,7 @@
       e = "exit";
       clr = "clear";
       cat = "bat";
+      tree = "eza --tree";
       pass = "gopass";
       open = "xdg-open";
       dbui = "nvim +DBUI";

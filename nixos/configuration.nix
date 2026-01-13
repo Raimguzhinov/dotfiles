@@ -131,7 +131,7 @@
         };
 
         programs.zed-editor = {
-          enable = true;
+          enable = false;
         };
 
         imports = [
@@ -374,6 +374,7 @@
       fzf
       gcc
       gdu
+      gimp2
       git
       gnome-themes-extra
       gnumake
@@ -385,6 +386,7 @@
       httpie
       imagemagick
       jq
+      krita
       lazygit
       libheif
       libheif.out
