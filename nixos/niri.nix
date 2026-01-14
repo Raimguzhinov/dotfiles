@@ -31,9 +31,9 @@
         accel-speed = 0.2;
         click-method = "clickfinger";
       };
-      warp-mouse-to-focus = {
+      focus-follows-mouse = {
         enable = true;
-        mode = "center-xy";
+        max-scroll-amount = "0%";
       };
     };
     outputs = {
@@ -44,13 +44,25 @@
     layout = {
       default-column-width.proportion = 0.975;
     };
+    window-rules = [
+      {
+        geometry-corner-radius = {
+          bottom-left = 5.0;
+          bottom-right = 5.0;
+          top-left = 5.0;
+          top-right = 5.0;
+        };
+        clip-to-geometry = true;
+      }
+    ];
+    debug = {
+      honor-xdg-activation-with-invalid-serial = { };
+    };
     prefer-no-csd = true;
     spawn-at-startup = [
       {
         command = [ "noctalia-shell" ];
       }
-      # { command = [ "waybar" ]; }
-      # { command = [ "mako" ]; }
       { command = [ "xwayland-satellite" ]; }
       {
         command = [
@@ -59,23 +71,15 @@
           "wl-paste --watch cliphist store"
         ];
       }
-      {
-        command = [
-          "bash"
-          "-c"
-          # bash
-          ''
-            ${pkgs.swww}/bin/swww-daemon &
-            sleep 0.5
-            ${pkgs.swww}/bin/swww img $HOME/dotfiles/SpecificDots/Wallpaper/nixos.png
-          ''
-        ];
-      }
     ];
     layer-rules = [
       {
-        matches = [ { namespace = "^notifications$"; } ];
+        matches = [ { namespace = "^noctalia-notifications*"; } ];
         block-out-from = "screen-capture";
+      }
+      {
+        matches = [ { namespace = "^noctalia-overview*"; } ];
+        place-within-backdrop = true;
       }
     ];
     binds =
@@ -116,6 +120,14 @@
               suffix = attrsToList suffixes;
             }
           );
+        noctalia =
+          cmd:
+          [
+            "noctalia-shell"
+            "ipc"
+            "call"
+          ]
+          ++ (splitString " " cmd);
       in
       with config.lib.niri.actions;
       mergeAttrsList [
@@ -128,6 +140,14 @@
           "Mod+A" = {
             action = spawn "rofi" "-show" "drun";
             hotkey-overlay.title = "Run an Application: rofi";
+          };
+          "Mod+E" = {
+            action = spawn "alacritty" "-e" "yazi";
+            hotkey-overlay.title = "File manager: yazi";
+          };
+          "Mod+Shift+E" = {
+            action = spawn "nautilus";
+            hotkey-overlay.title = "File manager: nautilus";
           };
           "Mod+O" = {
             action =
@@ -154,27 +174,35 @@
             action = spawn "tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
             hotkey-overlay.title = "Password Manager: tessen";
           };
-          # "Mod+L".action = spawn "swaylock";
+          "Mod+Shift+L" = {
+            action.spawn = noctalia "lockScreen lock";
+            hotkey-overlay.title = "Lock Screen";
+          };
 
           XF86AudioRaiseVolume = {
-            action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+";
+            action.spawn = noctalia "volume increase"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+";
             allow-when-locked = true;
           };
           XF86AudioLowerVolume = {
-            action = spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-";
+            action.spawn = noctalia "volume decrease"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-";
             allow-when-locked = true;
           };
           XF86AudioMute = {
-            action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+            action.spawn = noctalia "volume muteOutput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
             allow-when-locked = true;
           };
           XF86AudioMicMute = {
-            action = spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
+            action.spawn = noctalia "volume muteInput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
             allow-when-locked = true;
           };
-          "XF86MonBrightnessUp".action = spawn "brightnessctl" "set" "+10%";
-          "XF86MonBrightnessDown".action = spawn "brightnessctl" "set" "10%-";
-          "Mod+B".action = spawn "rfkill" "toggle" "bluetooth";
+          XF86MonBrightnessUp = {
+            action.spawn = noctalia "brightness increase"; # "brightnessctl" "set" "+10%";
+            allow-when-locked = true;
+          };
+          XF86MonBrightnessDown = {
+            action.spawn = noctalia "brightness decrease"; # "brightnessctl" "set" "10%-";
+            allow-when-locked = true;
+          };
 
           "Mod+Q".action = close-window;
 
@@ -196,11 +224,12 @@
           "Mod+Shift+Equal".action = set-window-height "+10%";
 
           Print.action.screenshot = [ ];
-          "Ctrl+Print".action.screenshot-screen = [ ];
+          "Mod+Print".action.screenshot-screen = [ ];
           "Alt+Print".action.screenshot-window = [ ];
 
           # "Mod+Shift+E".action = quit;
           # "Mod+Shift+P".action = power-off-monitors;
+          # "Mod+B".action = spawn "rfkill" "toggle" "bluetooth";
         }
         (binds {
           suffixes.H = "column-left";

@@ -18,15 +18,15 @@ in
     ];
 
     extraConfig = {
-      modi = "drun,run,filebrowser,window";
+      modi = "drun,run,recursivebrowser,window,calc";
       font = "JetBrains Mono Nerd Font 10";
       show-icons = true;
       terminal = "${pkgs.alacritty}/bin/alacritty";
       display-drun = "  Apps";
       display-run = "  Run";
-      display-filebrowser = "  Files";
+      display-recursivebrowser = "  Files";
       display-window = "  Windows";
-      display-calc = "";
+      display-calc = " Calc";
       drun-display-format = "{name} [<span weight='light' size='small'><i>({generic})</i></span>]";
       window-format = "{w} · {c} · {t}";
     };
@@ -150,7 +150,7 @@ in
         text-color = mkLiteral "#73daca";
       };
       button = {
-        width = mkLiteral "120px";
+        width = mkLiteral "110px";
         padding = mkLiteral "12px";
         border-radius = mkLiteral "20px";
         background-color = mkLiteral "@background-alt";

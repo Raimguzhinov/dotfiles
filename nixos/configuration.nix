@@ -95,33 +95,6 @@
           };
         };
 
-        services.mako = {
-          enable = false;
-          settings = {
-            border-radius = 5;
-            border-size = 3;
-            default-timeout = 4000;
-            ignore-timeout = 1;
-            icons = 1;
-            layer = "overlay";
-            sort = "-time";
-            "urgency=low" = {
-              border-color = lib.mkForce "#cccccc";
-            };
-            "urgency=normal" = {
-              border-color = lib.mkForce "#7fc8ff";
-            };
-            "urgency=high" = {
-              border-color = lib.mkForce "#bf616a";
-              default-timeout = 5000;
-            };
-            "category=mpd" = {
-              default-timeout = 2000;
-              group-by = "category";
-            };
-          };
-        };
-
         programs.obs-studio = {
           enable = true;
           plugins = with pkgs.obs-studio-plugins; [
@@ -131,24 +104,20 @@
           ];
         };
 
-        programs.zed-editor = {
-          enable = true;
-        };
-
         imports = [
+          noctalia.homeModules.default
           nvf.homeManagerModules.default
           zen-browser.homeModules.beta
-          noctalia.homeModules.default
-          ./zen-browser.nix
-          ./noctalia.nix
+          ./chromium.nix
+          ./development.nix
+          ./jetbrains.nix
           ./neovim.nix
           ./niri.nix
-          ./waybar.nix
+          ./noctalia.nix
           ./rofi.nix
-          ./jetbrains.nix
-          ./development.nix
-          ./chromium.nix
           ./tools.nix
+          ./zed-editor.nix
+          ./zen-browser.nix
         ];
       };
   };
@@ -273,7 +242,6 @@
   services.yubikey-agent.enable = true;
 
   security.polkit.enable = true; # polkit
-  security.pam.services.swaylock = { };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -282,11 +250,12 @@
     fontconfig.enable = true;
     fontDir.enable = true;
     packages = with pkgs; [
+      inter-nerdfont
       nerd-fonts.fira-code
-      nerd-fonts.roboto-mono
       nerd-fonts.jetbrains-mono
-      nerd-fonts.zed-mono
+      nerd-fonts.roboto-mono
       nerd-fonts.ubuntu-sans
+      nerd-fonts.zed-mono
     ];
   };
 
@@ -405,6 +374,7 @@
       loupe # image viewer
       max-messanger.packages.${stdenv.hostPlatform.system}.default
       nautilus
+      nettools
       nixfmt-rfc-style
       nurl # nix fetcher
       nwg-drawer
@@ -417,10 +387,6 @@
       rr
       showtime
       spotify
-      swaybg
-      swayidle
-      swaylock
-      swww
       telegram-desktop
       tessen
       thinkfan
@@ -432,7 +398,6 @@
       wireshark
       wl-clipboard
       wl-color-picker
-      wlogout
       xdg-desktop-portal-gnome
       xdg-desktop-portal-gtk
       xwayland-satellite

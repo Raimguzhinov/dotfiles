@@ -3,6 +3,7 @@
 {
   programs.noctalia-shell = {
     enable = true;
+    systemd.enable = true;
     settings = {
       bar = {
         density = "compact";
@@ -15,6 +16,35 @@
               useDistroLogo = true;
             }
             {
+              id = "Volume";
+            }
+            {
+              id = "VPN";
+            }
+            {
+              id = "WiFi";
+            }
+            {
+              id = "Bluetooth";
+            }
+          ];
+          center = [
+            {
+              hideUnoccupied = false;
+              id = "Workspace";
+              labelMode = "none";
+            }
+            {
+              id = "ActiveWindow";
+              showIcon = false;
+            }
+          ];
+          right = [
+            {
+              id = "KeyboardLayout";
+              displayMode = "forceOpen";
+            }
+            {
               id = "Battery";
               displayMode = "alwaysShow";
               warningThreshold = 30;
@@ -25,37 +55,9 @@
               formatHorizontal = "HH:mm";
               formatVertical = "HH mm";
               id = "Clock";
-              useMonospacedFont = true;
+              useCustomFont = true;
+              customFont = "Inter Nerd Font Display Black";
               usePrimaryColor = true;
-            }
-            {
-              id = "ActiveWindow";
-              showIcon = false;
-            }
-          ];
-          center = [
-            {
-              hideUnoccupied = false;
-              id = "Workspace";
-              labelMode = "none";
-            }
-          ];
-          right = [
-            {
-              id = "KeyboardLayout";
-              displayMode = "forceOpen";
-            }
-            {
-              id = "Bluetooth";
-            }
-            {
-              id = "WiFi";
-            }
-            {
-              id = "VPN";
-            }
-            {
-              id = "Volume";
             }
             {
               id = "Tray";
@@ -63,10 +65,14 @@
                 "AmneziaVPN"
                 "Telegram Desktop"
                 "MAX"
+                "OBS Studio"
               ];
             }
           ];
         };
+      };
+      ui = {
+        fontDefault = "Inter Nerd Font Display";
       };
       colorSchemes.predefinedScheme = "Rose Pine";
       general = {
@@ -77,8 +83,10 @@
         monthBeforeDay = true;
         name = "Novosibirsk, Russia";
       };
-      wallpapper = {
-        enable = false;
+      wallpaper = {
+        enable = true;
+        overviewEnabled = true;
+        directory = "/home/dias/dotfiles/SpecificDots/Wallpaper";
       };
       audio = {
         volumeOverdrive = true;
