@@ -8,6 +8,7 @@
   niri,
   nvf,
   max-messanger,
+  niri-float-sticky,
   zen-browser,
   noctalia,
   home-manager,
@@ -36,7 +37,7 @@
   nix.gc = {
     automatic = true;
     dates = "weekly";
-    options = "--delete-older-than 30d";
+    options = "--delete-older-than 14d";
   };
 
   # Niri
@@ -71,6 +72,7 @@
         home.stateVersion = "25.11";
         home.packages = with pkgs; [
           amnezia-vpn
+          nautilus
           networkmanagerapplet
         ];
 
@@ -92,6 +94,49 @@
           iconTheme = {
             name = "Papirus-Dark";
             package = pkgs.papirus-icon-theme;
+          };
+        };
+
+        programs.foot = {
+          enable = true;
+          server.enable = true;
+          settings = {
+            main = {
+              term = "foot";
+              shell = "${pkgs.zsh}/bin/zsh";
+              login-shell = "no";
+              app-id = "foot";
+              title = "Terminal";
+              locked-title = "no";
+              font = "JetBrainsMono Nerd Font:size=10.5";
+              dpi-aware = "no";
+              bold-text-in-bright = "yes";
+              selection-target = "primary";
+            };
+            csd.preferred = "none";
+            scrollback.lines = 10000;
+            key-bindings.clipboard-copy = "Control+c XF86Copy";
+            colors = {
+              alpha = 1.0;
+              foreground = "ffffff";
+              background = "181818";
+              regular0 = "181818";
+              regular1 = "f62b5a";
+              regular2 = "47b413";
+              regular3 = "e3c401";
+              regular4 = "24acd4";
+              regular5 = "f2affd";
+              regular6 = "13c299";
+              regular7 = "e6e6e6";
+              bright0 = "616161";
+              bright1 = "ff4d51";
+              bright2 = "35d450";
+              bright3 = "e9e836";
+              bright4 = "5dc5f8";
+              bright5 = "feabf2";
+              bright6 = "24dfc4";
+              bright7 = "ffffff";
+            };
           };
         };
 
@@ -128,8 +173,21 @@
   };
   xdg.portal = {
     enable = true;
+    config = {
+      #common.default = "*";
+      common = {
+        default = [
+          "gnome"
+          "gtk"
+        ];
+        "org.freedesktop.impl.portal.ScreenCast" = "gnome";
+        "org.freedesktop.impl.portal.Screenshot" = "gnome";
+        "org.freedesktop.impl.portal.RemoteDesktop" = "gnome";
+      };
+    };
     xdgOpenUsePortal = true;
     extraPortals = with pkgs; [
+      xdg-desktop-portal
       xdg-desktop-portal-gtk
       xdg-desktop-portal-gnome
     ];
@@ -153,6 +211,7 @@
 
   # Set your time zone.
   time.timeZone = "Asia/Novosibirsk";
+  # services.automatic-timezoned.enable = true;
 
   # Select internationalisation properties.
   i18n.defaultLocale = "ru_RU.UTF-8";
@@ -175,9 +234,10 @@
   services.displayManager.ly = {
     enable = true;
     settings = {
-      animation = "matrix";
+      animation = "colormix"; # "matrix";
       bigclock = true;
       clear_password = true;
+      session_log = ".local/state/ly-session.log";
     };
   };
   # Ensure services start properly
@@ -295,7 +355,24 @@
   services.gnome.sushi.enable = true;
   programs.nautilus-open-any-terminal = {
     enable = true;
-    terminal = "alacritty";
+    terminal = "foot";
+  };
+
+  # Logging
+  services.logrotate = {
+    enable = true;
+    configFile = pkgs.writeText "logrotate.conf" ''
+      /tmp/niri-float-sticky.log {
+          daily
+          rotate 5
+          compress
+          missingok
+          notifempty
+          copytruncate
+          maxsize 10M
+          su root root
+      }
+    '';
   };
 
   # Virtualisation
@@ -354,6 +431,7 @@
       gimp2
       git
       gnome-themes-extra
+      gnome-settings-daemon
       gnumake
       gnupg
       gopass
@@ -373,8 +451,8 @@
       libwebp
       loupe # image viewer
       max-messanger.packages.${stdenv.hostPlatform.system}.default
-      nautilus
       nettools
+      niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
       nixfmt-rfc-style
       nurl # nix fetcher
       nwg-drawer

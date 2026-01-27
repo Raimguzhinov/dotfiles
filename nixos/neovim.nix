@@ -11,23 +11,20 @@
       vim.enableLuaLoader = true;
       vim.hideSearchHighlight = true;
       vim.searchCase = "smart";
+      vim.undoFile.enable = true;
       vim.options = {
         mouse = "a";
         cursorlineopt = "both";
         signcolumn = "auto";
         colorcolumn = "140";
         encoding = "utf-8";
-        fileformat = "unix";
         number = true;
         relativenumber = true;
-        swapfile = false;
-        scrolloff = 7;
         tabstop = 4;
+        autoindent = true;
         shiftwidth = 0;
         softtabstop = 2;
-        expandtab = true;
-        smartindent = true;
-        wrap = false;
+        wrap = true;
         termguicolors = true;
       };
       vim.lsp = {
@@ -44,6 +41,7 @@
         go.enable = true;
         go.dap.enable = true;
         nix.enable = true;
+        nix.format.enable = true;
         nix.format.type = [ "nixfmt" ];
         bash.enable = true;
         python.enable = true;
@@ -56,11 +54,13 @@
         enable = true;
         name = "tokyonight";
         style = "night";
+        transparent = true;
       };
       vim.terminal.toggleterm = {
         enable = true;
+        mappings.open = ''<leader>"'';
         setupOpts = {
-          direction = "float";
+          direction = "horizontal";
         };
       };
       vim.utility = {
@@ -196,7 +196,7 @@
       vim.lazy.plugins = {
         vim-dadbod-ui = {
           package = pkgs.vimPlugins.vim-dadbod-ui;
-          lazy = false;
+          lazy = true;
           cmd = [
             "DBUI"
             "DBUIToggle"
@@ -208,10 +208,6 @@
               vim.g.db_ui_use_nerd_fonts = 1
               vim.g.db_ui_win_position = "right"
             '';
-        };
-        vim-dadbod = {
-          package = pkgs.vimPlugins.vim-dadbod;
-          lazy = false;
         };
         vim-dadbod-completion = {
           package = pkgs.vimPlugins.vim-dadbod-completion;

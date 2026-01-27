@@ -7,6 +7,7 @@
     niri.url = "github:sodiboo/niri-flake";
     nvf.url = "github:notashelf/nvf";
     max-messanger.url = "github:Raimguzhinov/max-messanger-flake";
+    niri-float-sticky.url = "github:probeldev/niri-float-sticky";
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -29,6 +30,7 @@
       niri,
       nvf,
       max-messanger,
+      niri-float-sticky,
       zen-browser,
       noctalia,
       home-manager,

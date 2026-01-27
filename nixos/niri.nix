@@ -60,10 +60,15 @@
     };
     prefer-no-csd = true;
     spawn-at-startup = [
-      {
-        command = [ "noctalia-shell" ];
-      }
+      { command = [ "noctalia-shell" ]; }
       { command = [ "xwayland-satellite" ]; }
+      {
+        command = [
+          "bash"
+          "-c"
+          "niri-float-sticky -debug >> /tmp/niri-float-sticky.log"
+        ];
+      }
       {
         command = [
           "bash"
@@ -133,21 +138,26 @@
       mergeAttrsList [
         {
           "Mod+Shift+Slash".action = show-hotkey-overlay;
+          "Mod+W".action = toggle-overview;
           "Mod+Return" = {
-            action = spawn "alacritty";
-            hotkey-overlay.title = "Open a Terminal: alacritty";
+            action = spawn "foot";
+            hotkey-overlay.title = "Open a Terminal: foot";
           };
           "Mod+A" = {
             action = spawn "rofi" "-show" "drun";
             hotkey-overlay.title = "Run an Application: rofi";
           };
+          "Mod+D" = {
+            action = spawn "nwg-drawer";
+            hotkey-overlay.title = "Open The Launcher";
+          };
           "Mod+E" = {
-            action = spawn "alacritty" "-e" "yazi";
+            action = spawn "foot" "--app-id=yazi" "yazi";
             hotkey-overlay.title = "File manager: yazi";
           };
           "Mod+Shift+E" = {
-            action = spawn "nautilus";
-            hotkey-overlay.title = "File manager: nautilus";
+            action = spawn "${pkgs.nemo-with-extensions}/bin/nemo";
+            hotkey-overlay.title = "File manager: nemo";
           };
           "Mod+O" = {
             action =

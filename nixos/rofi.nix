@@ -21,7 +21,7 @@ in
       modi = "drun,run,recursivebrowser,window,calc";
       font = "JetBrains Mono Nerd Font 10";
       show-icons = true;
-      terminal = "${pkgs.alacritty}/bin/alacritty";
+      terminal = "${pkgs.foot}/bin/foot";
       display-drun = "  Apps";
       display-run = "  Run";
       display-recursivebrowser = "  Files";
