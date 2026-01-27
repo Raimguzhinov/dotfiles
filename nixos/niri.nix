@@ -140,7 +140,7 @@
           "Mod+Shift+Slash".action = show-hotkey-overlay;
           "Mod+W".action = toggle-overview;
           "Mod+Return" = {
-            action = spawn "foot";
+            action = spawn "${pkgs.foot}/bin/foot";
             hotkey-overlay.title = "Open a Terminal: foot";
           };
           "Mod+A" = {
@@ -148,16 +148,16 @@
             hotkey-overlay.title = "Run an Application: rofi";
           };
           "Mod+D" = {
-            action = spawn "nwg-drawer";
+            action = spawn "${pkgs.nwg-drawer}/bin/nwg-drawer";
             hotkey-overlay.title = "Open The Launcher";
           };
           "Mod+E" = {
-            action = spawn "foot" "--app-id=yazi" "yazi";
+            action = spawn "${pkgs.foot}/bin/foot" "--app-id=yazi" "yazi";
             hotkey-overlay.title = "File manager: yazi";
           };
           "Mod+Shift+E" = {
-            action = spawn "${pkgs.nemo-with-extensions}/bin/nemo";
-            hotkey-overlay.title = "File manager: nemo";
+            action = spawn "${pkgs.nautilus}/bin/nautilus" "--new-window";
+            hotkey-overlay.title = "File manager: nautilus";
           };
           "Mod+O" = {
             action =
@@ -181,10 +181,10 @@
             hotkey-overlay.title = "Clipboard: cliphist";
           };
           "Mod+Shift+P" = {
-            action = spawn "tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
+            action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
             hotkey-overlay.title = "Password Manager: tessen";
           };
-          "Mod+Shift+L" = {
+          "Mod+Alt+Q" = {
             action.spawn = noctalia "lockScreen lock";
             hotkey-overlay.title = "Lock Screen";
           };
