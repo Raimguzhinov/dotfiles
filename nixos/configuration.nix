@@ -265,9 +265,6 @@
     enable = true;
   };
 
-  # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
-
   # For global user
   users.defaultUserShell = pkgs.zsh;
   programs = {
@@ -285,6 +282,7 @@
     isNormalUser = true;
     description = "dias";
     extraGroups = [
+      "nixosvmtest"
       "networkmanager"
       "wheel"
       "docker"
@@ -348,6 +346,12 @@
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
+  programs.ssh.extraConfig = ''
+    Host *
+        SetEnv TERM=xterm-256color
+        RequestTTY auto
+        ServerAliveInterval 60
+  '';
 
   # Nautilus
   services.gvfs.enable = true;
@@ -376,10 +380,19 @@
   };
 
   # Virtualisation
-  virtualisation.docker.enable = true;
-  virtualisation.libvirtd.enable = true;
-  virtualisation.libvirtd.qemu.vhostUserPackages = with pkgs; [ virtiofsd ];
-  virtualisation.spiceUSBRedirection.enable = true;
+  virtualisation = {
+    docker.enable = true;
+    libvirtd.enable = true;
+    libvirtd.qemu.vhostUserPackages = with pkgs; [ virtiofsd ];
+    spiceUSBRedirection.enable = true;
+    # sudo nixos-rebuild build-vm-with-bootloader --flake ~/dotfiles/nixos
+    vmVariantWithBootLoader = {
+      virtualisation = {
+        memorySize = 8192; # Use 8GiB memory.
+        cores = 4;
+      };
+    };
+  };
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
@@ -421,7 +434,6 @@
       chafa # terminal image viewer
       cliphist
       cmatrix
-      delve
       docker-compose
       file-roller
       firefoxpwa
