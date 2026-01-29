@@ -1,0 +1,13 @@
+^\.idea
+^\.git
+^\.github
+^\.gitignore
+^\.gitattributes
+^\.gitmodules
+^\SpecificDots
+^\Scripts
+^\nixos
+^\.bak
+^\.md
+^\.sh
+^\.png

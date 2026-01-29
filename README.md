@@ -1,43 +1,37 @@
 # Dotfiles symlinked on my machine
 
-### Install with `ln -s`:
+### Install with `stow`:
+
 ```bash
-ln -s ~/dotfiles/.zshrc ~/.zshrc
-# or
-ln -s ~/dotfiles/.zshrc.hyprland ~/.zshrc
+sudo apt install git stow
 
-ln -s ~/dotfiles/.gitconfig ~/.gitconfig
+git clone --branch main git@github.com:Raimguzhinov/dotfiles.git
 
-ln -s ~/dotfiles/nvim/ ~/.config/nvim
-ln -s ~/dotfiles/alacritty/ ~/.config/alacritty
+cd dotfiles
 
-ln -s ~/dotfiles/.tmux ~/.tmux
-ln -s ~/dotfiles/.tmux.conf.local ~/.tmux.conf.local
-ln -s ~/dotfiles/.tmux.conf ~/.tmux.conf
-ln -sf ~/.tmux/.tmux.conf
-ln -s ~/dotfiles/yazi/ ~/.config/yazi
-
-ln -s ~/dotfiles/mimeapps.list ~/.config/mimeapps.list
+stow .
 ```
 
 ### Homebrew installation:
+
 ```bash
 # Leaving a machine
-brew leaves > leaves.txt
+brew leaves > ~/dotfiles/SpecificDots/MacOS/leaves.txt
 
 # Fresh installation
-xargs brew install < leaves.txt
+xargs brew install < ~/dotfiles/SpecificDots/MacOS/leaves.txt
 ```
 
 ### Arch installation:
+
 ```bash
 # Leaving a machine
-pacman -Qqe > pkglist.txt
-comm -13 <(pacman -Qqdt | sort) <(pacman -Qqdtt | sort) > optdeplist.txt
-pacman -Qqem > foreignpkglist.txt
+pacman -Qqe > ~/dotfiles/SpecificDots/Arch/pacman/pkglist.txt
+comm -13 <(pacman -Qqdt | sort) <(pacman -Qqdtt | sort) > ~/dotfiles/SpecificDots/Arch/pacman/optdeplist.txt
+pacman -Qqem > ~/dotfiles/SpecificDots/Arch/pacman/foreignpkglist.txt
 
 # Fresh installation
-pacman -S --needed - < pkglist.txt
-pacman -S --needed $(comm -12 <(pacman -Slq | sort) <(sort pkglist.txt))
-pacman -Rsu $(comm -23 <(pacman -Qq | sort) <(sort pkglist.txt))
+pacman -S --needed - < ~/dotfiles/SpecificDots/Arch/pacman/pkglist.txt
+pacman -S --needed $(comm -12 <(pacman -Slq | sort) <(sort ~/dotfiles/SpecificDots/Arch/pacman/pkglist.txt))
+pacman -Rsu $(comm -23 <(pacman -Qq | sort) <(sort ~/dotfiles/SpecificDots/Arch/pacman/pkglist.txt))
 ```
