@@ -1,2 +1,0 @@
-#!/bin/bash
-cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 -width 35 -theme "$HOME/.config/rofi/launchers/type-7/style-2.rasi" | cliphist decode | wl-copy
