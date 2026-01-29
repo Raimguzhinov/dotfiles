@@ -86,7 +86,7 @@
       wallpaper = {
         enable = true;
         overviewEnabled = true;
-        directory = "/home/dias/dotfiles/SpecificDots/Wallpaper";
+        directory = "/home/dias/dotfiles/wallpapers";
       };
       audio = {
         volumeOverdrive = true;
