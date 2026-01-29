@@ -1,0 +1,3 @@
+SpecificDots/Wallpaper/solar-system.png filter=lfs diff=lfs merge=lfs -text
+SpecificDots/Wallpaper/hyprland.png filter=lfs diff=lfs merge=lfs -text
+SpecificDots/Wallpaper/nixos.png filter=lfs diff=lfs merge=lfs -text
