@@ -10,6 +10,7 @@
   max-messanger,
   niri-float-sticky,
   zen-browser,
+  firefox-addons,
   noctalia,
   home-manager,
   ...

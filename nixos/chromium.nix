@@ -10,7 +10,7 @@
 
   home.packages = with pkgs; [ chromium ];
 
-  home.file.".zen/native-messaging-hosts/com.add0n.node.json".text = ''
+  home.file.".config/zen/native-messaging-hosts/com.add0n.node.json".text = ''
     {
       "name": "com.add0n.node",
       "description": "Node Host for Native Messaging",

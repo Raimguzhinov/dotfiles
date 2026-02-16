@@ -127,6 +127,10 @@
                     pkgs-gen-go-grpc1_3_0.protoc-gen-go-grpc
                     libwebp
                     pkg-config
+                    (pkgs.python3.withPackages (python-pkgs: with python-pkgs; [
+                      requests
+                      configparser
+                    ]))
                   ];
 
                   shellHook = ${"''"}
