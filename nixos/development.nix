@@ -125,9 +125,11 @@
                     protobuf23
                     pkgs-go21.protoc-gen-go
                     pkgs-gen-go-grpc1_3_0.protoc-gen-go-grpc
+                    python3
                     libwebp
                     pkg-config
                     (pkgs.python3.withPackages (python-pkgs: with python-pkgs; [
+                      python-dotenv
                       requests
                       configparser
                     ]))
@@ -277,11 +279,26 @@
                         echo '$VIMRC_CONTENT' | sudo tee /root/.vimrc > /dev/null"
         echo "✅ .vimrc установлен для пользователя и root на $HOST"
       '';
+      tracktime = pkgs.writeShellScriptBin "tracktime" ''
+        if [ $# -ne 1 ]; then
+            echo "Usage   : $(basename $0) date,issue,duration,workType,description"
+            echo "Example : $(basename $0) 2026-02-17,UC-9750,20m,Discuss,"
+            exit 1
+        fi
+        temp_file=$(mktemp --suffix=.csv)
+        cat << EOF > $temp_file
+        date,issue,duration,workType,description
+        ${"$"}{@:1}
+        EOF
+        echo "log track entry: $temp_file"
+        $HOME/Work/yt-time-tracker/yt_time_tracker.py $temp_file
+      '';
     in
     [
       fetch-srv-from-docker
       ssh-setup-dlv
       ssh-run-debugger
       ssh-copy-vimrc
+      tracktime
     ];
 }

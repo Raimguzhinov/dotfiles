@@ -48,9 +48,11 @@
     oh-my-zsh = {
       enable = true;
       plugins = [
+        "docker"
+        "docker-compose"
+        "extract"
         "git"
         "sudo"
-        "docker"
       ];
       # theme = "robbyrussell";
     };
@@ -472,6 +474,7 @@
   };
 
   programs.fd.enable = true;
+  programs.fzf.enable = true;
   programs.ripgrep.enable = true;
   programs.lazygit.enable = true;
 

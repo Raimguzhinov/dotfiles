@@ -162,36 +162,42 @@
                   ];
                 }
               ];
-              definedAliases = [ "@nx" ];
+              icon = "${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
+              definedAliases = [ "@hx" ];
             };
-            yandex = {
-              name = "Yandex";
+            nix-packages = {
+              name = "NixOS Search";
               urls = [
                 {
-                  template = "https://ya.ru/search?text={searchTerms}";
+                  template = "https://search.nixos.org/packages";
                   params = [
                     {
+                      name = "type";
+                      value = "packages";
+                    }
+                    {
                       name = "query";
-                      value = "searchTerms";
+                      value = "{searchTerms}";
                     }
                   ];
                 }
               ];
+              icon = "${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
+              definedAliases = [ "@nix" ];
+            };
+            google.metaData.alias = "@goo";
+            youtube.metaData.alias = "@you";
+            wikipedia-ru.metaData.alis = "@wiki";
+            yandex = {
+              name = "Yandex";
+              urls = [ { template = "https://ya.ru/search?text={searchTerms}"; } ];
+              iconMapObj."16" = "https://yastatic.net/s3/home-static/_/3a/3aad4345be1368a10e2eaa78143a4cb5.png";
               definedAliases = [ "@ya" ];
             };
             translate = {
               name = "Yandex Translate";
-              urls = [
-                {
-                  template = "https://translate.yandex.ru/?text={searchTerms}";
-                  params = [
-                    {
-                      name = "query";
-                      value = "searchTerms";
-                    }
-                  ];
-                }
-              ];
+              urls = [ { template = "https://translate.yandex.ru/?text={searchTerms}"; } ];
+              iconMapObj."16" = "https://translate.yandex.ru/icons/favicon.ico";
               definedAliases = [ "@trans" ];
             };
           };

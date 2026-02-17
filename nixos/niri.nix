@@ -54,6 +54,17 @@
         };
         clip-to-geometry = true;
       }
+      {
+        matches = [
+          { app-id = "spotify"; }
+          { app-id = "Alacritty"; }
+          { app-id = "ONLYOFFICE"; }
+          { app-id = "localsend_app"; }
+          { app-id = "chromium-browser"; }
+          { title = "Virtual Machine Manager"; }
+        ];
+        open-floating = true;
+      }
     ];
     debug = {
       honor-xdg-activation-with-invalid-serial = { };

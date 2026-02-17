@@ -288,9 +288,6 @@
       "wheel"
       "docker"
       "wireshark"
-      "libvirtd"
-      "kvm"
-      "qemu"
     ];
     shell = pkgs.zsh;
   };
@@ -394,6 +391,7 @@
       };
     };
   };
+  users.groups.libvirtd.members = [ "dias" ];
   services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
@@ -438,10 +436,8 @@
       docker-compose
       file-roller
       firefoxpwa
-      fzf
       gcc
       gdu
-      gimp2
       git
       gnome-themes-extra
       gnome-settings-daemon
@@ -454,7 +450,8 @@
       httpie
       imagemagick
       jq
-      krita
+      kdePackages.kpat
+      keypunch
       lazygit
       libheif
       libheif.out
@@ -474,6 +471,7 @@
       papers
       papirus-icon-theme
       pfetch
+      pinta
       postgresql
       rr
       showtime
