@@ -98,6 +98,15 @@
           };
         };
 
+        programs.gpg.enable = true;
+        services.gpg-agent = {
+          enable = true;
+          enableZshIntegration = true;
+          enableBashIntegration = true;
+          enableSshSupport = true;
+          pinentry.package = pkgs.pinentry-gnome3;
+        };
+
         programs.foot = {
           enable = true;
           server.enable = true;
@@ -171,6 +180,7 @@
   qt = {
     enable = true;
     platformTheme = "qt5ct";
+    style = "adwaita-dark";
   };
   xdg.portal = {
     enable = true;
@@ -296,6 +306,7 @@
   services.udev.packages = [ pkgs.yubikey-personalization ];
   services.pcscd.enable = true;
   services.yubikey-agent.enable = true;
+  hardware.gpgSmartcards.enable = true;
 
   security.polkit.enable = true; # polkit
 
@@ -326,11 +337,6 @@
   programs.mtr.enable = true;
 
   # Password store
-  programs.gnupg.agent = {
-    enable = true;
-    enableSSHSupport = true;
-    pinentryPackage = pkgs.pinentry-gnome3;
-  };
   services.gnome.gnome-keyring.enable = true;
 
   # Bluetooth
@@ -451,6 +457,7 @@
       imagemagick
       jq
       kdePackages.kpat
+      kdePackages.partitionmanager
       keypunch
       lazygit
       libheif
@@ -472,7 +479,9 @@
       papirus-icon-theme
       pfetch
       pinta
+      popsicle
       postgresql
+      python3
       rr
       showtime
       spotify

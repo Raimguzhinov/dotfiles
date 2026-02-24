@@ -4,6 +4,7 @@
   programs.direnv = {
     enable = true;
     enableZshIntegration = true;
+    enableBashIntegration = true;
     nix-direnv.enable = true;
   };
 
@@ -283,6 +284,10 @@
         if [ $# -ne 1 ]; then
             echo "Usage   : $(basename $0) date,issue,duration,workType,description"
             echo "Example : $(basename $0) 2026-02-17,UC-9750,20m,Discuss,"
+            echo
+            echo "Unclassified tasks:"
+            echo "UC-9750 Учет времени на запланированные митапы"
+            echo "EDU-557 Учёт времени на переезд, перелёт, настройку ОС, фоновые задачи и саморазвитие"
             exit 1
         fi
         temp_file=$(mktemp --suffix=.csv)
@@ -291,7 +296,9 @@
         ${"$"}{@:1}
         EOF
         echo "log track entry: $temp_file"
-        $HOME/Work/yt-time-tracker/yt_time_tracker.py $temp_file
+        cd $HOME/Work/yt-time-tracker
+        ./yt_time_tracker.py $temp_file
+        cd -
       '';
     in
     [
