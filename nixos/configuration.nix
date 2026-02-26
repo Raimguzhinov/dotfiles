@@ -179,8 +179,8 @@
 
   qt = {
     enable = true;
+    style = null;
     platformTheme = "qt5ct";
-    style = "adwaita-dark";
   };
   xdg.portal = {
     enable = true;
@@ -436,6 +436,7 @@
       alsa-utils
       brightnessctl
       bruno # lightweight insomnia
+      # censor # PDF document redaction
       chafa # terminal image viewer
       cliphist
       cmatrix
@@ -456,15 +457,15 @@
       httpie
       imagemagick
       jq
-      kdePackages.kpat
-      kdePackages.partitionmanager
+      kdePackages.kpat # solitaire game
+      kdePackages.partitionmanager # disk utility
       keypunch
       lazygit
       libheif
       libheif.out
       libnotify
       libpng
-      libsForQt5.qt5.qtwayland # для Qt приложений
+      libsForQt5.qt5.qtwayland # for Qt apps
       libwebp
       loupe # image viewer
       max-messanger.packages.${stdenv.hostPlatform.system}.default
@@ -479,17 +480,19 @@
       papirus-icon-theme
       pfetch
       pinta
-      popsicle
+      popsicle # USB flasher
       postgresql
       python3
+      qrencode
       rr
-      showtime
+      showtime # video player
       spotify
       telegram-desktop
       tessen
       thinkfan
       tig
       tlrc
+      transmission_4-gtk
       unzip
       vim
       wget

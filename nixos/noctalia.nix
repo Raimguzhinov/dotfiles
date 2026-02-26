@@ -97,6 +97,9 @@
         normalUrgencyDuration = 5;
         criticalUrgencyDuration = 15;
       };
+      dock = {
+        enable = false;
+      };
     };
     # this may also be a string or a path to a JSON file.
   };
