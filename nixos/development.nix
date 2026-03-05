@@ -129,6 +129,11 @@
                     python3
                     libwebp
                     pkg-config
+                    rustc
+                    cargo
+                    nodejs_20
+                    yarn
+                    yarn2nix
                     (pkgs.python3.withPackages (python-pkgs: with python-pkgs; [
                       python-dotenv
                       requests

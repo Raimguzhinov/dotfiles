@@ -100,7 +100,7 @@
         mappings.refresh = "<leader>er";
         mappings.toggle = "<leader>eq";
         mappings.focus = "<leader>e";
-        openOnSetup = true;
+        openOnSetup = false;
         setupOpts = {
           sync_root_with_cwd = false;
           respect_buf_cwd = true;

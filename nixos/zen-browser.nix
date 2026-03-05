@@ -3,6 +3,7 @@
 {
   programs.zen-browser = {
     enable = true;
+    suppressXdgMigrationWarning = true;
     nativeMessagingHosts = [ pkgs.firefoxpwa ];
     policies =
       let
@@ -163,7 +164,7 @@
                 }
               ];
               icon = "${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
-              definedAliases = [ "@hx" ];
+              definedAliases = [ "@hm" ];
             };
             nix-packages = {
               name = "NixOS Search";
@@ -205,7 +206,7 @@
       in
       {
         containersForce = true;
-        pinsForce = true;
+        pinsForce = false;
         spacesForce = true;
         inherit
           containers

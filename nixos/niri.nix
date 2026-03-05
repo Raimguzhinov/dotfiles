@@ -58,12 +58,13 @@
       }
       {
         matches = [
-          { app-id = "spotify"; }
-          { app-id = "Alacritty"; }
-          { app-id = "ONLYOFFICE"; }
-          { app-id = "localsend_app"; }
-          { app-id = "chromium-browser"; }
-          { title = "Virtual Machine Manager"; }
+          { app-id = "^spotify$"; }
+          { app-id = "^Alacritty$"; }
+          { app-id = "^ONLYOFFICE$"; }
+          { app-id = "^localsend_app$"; }
+          { app-id = "^chromium-browser$"; }
+          { title = "^Virtual Machine Manager$"; }
+          { title = "^Интернетометр"; }
         ];
         open-floating = true;
       }

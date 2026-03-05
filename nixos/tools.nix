@@ -57,15 +57,18 @@
       # theme = "robbyrussell";
     };
     shellAliases = {
+      e = "exit";
       ll = "ls -l";
       la = "ls -la";
-      e = "exit";
       clr = "clear";
       cat = "bat";
+      "cd.." = "cd ..";
       tree = "eza --tree";
       pass = "gopass";
       open = "xdg-open";
       dbui = "nvim +DBUI";
+      http = "xh";
+      https = "xhs";
     };
   };
 
@@ -114,6 +117,9 @@
           tooltip = "F1";
         };
       };
+      web_server_ip = "0.0.0.0";
+      web_server_cert = "/home/dias/.cert/zellij.local/zellij.crt";
+      web_server_key = "/home/dias/.cert/zellij.local/zellij.key";
     };
     extraConfig = ''
       keybinds clear-defaults=true {

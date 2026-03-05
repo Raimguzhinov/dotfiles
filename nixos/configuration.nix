@@ -402,8 +402,18 @@
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
 
+  # V4L2 Loopback
+  boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback ];
+  boot.extraModprobeConfig = ''
+    options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
+  '';
+
   # Open ports in the firewall.
-  # networking.firewall.allowedTCPPorts = [ ... ];
+  networking.firewall.allowedTCPPorts = [
+    8081
+    8082
+    8083
+  ];
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   # networking.firewall.enable = false;
@@ -438,23 +448,24 @@
       bruno # lightweight insomnia
       # censor # PDF document redaction
       chafa # terminal image viewer
+      choose # cut → choose
       cliphist
       cmatrix
       docker-compose
+      dysk # df → dysk
       file-roller
       firefoxpwa
       gcc
-      gdu
+      gdu # du -> ncdu/dust -> gdu
       git
-      gnome-themes-extra
       gnome-settings-daemon
+      gnome-themes-extra
       gnumake
       gnupg
       gopass
       gtk3
       hicolor-icon-theme
       htop
-      httpie
       imagemagick
       jq
       kdePackages.kpat # solitaire game
@@ -482,6 +493,7 @@
       pinta
       popsicle # USB flasher
       postgresql
+      procs # ps → procs
       python3
       qrencode
       rr
@@ -501,7 +513,9 @@
       wl-color-picker
       xdg-desktop-portal-gnome
       xdg-desktop-portal-gtk
+      xh # curl/httpie → xh
       xwayland-satellite
+      yq-go
       yubikey-manager
       yubikey-personalization
       yubioath-flutter
