@@ -5,6 +5,7 @@
   config,
   lib,
   pkgs,
+  nixpkgs,
   nvf,
   max-messanger,
   niri-float-sticky,
@@ -38,6 +39,9 @@
     options = "--delete-older-than 14d";
   };
 
+  nix.registry.nixpkgs.flake = nixpkgs;
+  nix.nixPath = [ "nixpkgs=${nixpkgs}" ];
+
   # Niri
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
@@ -68,9 +72,19 @@
         home.homeDirectory = "/home/dias";
         home.stateVersion = "25.11";
         home.packages = with pkgs; [
+          alacritty
           amnezia-vpn
+          cmatrix
+          kdePackages.kpat
+          kdePackages.partitionmanager
+          keypunch
           nautilus
           networkmanagerapplet
+          obsidian
+          pfetch
+          pinta
+          spotify
+          telegram-desktop
         ];
 
         dconf = {
@@ -268,9 +282,13 @@
     # no need to redefine it in your config for now)
     #media-session.enable = true;
   };
-  services.cron = {
-    enable = true;
-  };
+  # Cron: отключён. Пример добавления задачи:
+  # services.cron = {
+  #   enable = true;
+  #   systemCronJobs = [
+  #     "0 2 * * * root /path/to/backup.sh  # каждую ночь в 2:00"
+  #   ];
+  # };
 
   # For global user
   users.defaultUserShell = pkgs.zsh;
@@ -345,7 +363,13 @@
   services.upower.enable = true;
 
   # Enable the OpenSSH daemon.
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = false;
+      PermitRootLogin = "no";
+    };
+  };
   programs.ssh.extraConfig = ''
     Host *
         SetEnv TERM=xterm-256color
@@ -394,7 +418,6 @@
     };
   };
   users.groups.libvirtd.members = [ "dias" ];
-  services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
 
@@ -424,102 +447,74 @@
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages =
-    with pkgs;
-    let
-      rr = writeShellScriptBin "rr" ''
-        tmp="$(mktemp -t "yazi-cwd.XXXXX")"
-        yazi "$@" --cwd-file="$tmp"
-        if cwd="$(cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
-            builtin cd -- "$cwd"
-        fi
-        rm -f -- "$tmp"
-      '';
-    in
-    [
-      aichat
-      alacritty
-      alsa-utils
-      brightnessctl
-      bruno # lightweight insomnia
-      # censor # PDF document redaction
-      chafa # terminal image viewer
-      choose # cut → choose
-      claude-code
-      cliphist
-      cmatrix
-      docker-buildx
-      docker-compose
-      dysk # df → dysk
-      file-roller
-      firefoxpwa
-      gcc
-      gdu # du -> ncdu/dust -> gdu
-      git
-      gnome-settings-daemon
-      gnome-themes-extra
-      gnumake
-      gnupg
-      gopass
-      gtk3
-      hicolor-icon-theme
-      htop-vim
-      imagemagick
-      jq
-      kdePackages.kpat # solitaire game
-      kdePackages.partitionmanager # disk utility
-      keypunch
-      lazydocker
-      lazygit
-      lazyssh
-      libheif
-      libheif.out
-      libnotify
-      libpng
-      libsForQt5.qt5.qtwayland # for Qt apps
-      libwebp
-      loupe # image viewer
-      max-messanger.packages.${stdenv.hostPlatform.system}.default
-      neohtop
-      nettools
-      niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
-      nixfmt-rfc-style
-      nurl # nix fetcher
-      nwg-drawer
-      obsidian
-      onlyoffice-desktopeditors
-      papers
-      papirus-icon-theme
-      pfetch
-      pinta
-      popsicle # USB flasher
-      postgresql
-      procs # ps → procs
-      python3
-      qrencode
-      rr
-      showtime # video player
-      spotify
-      telegram-desktop
-      tessen
-      thinkfan
-      tig
-      tlrc
-      transmission_4-gtk
-      unzip
-      vim
-      wget
-      wireshark
-      wl-clipboard
-      wl-color-picker
-      xdg-desktop-portal-gnome
-      xdg-desktop-portal-gtk
-      xh # curl/httpie → xh
-      xwayland-satellite
-      yq-go
-      yubikey-manager
-      yubikey-personalization
-      yubioath-flutter
-      zip
-    ];
+  environment.systemPackages = with pkgs; [
+    aichat
+    alsa-utils
+    brightnessctl
+    bruno # lightweight insomnia
+    # censor # PDF document redaction
+    chafa # terminal image viewer
+    choose # cut → choose
+    claude-code
+    cliphist
+    docker-buildx
+    docker-compose
+    dysk # df → dysk
+    file-roller
+    firefoxpwa
+    gcc
+    gdu # du -> ncdu/dust -> gdu
+    gnome-settings-daemon
+    gnome-themes-extra
+    gnumake
+    gnupg
+    gopass
+    gtk3
+    hicolor-icon-theme
+    htop-vim
+    imagemagick
+    jq
+    lazydocker
+    lazyssh
+    libheif
+    libnotify
+    libpng
+    libsForQt5.qt5.qtwayland # for Qt apps
+    libwebp
+    loupe # image viewer
+    max-messanger.packages.${stdenv.hostPlatform.system}.default
+    neohtop
+    nettools
+    niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
+    nixfmt-rfc-style
+    nurl # nix fetcher
+    nwg-drawer
+    onlyoffice-desktopeditors
+    papers
+    papirus-icon-theme
+    popsicle # USB flasher
+    postgresql
+    procs # ps → procs
+    python3
+    qrencode
+    showtime # video player
+    tessen
+    thinkfan
+    tig
+    tlrc
+    transmission_4-gtk
+    unzip
+    wget
+    wl-clipboard
+    wl-color-picker
+    xdg-desktop-portal-gnome
+    xdg-desktop-portal-gtk
+    xh # curl/httpie → xh
+    xwayland-satellite
+    yq-go
+    yubikey-manager
+    yubikey-personalization
+    yubioath-flutter
+    zip
+  ];
 }
