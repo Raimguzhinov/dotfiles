@@ -451,6 +451,7 @@
       choose # cut → choose
       cliphist
       cmatrix
+      docker-buildx
       docker-compose
       dysk # df → dysk
       file-roller
@@ -465,13 +466,15 @@
       gopass
       gtk3
       hicolor-icon-theme
-      htop
+      htop-vim
       imagemagick
       jq
       kdePackages.kpat # solitaire game
       kdePackages.partitionmanager # disk utility
       keypunch
+      lazydocker
       lazygit
+      lazyssh
       libheif
       libheif.out
       libnotify
@@ -480,6 +483,7 @@
       libwebp
       loupe # image viewer
       max-messanger.packages.${stdenv.hostPlatform.system}.default
+      neohtop
       nettools
       niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
       nixfmt-rfc-style

@@ -65,6 +65,7 @@
           { app-id = "^chromium-browser$"; }
           { title = "^Virtual Machine Manager$"; }
           { title = "^Интернетометр"; }
+          { title = "^Speedted by Ookla"; }
         ];
         open-floating = true;
       }

@@ -45,6 +45,12 @@
     enableCompletion = true;
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
+    initContent = ''
+      # open commands in $EDITOR with C-e
+      autoload -z edit-command-line
+      zle -N edit-command-line
+      bindkey "^e" edit-command-line
+    '';
     oh-my-zsh = {
       enable = true;
       plugins = [
@@ -69,6 +75,7 @@
       dbui = "nvim +DBUI";
       http = "xh";
       https = "xhs";
+      nvimdiff = "nvim -d";
     };
   };
 
@@ -451,6 +458,15 @@
           desc = "Go to docker Protei services";
         }
       ];
+    };
+  };
+
+  programs.mc = {
+    enable = true;
+    settings.Midnight-Commander = {
+      skin = "yadt256";
+      use_internal_view = false;
+      use_internal_edit = false;
     };
   };
 
