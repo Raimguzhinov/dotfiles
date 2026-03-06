@@ -67,7 +67,7 @@
       ll = "ls -l";
       la = "ls -la";
       clr = "clear";
-      cat = "bat -p -P";
+      cat = "bat -p";
       "cd.." = "cd ..";
       tree = "eza --tree";
       pass = "gopass";
