@@ -5,14 +5,11 @@
   config,
   lib,
   pkgs,
-  niri,
   nvf,
   max-messanger,
   niri-float-sticky,
   zen-browser,
-  firefox-addons,
   noctalia,
-  home-manager,
   ...
 }:
 {
@@ -44,7 +41,6 @@
   # Niri
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
-  # nixpkgs.overlays = [niri.overlays.niri];
 
   # Home Manager configuration
   home-manager = {
@@ -449,6 +445,7 @@
       # censor # PDF document redaction
       chafa # terminal image viewer
       choose # cut → choose
+      claude-code
       cliphist
       cmatrix
       docker-buildx

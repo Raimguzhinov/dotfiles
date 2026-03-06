@@ -3,9 +3,10 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/1ebf2de9af636a5752c15b4f40e504183f0b2ec8";
+    nixpkgs-amnezia.url = "github:NixOS/nixpkgs/1ebf2de9af636a5752c15b4f40e504183f0b2ec8";
     niri.url = "github:sodiboo/niri-flake";
     nvf.url = "github:notashelf/nvf";
+    claude-code.url = "github:sadjow/claude-code-nix";
     max-messanger.url = "github:Raimguzhinov/max-messanger-flake";
     niri-float-sticky.url = "github:probeldev/niri-float-sticky";
     zen-browser = {
@@ -30,9 +31,10 @@
     {
       self,
       nixpkgs,
-      nixpkgs-unstable,
+      nixpkgs-amnezia,
       niri,
       nvf,
+      claude-code,
       max-messanger,
       niri-float-sticky,
       zen-browser,

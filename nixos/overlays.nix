@@ -1,17 +1,21 @@
 {
   config,
   pkgs,
-  nixpkgs-unstable,
+  nixpkgs-amnezia,
   firefox-addons,
+  claude-code,
+  niri,
   ...
 }:
 {
   nixpkgs.overlays = [
     (final: prev: {
-      amnezia-vpn = nixpkgs-unstable.legacyPackages.${prev.stdenv.hostPlatform.system}.amnezia-vpn;
+      amnezia-vpn = nixpkgs-amnezia.legacyPackages.${prev.stdenv.hostPlatform.system}.amnezia-vpn;
     })
     (final: prev: {
       firefox-addons = firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
     })
+    claude-code.overlays.default
+    niri.overlays.niri
   ];
 }
