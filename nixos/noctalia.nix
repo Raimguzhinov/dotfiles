@@ -30,6 +30,10 @@
           ];
           center = [
             {
+              id = "Launcher";
+              enableColorization = true;
+            }
+            {
               hideUnoccupied = false;
               id = "Workspace";
               labelMode = "none";
@@ -57,7 +61,6 @@
               id = "Clock";
               useCustomFont = true;
               customFont = "Inter Nerd Font Display Black";
-              usePrimaryColor = true;
             }
             {
               id = "Tray";
@@ -99,6 +102,10 @@
       };
       dock = {
         enabled = false;
+      };
+      appLauncher = {
+        showCategories = true;
+        viewMode = "grid";
       };
     };
     # this may also be a string or a path to a JSON file.

@@ -466,6 +466,8 @@
     firefoxpwa
     gcc
     gdu # du -> ncdu/dust -> gdu
+    gh
+    glab
     gnome-settings-daemon
     gnome-themes-extra
     gnumake
@@ -484,7 +486,7 @@
     libsForQt5.qt5.qtwayland # for Qt apps
     libwebp
     loupe # image viewer
-    max-messanger.packages.${stdenv.hostPlatform.system}.default
+    # max-messanger.packages.${stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
     neohtop
     nettools
     niri-float-sticky.packages.${stdenv.hostPlatform.system}.default

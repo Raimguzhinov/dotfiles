@@ -28,6 +28,9 @@
       url."ssh://git@git.protei.ru/" = {
         insteadOf = [ "https://git.protei.ru/" ];
       };
+      url."ssh://git@github.com/" = {
+        insteadOf = [ "https://github.com/" ];
+      };
     };
   };
 

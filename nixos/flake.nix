@@ -121,6 +121,8 @@
           echo "  git add nixos/hardware-configuration.nix"
           echo "  git commit -m 'nixos: add hardware-configuration'"
           echo "  git remote set-url origin git@github.com:Raimguzhinov/dotfiles.git"
+          echo "  mkdir -p ~/.config/nix"
+          echo "  echo 'access-tokens = github.com=<token>' > ~/.config/nix/nix.conf"
           echo ""
         '';
       };
