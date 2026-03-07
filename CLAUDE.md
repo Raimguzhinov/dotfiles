@@ -68,10 +68,10 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 ## Disko (разметка диска)
 
 `nixos/disko.nix` — NixOS-модуль И standalone-конфиг (параметр `disk ? "/dev/disk/by-diskseq/1"`):
-- GPT: ESP 1G (vfat, /boot) + LUKS2 остаток → LVM VG `pool`
-- LVM: `swap` 32G (resumeDevice=true → boot.resumeDevice) + `root` 100%FREE → btrfs
-- btrfs subvolumes: `@`→/, `@home`→/home, `@nix`→/nix
-- Стабильные пути: `/dev/disk/by-partlabel/disk-main-*`, `/dev/mapper/cryptroot`, `/dev/pool/root`
+- GPT: ESP 512M (vfat, /boot) + swap 32G (resumeDevice=true) + LUKS2 остаток → btrfs
+- btrfs subvolumes: `/root`→/, `/home`→/home, `/nix`→/nix
+- Swap вне LUKS — для простой гибернации без вычисления resume_offset
+- LUKS: интерактивный ввод пароля, allowDiscards=true
 - Параметр `disk` нужен только при форматировании (disko CLI), для работающей системы не важен
 
 ## Inputs flake
