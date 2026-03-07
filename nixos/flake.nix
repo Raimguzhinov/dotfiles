@@ -90,7 +90,7 @@
 
           echo ""
           echo ">>> Generating hardware configuration..."
-          nixos-generate-config --no-filesystems --root "$TARGET"
+          nixos-generate-config --root "$TARGET"
 
           echo ""
           echo ">>> Cloning dotfiles..."
@@ -132,8 +132,6 @@
         modules = [
           ./configuration.nix
           ./overlays.nix
-          ./disko.nix
-          disko.nixosModules.disko
           home-manager.nixosModules.home-manager
           niri.nixosModules.niri
         ];
