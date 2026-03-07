@@ -68,6 +68,7 @@
             { title = "^Virtual Machine Manager$"; }
             { title = "^Интернетометр"; }
             { title = "^Speedted by Ookla"; }
+            { title = "^Картинка в картинке$"; }
           ];
           open-floating = true;
         }
@@ -83,14 +84,7 @@
           command = [
             "bash"
             "-c"
-            "niri-float-sticky -debug >> /tmp/niri-float-sticky.log"
-          ];
-        }
-        {
-          command = [
-            "bash"
-            "-c"
-            "wl-paste --watch cliphist store"
+            "niri-float-sticky -debug >> /tmp/niri-float-sticky.log" # -title 'Картинка в картинке'
           ];
         }
       ];
@@ -161,8 +155,8 @@
               hotkey-overlay.title = "Open a Terminal: foot";
             };
             "Mod+A" = {
-              action = spawn "rofi" "-show" "drun";
-              hotkey-overlay.title = "Run an Application: rofi";
+              action.spawn = noctalia "launcher toggle"; # "rofi" "-show" "drun";
+              hotkey-overlay.title = "Run an Application: noctalia launcher";
             };
             "Mod+D" = {
               action = spawn "${pkgs.nwg-drawer}/bin/nwg-drawer";
@@ -187,15 +181,19 @@
               hotkey-overlay.title = "Calculator: rofi-calc";
             };
             "Mod+V" = {
-              action =
-                let
-                  cliphistRofi = pkgs.writeShellScriptBin "cliphistRofi" ''
-                    cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 \
-                    -width 35 | cliphist decode | wl-copy
-                  '';
-                in
-                spawn "${lib.getExe cliphistRofi}";
-              hotkey-overlay.title = "Clipboard: cliphist";
+              action.spawn = noctalia "launcher clipboard";
+              # let
+              #   cliphistRofi = pkgs.writeShellScriptBin "cliphistRofi" ''
+              #     cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 \
+              #     -width 35 | cliphist decode | wl-copy
+              #   '';
+              # in
+              # spawn "${lib.getExe cliphistRofi}";
+              hotkey-overlay.title = "Clipboard: noctalia launcher";
+            };
+            "Mod+G" = {
+              action = spawn "niri-float-sticky" "-ipc" "toggle_sticky";
+              hotkey-overlay.title = "Toggle sticky";
             };
             "Mod+Shift+P" = {
               action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";

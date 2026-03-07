@@ -16,6 +16,9 @@
               useDistroLogo = true;
             }
             {
+              id = "Launcher";
+            }
+            {
               id = "Volume";
             }
             {
@@ -29,10 +32,6 @@
             }
           ];
           center = [
-            {
-              id = "Launcher";
-              enableColorization = true;
-            }
             {
               hideUnoccupied = false;
               id = "Workspace";
@@ -104,8 +103,30 @@
         enabled = false;
       };
       appLauncher = {
-        showCategories = true;
+        enableClipboardHistory = true;
+        autoPasteClipboard = false;
+        enableClipPreview = true;
+        clipboardWrapText = true;
+        clipboardWatchTextCommand = "wl-paste --type text --watch cliphist store";
+        clipboardWatchImageCommand = "wl-paste --type image --watch cliphist store";
+        position = "center";
+        pinnedApps = [ ];
+        useApp2Unit = false;
+        sortByMostUsed = true;
+        terminalCommand = "alacritty -e";
+        customLaunchPrefixEnabled = false;
+        customLaunchPrefix = "";
         viewMode = "grid";
+        showCategories = true;
+        iconMode = "native";
+        showIconBackground = false;
+        enableSettingsSearch = true;
+        enableWindowsSearch = true;
+        enableSessionSearch = true;
+        ignoreMouseInput = false;
+        screenshotAnnotationTool = "";
+        overviewLayer = true;
+        density = "default";
       };
     };
     # this may also be a string or a path to a JSON file.
