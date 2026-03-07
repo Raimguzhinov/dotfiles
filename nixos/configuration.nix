@@ -507,7 +507,7 @@
     transmission_4-gtk
     unzip
     wget
-    wl-clipboard-rs
+    wl-clipboard
     wl-color-picker
     xdg-desktop-portal-gnome
     xdg-desktop-portal-gtk
