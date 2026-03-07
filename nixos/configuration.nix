@@ -362,6 +362,8 @@
   services.tuned.enable = true;
   services.upower.enable = true;
 
+  services.fstrim.enable = true; # SSD TRIM (weekly)
+
   # Enable the OpenSSH daemon.
   services.openssh = {
     enable = true;
