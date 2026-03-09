@@ -5,8 +5,6 @@
     enable = true;
     lfs.enable = true;
     settings = {
-      user.name = "Dias B. Raimguzhinov";
-      user.email = "raimguzhinov@protei-lab.ru";
       alias = {
         co = "checkout";
         br = "branch";
@@ -24,12 +22,6 @@
         autoSquash = true;
         autoStash = true;
         updateRefs = true;
-      };
-      url."ssh://git@git.protei.ru/" = {
-        insteadOf = [ "https://git.protei.ru/" ];
-      };
-      url."ssh://git@github.com/" = {
-        insteadOf = [ "https://github.com/" ];
       };
     };
   };

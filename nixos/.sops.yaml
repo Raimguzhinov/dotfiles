@@ -1,0 +1,8 @@
+keys:
+  - &dias 6E06AD1573F0D606704F4A32719B8382A9DBA991
+
+creation_rules:
+  - path_regex: secrets\.yaml$
+    key_groups:
+      - pgp:
+          - *dias

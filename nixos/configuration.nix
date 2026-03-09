@@ -11,6 +11,7 @@
   niri-float-sticky,
   zen-browser,
   noctalia,
+  sops-nix,
   ...
 }:
 {
@@ -53,6 +54,7 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
+    sharedModules = [ sops-nix.homeManagerModules.sops ];
     users.root =
       { config, lib, ... }:
       {
@@ -176,6 +178,7 @@
           nvf.homeManagerModules.default
           zen-browser.homeModules.beta
           ./chromium.nix
+          ./sops.nix
           ./development.nix
           ./jetbrains.nix
           ./neovim.nix
@@ -502,6 +505,7 @@
     python3
     qrencode
     showtime # video player
+    sops
     tessen
     thinkfan
     tig
