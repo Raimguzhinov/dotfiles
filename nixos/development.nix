@@ -40,8 +40,9 @@
   home.packages =
     let
       fetch-srv-from-docker = pkgs.writeShellScriptBin "fetch-srv-from-docker" ''
-        echo "docker cp $(basename "$PWD"):/home/protei/Protei-UC/$(basename "$PWD")/$(basename "$PWD") ."
-        ${pkgs.docker}/bin/docker cp $(basename "$PWD"):/home/protei/Protei-UC/$(basename "$PWD")/$(basename "$PWD") .
+        svc_root=$(cat ${config.sops.secrets."product/services-root".path})
+        echo "docker cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") ."
+        ${pkgs.docker}/bin/docker cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") .
       '';
       ssh-setup-dlv = pkgs.writeShellScriptBin "ssh-setup-dlv" ''
         if [ $# -ne 1 ]; then
@@ -68,7 +69,8 @@
         echo "Далее следуйте инструкциям"
       '';
       remoteDebugRawScript = pkgs.writeText "remoteDebugRawScript" ''
-        export SERVICE_PATH=$(dirname $(dirname $(sudo find /home/protei/Protei-UC -follow -type f -path "*/bin/$SERVICE" | grep -v -- "-[0-9]\+/" | head -1))) && \
+        svc_root=$(cat ${config.sops.secrets."product/services-root".path})
+        export SERVICE_PATH=$(dirname $(dirname $(sudo find $svc_root -follow -type f -path "*/bin/$SERVICE" | grep -v -- "-[0-9]\+/" | head -1))) && \
         echo $SERVICE_PATH && \
         sudo mv $SERVICE_PATH/bin/$SERVICE $SERVICE_PATH/bin/$SERVICE.bak && \
         sudo mv /home/support/$SERVICE $SERVICE_PATH/bin/$SERVICE && \

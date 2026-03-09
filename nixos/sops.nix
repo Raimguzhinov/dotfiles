@@ -11,6 +11,7 @@
     secrets."youtrack/url" = { };
     secrets."youtrack/token" = { };
     secrets."git/private" = { };
+    secrets."product/services-root" = { };
   };
 
   programs.git.includes = [{ path = config.sops.secrets."git/private".path; }];
