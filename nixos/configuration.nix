@@ -45,6 +45,8 @@
   # Niri
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
+  hardware.graphics.enable = true;
+  services.dbus.enable = true;
 
   # Home Manager configuration
   home-manager = {
@@ -248,8 +250,6 @@
     LC_TELEPHONE = "ru_RU.UTF-8";
     LC_TIME = "ru_RU.UTF-8";
   };
-
-  services.dbus.enable = true;
 
   # Enable the Ly Display Manager.
   services.displayManager.ly = {

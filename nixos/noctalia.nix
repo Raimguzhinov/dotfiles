@@ -3,7 +3,6 @@
 {
   programs.noctalia-shell = {
     enable = true;
-    systemd.enable = true;
     settings = {
       bar = {
         density = "compact";
@@ -44,6 +43,9 @@
           ];
           right = [
             {
+              id = "plugin:sticky-notes";
+            }
+            {
               id = "KeyboardLayout";
               displayMode = "forceOpen";
             }
@@ -60,6 +62,9 @@
               id = "Clock";
               useCustomFont = true;
               customFont = "Inter Nerd Font Display Black";
+            }
+            {
+              id = "plugin:timer";
             }
             {
               id = "Tray";
@@ -127,6 +132,35 @@
         screenshotAnnotationTool = "";
         overviewLayer = true;
         density = "default";
+      };
+      plugins = {
+        autoUpdate = true;
+        sources = [
+          {
+            enabled = true;
+            name = "Official Source";
+            url = "https://github.com/noctalia-dev/noctalia-plugins";
+          }
+        ];
+        states = {
+          timer = {
+            enabled = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+          sticky-notes = {
+            enabled = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+        };
+        version = 1;
+      };
+    };
+    pluginSettings = {
+      timer = {
+        defaulltDuration = 0;
+        compactMode = true;
+        iconColor = "tertiary";
+        textColor = "tertiary";
       };
     };
     # this may also be a string or a path to a JSON file.
