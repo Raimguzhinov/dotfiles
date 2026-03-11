@@ -5,13 +5,11 @@
   config,
   lib,
   pkgs,
-  nixpkgs,
-  nvf,
-  max-messanger,
-  niri-float-sticky,
-  zen-browser,
-  noctalia,
-  sops-nix,
+  pkgs-unstable,
+  inputs,
+  hostname,
+  username,
+  version,
   ...
 }:
 {
@@ -40,8 +38,8 @@
     options = "--delete-older-than 14d";
   };
 
-  nix.registry.nixpkgs.flake = nixpkgs;
-  nix.nixPath = [ "nixpkgs=${nixpkgs}" ];
+  nix.registry.nixpkgs.flake = inputs.nixpkgs;
+  nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
 
   # Niri
   niri-flake.cache.enable = true;
@@ -54,48 +52,56 @@
     useGlobalPkgs = true;
     useUserPackages = true;
     backupFileExtension = "backup";
-    sharedModules = [ sops-nix.homeManagerModules.sops ];
+    sharedModules = [ inputs.sops-nix.homeManagerModules.sops ];
+    extraSpecialArgs = { inherit pkgs-unstable; };
     users.root =
       { config, lib, ... }:
       {
         programs.home-manager.enable = true;
         home.username = "root";
         home.homeDirectory = "/root";
-        home.stateVersion = "25.11";
+        home.stateVersion = version;
         imports = [
-          nvf.homeManagerModules.default
+          inputs.nvf.homeManagerModules.default
           ./neovim.nix
           ./tools.nix
         ];
       };
-    users.dias =
+    users.${username} =
       { config, lib, ... }:
       {
         programs.home-manager.enable = true;
-        home.username = "dias";
-        home.homeDirectory = "/home/dias";
-        home.stateVersion = "25.11";
-        home.packages = with pkgs; [
-          alacritty
-          amnezia-vpn
-          cmatrix
-          kdePackages.kpat
-          kdePackages.partitionmanager
-          keypunch
-          nautilus
-          networkmanagerapplet
-          obsidian
-          pfetch
-          pinta
-          spotify
-          telegram-desktop
-        ];
+        home.username = username;
+        home.homeDirectory = "/home/${username}";
+        home.stateVersion = version;
+        home.packages =
+          (with pkgs-unstable; [
+            amnezia-vpn
+            telegram-desktop
+          ])
+          ++ (with pkgs; [
+            alacritty
+            cmatrix
+            kdePackages.kpat
+            kdePackages.partitionmanager
+            keypunch
+            nautilus
+            networkmanagerapplet
+            obsidian
+            pfetch
+            pinta
+            spotify
+          ]);
 
         dconf = {
           enable = true;
           settings = {
             "org/gnome/desktop/interface" = {
               color-scheme = "prefer-dark";
+            };
+            "org/virt-manager/virt-manager/connections" = {
+              autoconnect = [ "qemu:///system" ];
+              uris = [ "qemu:///system" ];
             };
           };
         };
@@ -174,9 +180,9 @@
         };
 
         imports = [
-          noctalia.homeModules.default
-          nvf.homeManagerModules.default
-          zen-browser.homeModules.beta
+          inputs.noctalia.homeModules.default
+          inputs.nvf.homeManagerModules.default
+          inputs.zen-browser.homeModules.beta
           ./chromium.nix
           ./sops.nix
           ./development.nix
@@ -219,7 +225,7 @@
     ];
   };
 
-  networking.hostName = "raimguzhinov"; # Define your hostname.
+  networking.hostName = hostname;
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
 
   # Configure network proxy if necessary
@@ -305,16 +311,18 @@
     localsend.enable = true;
   };
 
-  # Define a user account. Don't forget to set a password with ‘passwd’.
-  users.users.dias = {
+  # Define a user account. Don’t forget to set a password with ‘passwd’.
+  users.users.${username} = {
     isNormalUser = true;
-    description = "dias";
+    description = username;
     extraGroups = [
       "nixosvmtest"
       "networkmanager"
       "wheel"
       "docker"
       "wireshark"
+      "libvirtd"
+      "kvm"
     ];
     shell = pkgs.zsh;
   };
@@ -326,9 +334,9 @@
   hardware.gpgSmartcards.enable = true;
 
   security.polkit.enable = true; # polkit
-
-  # Allow unfree packages
-  nixpkgs.config.allowUnfree = true;
+  security.sudo.extraConfig = ''
+    Defaults env_keep += "PATH"
+  '';
 
   fonts = {
     fontconfig.enable = true;
@@ -423,6 +431,7 @@
     };
   };
   users.groups.libvirtd.members = [ "dias" ];
+  services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
 
@@ -448,81 +457,83 @@
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "25.11"; # Did you read the comment?
+  system.stateVersion = version; # Did you read the comment?
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    aichat
-    alsa-utils
-    brightnessctl
-    bruno # lightweight insomnia
-    # censor # PDF document redaction
-    chafa # terminal image viewer
-    choose # cut → choose
-    claude-code
-    cliphist
-    docker-buildx
-    docker-compose
-    dysk # df → dysk
-    file-roller
-    firefoxpwa
-    gcc
-    gdu # du -> ncdu/dust -> gdu
-    gh
-    glab
-    gnome-settings-daemon
-    gnome-themes-extra
-    gnumake
-    gnupg
-    gopass
-    gtk3
-    hicolor-icon-theme
-    htop-vim
-    imagemagick
-    jq
-    lazydocker
-    lazyssh
-    libheif
-    libnotify
-    libpng
-    libsForQt5.qt5.qtwayland # for Qt apps
-    libwebp
-    loupe # image viewer
-    # max-messanger.packages.${stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
-    neohtop
-    nettools
-    niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
-    nixfmt-rfc-style
-    nurl # nix fetcher
-    nwg-drawer
-    onlyoffice-desktopeditors
-    papers
-    papirus-icon-theme
-    popsicle # USB flasher
-    postgresql
-    procs # ps → procs
-    python3
-    qrencode
-    showtime # video player
-    sops
-    tessen
-    thinkfan
-    tig
-    tlrc
-    transmission_4-gtk
-    unzip
-    wget
-    wl-clipboard
-    wl-color-picker
-    xdg-desktop-portal-gnome
-    xdg-desktop-portal-gtk
-    xh # curl/httpie → xh
-    xwayland-satellite
-    yq-go
-    yubikey-manager
-    yubikey-personalization
-    yubioath-flutter
-    zip
-  ];
+  environment.systemPackages =
+    (with pkgs-unstable; [
+      censor # PDF document redaction
+    ])
+    ++ (with pkgs; [
+      aichat
+      alsa-utils
+      brightnessctl
+      bruno # lightweight insomnia
+      chafa # terminal image viewer
+      choose # cut → choose
+      claude-code
+      cliphist
+      docker-buildx
+      docker-compose
+      dysk # df → dysk
+      file-roller
+      firefoxpwa
+      gcc
+      gdu # du -> ncdu/dust -> gdu
+      gh
+      glab
+      gnome-settings-daemon
+      gnome-themes-extra
+      gnumake
+      gnupg
+      gopass
+      gtk3
+      hicolor-icon-theme
+      htop-vim
+      imagemagick
+      jq
+      lazydocker
+      lazyssh
+      libheif
+      libnotify
+      libpng
+      libsForQt5.qt5.qtwayland # for Qt apps
+      libwebp
+      loupe # image viewer
+      # inputs.max-messanger.packages.${stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
+      nettools
+      inputs.niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
+      nixfmt-rfc-style
+      nurl # nix fetcher
+      nwg-drawer
+      onlyoffice-desktopeditors
+      papers
+      papirus-icon-theme
+      popsicle # USB flasher
+      postgresql
+      procs # ps → procs
+      python3
+      qrencode
+      showtime # video player
+      sops
+      tessen
+      thinkfan
+      tig
+      tlrc
+      transmission_4-gtk
+      unzip
+      wget
+      wl-clipboard
+      wl-color-picker
+      xdg-desktop-portal-gnome
+      xdg-desktop-portal-gtk
+      xh # curl/httpie → xh
+      xwayland-satellite
+      yq-go
+      yubikey-manager
+      yubikey-personalization
+      yubioath-flutter
+      zip
+    ]);
 }

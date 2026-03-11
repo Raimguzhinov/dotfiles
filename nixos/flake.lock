@@ -341,22 +341,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-amnezia": {
-      "locked": {
-        "lastModified": 1757051428,
-        "narHash": "sha256-sZWMTbZVWG8Wp0Vpt1Q8GC3LHqXS+OqWEo4xfLWg8lA=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1ebf2de9af636a5752c15b4f40e504183f0b2ec8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1ebf2de9af636a5752c15b4f40e504183f0b2ec8",
-        "type": "github"
-      }
-    },
     "nixpkgs-stable": {
       "locked": {
         "lastModified": 1772598333,
@@ -369,6 +353,22 @@
       "original": {
         "owner": "NixOS",
         "ref": "nixos-25.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs-unstable": {
+      "locked": {
+        "lastModified": 1772963539,
+        "narHash": "sha256-9jVDGZnvCckTGdYT53d/EfznygLskyLQXYwJLKMPsZs=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "9dcb002ca1690658be4a04645215baea8b95f31d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -528,7 +528,7 @@
         "niri": "niri",
         "niri-float-sticky": "niri-float-sticky",
         "nixpkgs": "nixpkgs_5",
-        "nixpkgs-amnezia": "nixpkgs-amnezia",
+        "nixpkgs-unstable": "nixpkgs-unstable",
         "noctalia": "noctalia",
         "nvf": "nvf",
         "sops-nix": "sops-nix",

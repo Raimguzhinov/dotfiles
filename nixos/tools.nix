@@ -64,6 +64,7 @@
       clr = "clear";
       cat = "bat -p";
       "cd.." = "cd ..";
+      sudo = "sudo ";
       tree = "eza --tree";
       pass = "gopass";
       open = "xdg-open";

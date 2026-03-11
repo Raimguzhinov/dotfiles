@@ -1,21 +1,18 @@
 {
-  config,
   pkgs,
-  nixpkgs-amnezia,
-  firefox-addons,
-  claude-code,
-  niri,
+  inputs,
   ...
 }:
+
 {
+  # Allow unfree packages
+  nixpkgs.config.allowUnfree = true;
+
   nixpkgs.overlays = [
     (final: prev: {
-      amnezia-vpn = nixpkgs-amnezia.legacyPackages.${prev.stdenv.hostPlatform.system}.amnezia-vpn;
+      firefox-addons = inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
     })
-    (final: prev: {
-      firefox-addons = firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
-    })
-    claude-code.overlays.default
-    niri.overlays.niri
+    inputs.claude-code.overlays.default
+    inputs.niri.overlays.niri
   ];
 }
