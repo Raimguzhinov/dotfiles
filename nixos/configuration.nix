@@ -314,7 +314,17 @@
   # Define a user account. Don’t forget to set a password with ‘passwd’.
   users.users.${username} = {
     isNormalUser = true;
+    initialHashedPassword = # mkdpasswd <password>
+      "$y$j9T$u06AsIj.fZtLVi2I0teH9.$IRF6NKQyvVgQKtr7r6PPAHO3CPnvp/nPHxVj.SBgBK4";
     description = username;
+    openssh.authorizedKeys.keyFiles = [
+      # after add new ssh key on github:
+      # nix store prefetch-file --hash-type sha256 https://github.com/Raimguzhinov.keys
+      (builtins.fetchurl {
+        url = "https://github.com/Raimguzhinov.keys";
+        sha256 = "sha256-uN+e1rqwBNmpAWkADbMOJycB1iPaJssmemwpk7LHfR0=";
+      })
+    ];
     extraGroups = [
       "nixosvmtest"
       "networkmanager"
@@ -419,19 +429,35 @@
   # Virtualisation
   virtualisation = {
     docker.enable = true;
-    libvirtd.enable = true;
-    libvirtd.qemu.vhostUserPackages = with pkgs; [ virtiofsd ];
+    libvirtd = {
+      enable = true;
+      qemu = {
+        package = pkgs.qemu_kvm;
+        runAsRoot = true;
+        swtpm.enable = true;
+        vhostUserPackages = with pkgs; [ virtiofsd ];
+      };
+      # SPICE display
+      # virsh edit {vmname}
+      /*
+        <graphics type='spice' port='5900' autoport='no' listen='0.0.0.0' defaultMode='insecure'>
+          <listen type='address' address='0.0.0.0'/>
+          <image compression='auto_lz'/>
+        </graphics>
+      */
+    };
     spiceUSBRedirection.enable = true;
     # sudo nixos-rebuild build-vm-with-bootloader --flake ~/dotfiles/nixos
     vmVariantWithBootLoader = {
       virtualisation = {
         memorySize = 8192; # Use 8GiB memory.
         cores = 4;
+        qemu.options = [ "-device virtio-vga" ];
       };
     };
   };
-  users.groups.libvirtd.members = [ "dias" ];
-  services.qemuGuest.enable = true;
+  users.groups.libvirtd.members = [ username ];
+  # services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
 

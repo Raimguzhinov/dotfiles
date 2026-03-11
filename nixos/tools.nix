@@ -23,6 +23,10 @@
         autoStash = true;
         updateRefs = true;
       };
+      diff.tool = "nvimdiff";
+      difftool.prompt = false;
+      merge.tool = "nvimdiff";
+      mergetool.prompt = false;
     };
   };
 
