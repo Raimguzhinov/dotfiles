@@ -53,10 +53,10 @@ nixfmt-rfc-style nixos/
 ## Ключевые соглашения
 
 - Десктопные пакеты — в `home.packages` пользователя `dias`, НЕ в `environment.systemPackages`
-- `rr` — алиас yazi, задаётся только через `programs.yazi.shellWrapperName`, не дублировать в packages
+- `rr` — обёртка yazi: `programs.yazi.shellWrapperName = "rr"` даёт shell-функцию с поддержкой `cd`; плюс `writeShellScriptBin "rr"` в `home.packages` как реальный бинарник для `sudo rr` (sudo не видит shell-функции)
 - `pkgs.replaceVars` вместо `pkgs.substituteAll` (убран в nixpkgs 25.11)
 - Активация dev-окружения (`~/Work/flake.nix`, `~/Work/.envrc`) пишет файлы только при изменении содержимого (`diff -q`) — иначе nix-direnv инвалидирует кэш
-- Формат коммитов: `nixos: <сообщение>`
+- Формат коммитов: `nixos: <сообщение>`; после каждого коммита обновить `CLAUDE.md` при необходимости (изменились соглашения, архитектура, ключевые решения)
 - `pkgs-unstable` доступен в HM модулях через `extraSpecialArgs = { inherit pkgs-unstable; }` в configuration.nix
 - `alias sudo='sudo '` в shellAliases — позволяет sudo видеть shell-алиасы; `security.sudo.extraConfig` с `env_keep += "PATH"` — для бинарей в пользовательском PATH
 

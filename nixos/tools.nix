@@ -422,6 +422,12 @@
     '';
   };
 
+  home.packages = [
+    (pkgs.writeShellScriptBin "rr" ''
+      exec ${pkgs.yazi}/bin/yazi "$@"
+    '')
+  ];
+
   programs.yazi = {
     enable = true;
     enableZshIntegration = true;
