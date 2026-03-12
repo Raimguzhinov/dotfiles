@@ -138,10 +138,10 @@
             export PATH="$GOBIN:$PATH"
             export CGO_ENABLED=0
             export GO111MODULE=on
-            export CGO_CFLAGS="-I${pkgs.libwebp.dev}/include"
-            export CGO_LDFLAGS="-L${pkgs.libwebp.out}/lib"
-            export LD_LIBRARY_PATH="${pkgs.libwebp.out}/lib:$LD_LIBRARY_PATH"
-            export PKG_CONFIG_PATH="${pkgs.libwebp.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
+            export CGO_CFLAGS="-I${pkgs.libwebp}/include"
+            export CGO_LDFLAGS="-L${pkgs.libwebp}/lib"
+            export LD_LIBRARY_PATH="${pkgs.libwebp}/lib:$LD_LIBRARY_PATH"
+            export PKG_CONFIG_PATH="${pkgs.libwebp}/lib/pkgconfig:$PKG_CONFIG_PATH"
             export PKG_CONFIG_PATH="${pkgs.zstd.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
             echo "Using Go version: $(go version)"
           '';

@@ -49,7 +49,7 @@ nixfmt-rfc-style nixos/
 
 **Модули Home Manager пользователя `root`**: `neovim.nix`, `tools.nix`
 
-**Go devshell** (`go-devshell.nix`): флейк для `~/Work/` с Go 1.21, gopls, delve, protobuf, grpc-gen. `@libwebp@` — placeholder, заменяется через `pkgs.replaceVars` при активации Home Manager.
+**Go devshell** (`go-devshell.nix`): флейк для `~/Work/` с Go 1.21, gopls, delve, protobuf, grpc-gen. `libwebp.dev`/`libwebp.out` используются напрямую через Nix-интерполяцию в shellHook (`${pkgs.libwebp.dev}`, `${pkgs.libwebp.out}`).
 
 ## Ключевые соглашения
 
