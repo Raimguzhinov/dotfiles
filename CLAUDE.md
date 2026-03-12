@@ -11,8 +11,9 @@ sudo nixos-rebuild switch --flake ~/dotfiles/nixos
 # Собрать без применения (проверка)
 sudo nixos-rebuild build --flake ~/dotfiles/nixos
 
-# Собрать виртуальную машину
+# Собрать и запустить виртуальную машину (GL-дисплей)
 sudo nixos-rebuild build-vm-with-bootloader --flake ~/dotfiles/nixos
+~/result/bin/run-*-vm -device virtio-vga-gl -display gtk,gl=on
 
 # Форматирование Nix-файлов
 nixfmt-rfc-style nixos/
@@ -66,6 +67,8 @@ nixfmt-rfc-style nixos/
 - `nixos/secrets.yaml` — зашифрованный файл секретов
 - `nixos/sops.nix` — HM модуль: объявление секретов и их использование в zsh/git
 - `sops-nix.homeManagerModules.sops` подключён через `home-manager.sharedModules`
+- Секреты загружаются лениво через `precmd` хук (`_sops_load_secrets`), только если файл существует и `$SOPS_SECRETS_LOADED` не выставлен — избегает ошибок при старте без YubiKey
+- `sops-nix.service` настроен `After/Wants gpg-agent.service` + `Restart=on-failure` — автоповтор при первом запуске без YubiKey
 - Редактировать секреты: `sops ./secrets.yaml` (YubiKey PIN)
 - На первой загрузке без YubiKey HM activation падает — вставить YubiKey и повторить rebuild
 
@@ -92,6 +95,14 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 - Swap вне LUKS — для простой гибернации без вычисления resume_offset
 - LUKS: интерактивный ввод пароля, allowDiscards=true
 - Параметр `disk` нужен только при форматировании (disko CLI), для работающей системы не важен
+
+## Бинарные кэши
+
+Настроены в `nix.settings` (`configuration.nix`):
+- `cache.nixos.org` — основной
+- `niri.cachix.org` — compositor niri
+- `notashelf.cachix.org` — noctalia и др.
+- `nix-community.cachix.org` — nvf, sops-nix и др.
 
 ## Inputs flake
 
