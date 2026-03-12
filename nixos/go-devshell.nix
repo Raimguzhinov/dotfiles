@@ -102,30 +102,34 @@
       {
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [
-            pkgs-go21.go_1_21
-            gcc
-            gopls
-            delve1_25_2
-            go-tools
-            go-mockery_2
-            golangci-lint
-            gotestsum
-            protobuf23
-            pkgs-go21.protoc-gen-go
-            pkgs-gen-go-grpc1_3_0.protoc-gen-go-grpc
-            python3
-            libwebp
-            pkg-config
-            rustc
             cargo
+            cmake
+            delve1_25_2
+            gcc
+            go-mockery_2
+            go-tools
+            golangci-lint
+            gopls
+            gotestsum
+            libwebp
             nodejs_20
+            pkg-config
+            pkgs-gen-go-grpc1_3_0.protoc-gen-go-grpc
+            pkgs-go21.go_1_21
+            pkgs-go21.protoc-gen-go
+            protobuf23
+            python3
+            rustc
             yarn
             yarn2nix
-            (pkgs.python3.withPackages (python-pkgs: with python-pkgs; [
-              python-dotenv
-              requests
-              configparser
-            ]))
+            zstd
+            (pkgs.python3.withPackages (
+              python-pkgs: with python-pkgs; [
+                python-dotenv
+                requests
+                configparser
+              ]
+            ))
           ];
 
           shellHook = ''
@@ -134,10 +138,11 @@
             export PATH="$GOBIN:$PATH"
             export CGO_ENABLED=0
             export GO111MODULE=on
-            export CGO_CFLAGS="-I@libwebp@/include"
-            export CGO_LDFLAGS="-L@libwebp@/lib"
-            export LD_LIBRARY_PATH="@libwebp@/lib:$LD_LIBRARY_PATH"
-            export PKG_CONFIG_PATH="@libwebp@/lib/pkgconfig:$PKG_CONFIG_PATH"
+            export CGO_CFLAGS="-I${pkgs.libwebp.dev}/include"
+            export CGO_LDFLAGS="-L${pkgs.libwebp.out}/lib"
+            export LD_LIBRARY_PATH="${pkgs.libwebp.out}/lib:$LD_LIBRARY_PATH"
+            export PKG_CONFIG_PATH="${pkgs.libwebp.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
+            export PKG_CONFIG_PATH="${pkgs.zstd.dev}/lib/pkgconfig:$PKG_CONFIG_PATH"
             echo "Using Go version: $(go version)"
           '';
         };

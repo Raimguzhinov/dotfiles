@@ -10,9 +10,7 @@
 
   home.activation.createWorkDir =
     let
-      goDevShell = pkgs.replaceVars ./go-devshell.nix {
-        libwebp = pkgs.libwebp;
-      };
+      goDevShell = ./go-devshell.nix;
       goEnvrc = pkgs.writeText "go-devshell-envrc" ''
         count=$(find . -type s -name 'mgmt.sock' -printf . | wc -c)
         if [ "$count" -gt 0 ]; then
