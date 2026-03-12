@@ -2,3 +2,7 @@
 .tmux/resurrect
 .DS_Store
 SpecificDots/Fonts/nerd-fonts
+result
+result-*
+*.qcow2
+*-efi-vars.fd

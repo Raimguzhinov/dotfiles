@@ -44,6 +44,7 @@
         eDP-1 = {
           scale = 1.25;
         };
+        "Virtual-1" = { };
       };
       layout = {
         default-column-width.proportion = 0.975;

@@ -29,6 +29,18 @@
       "flakes"
     ];
     auto-optimise-store = true;
+    substituters = [
+      "https://cache.nixos.org"
+      "https://niri.cachix.org"
+      "https://notashelf.cachix.org"
+      "https://nix-community.cachix.org"
+    ];
+    trusted-public-keys = [
+      "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+      "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+      "notashelf.cachix.org-1:VTTBFNQWbfyLuRzgm2I7AWSDJdqAa11ytLXHBhrprZk="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
   };
 
   # Garbage collector
@@ -102,6 +114,9 @@
             "org/virt-manager/virt-manager/connections" = {
               autoconnect = [ "qemu:///system" ];
               uris = [ "qemu:///system" ];
+            };
+            "org/gnome/nautilus/preferences" = {
+              fts-enabled = false;
             };
           };
         };
@@ -428,7 +443,15 @@
 
   # Virtualisation
   virtualisation = {
-    docker.enable = true;
+    docker = {
+      enable = true;
+      daemon.settings = {
+        builder.gc = {
+          enabled = true;
+          defaultKeepStorage = "20GB";
+        };
+      };
+    };
     libvirtd = {
       enable = true;
       qemu = {
@@ -448,11 +471,15 @@
     };
     spiceUSBRedirection.enable = true;
     # sudo nixos-rebuild build-vm-with-bootloader --flake ~/dotfiles/nixos
+    # ~/result/bin/run-*-vm -device virtio-vga
     vmVariantWithBootLoader = {
       virtualisation = {
         memorySize = 8192; # Use 8GiB memory.
         cores = 4;
-        qemu.options = [ "-device virtio-vga" ];
+        qemu.options = [
+          "-device virtio-vga-gl"
+          "-display gtk,gl=on"
+        ];
       };
     };
   };
