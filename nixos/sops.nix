@@ -35,5 +35,11 @@
       fi
     }
     add-zsh-hook precmd _sops_load_secrets
+
+    # Post-install reminder until password-store is cloned
+    if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass-store/clone-cmd".path} ]]; then
+      echo "Клонировать хранилище паролей:"
+      echo "  $(cat ${config.sops.secrets."pass-store/clone-cmd".path})"
+    fi
   '';
 }

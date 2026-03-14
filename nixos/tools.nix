@@ -55,11 +55,6 @@
         sed -n '/^## После первой загрузки/,$p' ~/dotfiles/README.md | glow -
       fi
 
-      # Post-install reminder until password-store is cloned
-      if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass-store/clone-cmd".path} ]]; then
-        echo "Клонировать хранилище паролей:"
-        echo "  $(cat ${config.sops.secrets."pass-store/clone-cmd".path})"
-      fi
     '';
     oh-my-zsh = {
       enable = true;
