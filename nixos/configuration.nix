@@ -22,6 +22,18 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  # Systemd initrd + YubiKey FIDO2 unlock for LUKS systems
+  boot.initrd.systemd.enable = true;
+  boot.initrd.luks.devices = lib.mkIf
+    (lib.hasPrefix "/dev/mapper/" (config.fileSystems."/".device or ""))
+    {
+      "cryptroot".crypttabExtraOpts = [
+        "fido2-device=auto"
+        "fido2-with-client-pin"
+        "token-timeout=10"
+      ];
+    };
+
   # Flakes
   nix.settings = {
     experimental-features = [
@@ -84,8 +96,9 @@
       {
         programs.home-manager.enable = true;
         home.username = username;
-        home.homeDirectory = "/home/${username}";
         home.stateVersion = version;
+        home.homeDirectory = "/home/${username}";
+        home.file."Pictures/Wallpapers".source = ../wallpapers;
         home.packages =
           (with pkgs-unstable; [
             amnezia-vpn
@@ -104,6 +117,19 @@
             pinta
             spotify
           ]);
+
+        xdg.userDirs = {
+          enable = true;
+          createDirectories = true;
+          desktop = "${config.home.homeDirectory}/Desktop";
+          documents = "${config.home.homeDirectory}/Documents";
+          download = "${config.home.homeDirectory}/Downloads";
+          music = "${config.home.homeDirectory}/Music";
+          pictures = "${config.home.homeDirectory}/Pictures";
+          publicShare = "${config.home.homeDirectory}/Public";
+          templates = "${config.home.homeDirectory}/Templates";
+          videos = "${config.home.homeDirectory}/Videos";
+        };
 
         dconf = {
           enable = true;

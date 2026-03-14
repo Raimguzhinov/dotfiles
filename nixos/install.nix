@@ -13,6 +13,7 @@ pkgs.writeShellApplication {
     pkgs.git-lfs
     pkgs.gnused
     pkgs.glow
+    pkgs.systemd
     disko.packages.${system}.disko
   ];
   text = ''
@@ -83,6 +84,14 @@ pkgs.writeShellApplication {
     echo ""
     echo ">>> Set password for user $USERNAME:"
     nixos-enter --root "$TARGET" -- passwd "$USERNAME"
+
+    echo ""
+    echo ">>> Enrolling YubiKey (FIDO2) into LUKS2..."
+    echo "    Insert YubiKey and enter LUKS passphrase when prompted."
+    systemd-cryptenroll \
+      --fido2-device=auto \
+      --fido2-with-client-pin=yes \
+      /dev/disk/by-partlabel/disk-main-luks
 
     echo ""
     echo "=== Done! Reboot and then: ==="

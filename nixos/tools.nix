@@ -1,4 +1,9 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  pkgs-unstable,
+  ...
+}:
 
 {
   programs.git = {
@@ -52,7 +57,7 @@
 
       # Post-install reminder until hardware-configuration.nix is committed
       if [[ -n "$(git -C ~/dotfiles status --porcelain nixos/hardware-configuration.nix 2>/dev/null)" ]]; then
-        sed -n '/^## После первой загрузки/,$p' ~/dotfiles/README.md | glow -
+        awk 'found && /^---/{exit} /^## После первой загрузки/{found=1} found' ~/dotfiles/README.md | glow -
       fi
 
     '';
@@ -438,7 +443,7 @@
     enable = true;
     enableZshIntegration = true;
     enableBashIntegration = true;
-    package = pkgs.yazi;
+    package = pkgs-unstable.yazi;
     shellWrapperName = "rr";
     settings = {
       mgr = {

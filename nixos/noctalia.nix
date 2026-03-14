@@ -93,7 +93,7 @@
       wallpaper = {
         enable = true;
         overviewEnabled = true;
-        directory = "/home/dias/dotfiles/wallpapers";
+        directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
       };
       audio = {
         volumeOverdrive = true;
