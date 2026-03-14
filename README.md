@@ -15,7 +15,7 @@ sudo nixos-rebuild switch --flake ~/dotfiles/nixos
 
 ```bash
 sudo nix --extra-experimental-features "nix-command flakes" \
-  run github:Raimguzhinov/dotfiles?dir=nixos#install
+  run 'github:Raimguzhinov/dotfiles?dir=nixos#install'
 ```
 
 Скрипт спросит целевой диск, всё остальное сделает сам:

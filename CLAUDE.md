@@ -80,7 +80,7 @@ nixfmt-rfc-style nixos/
 ```bash
 # С LiveCD NixOS — одна команда:
 sudo nix --extra-experimental-features "nix-command flakes" \
-  run github:Raimguzhinov/dotfiles?dir=nixos#install
+  run 'github:Raimguzhinov/dotfiles?dir=nixos#install'
 ```
 
 Скрипт (`nixos/install.nix`, доступен как `apps.x86_64-linux.install`) делает:
