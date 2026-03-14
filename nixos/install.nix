@@ -12,6 +12,7 @@ pkgs.writeShellApplication {
     pkgs.git
     pkgs.git-lfs
     pkgs.gnused
+    pkgs.glow
     disko.packages.${system}.disko
   ];
   text = ''
@@ -86,6 +87,6 @@ pkgs.writeShellApplication {
     echo ""
     echo "=== Done! Reboot and then: ==="
     echo ""
-    sed -n '/^## После первой загрузки/,$p' "$README"
+    sed -n '/^## После первой загрузки/,$p' "$README" | glow -
   '';
 }

@@ -32,6 +32,18 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 ## После первой загрузки
 
 ```bash
+# Вставить YubiKey и импортировать GPG-ключ
+gpg --card-edit
+# В интерактивном режиме:
+#   fetch
+#   quit
+
+# Импортировать SSH SK-ключи с YubiKey
+mkdir -p ~/.ssh && cd ~/.ssh && ssh-keygen -K
+
+# Применить конфигурацию (sops-nix требует GPG-ключ)
+sudo nixos-rebuild switch --flake ~/dotfiles/nixos
+
 # Закоммитить hardware-configuration для нового железа
 cd ~/dotfiles
 git add nixos/hardware-configuration.nix

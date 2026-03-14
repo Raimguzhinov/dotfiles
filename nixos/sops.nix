@@ -20,6 +20,7 @@
     secrets."youtrack/token" = { };
     secrets."git/private" = { };
     secrets."product/services-root" = { };
+    secrets."pass-store/clone-cmd" = { };
   };
 
   programs.git.includes = [ { path = config.sops.secrets."git/private".path; } ];

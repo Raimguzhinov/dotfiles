@@ -536,6 +536,7 @@
       gdu # du -> ncdu/dust -> gdu
       gh
       glab
+      glow
       gnome-settings-daemon
       gnome-themes-extra
       gnumake

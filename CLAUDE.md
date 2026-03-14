@@ -68,6 +68,8 @@ nixfmt-rfc-style nixos/
 - `nixos/secrets.yaml` — зашифрованный файл секретов
 - `nixos/sops.nix` — HM модуль: объявление секретов и их использование в zsh/git
 - `sops-nix.homeManagerModules.sops` подключён через `home-manager.sharedModules`
+- Секреты: `github_token`, `youtrack/url`, `youtrack/token`, `git/private`, `product/services-root`, `pass-store/clone-cmd`
+- `pass-store/clone-cmd` — команда клонирования приватного репо паролей, показывается в zsh при отсутствии `~/.password-store`
 - Секреты загружаются лениво через `precmd` хук (`_sops_load_secrets`), только если файл существует и `$SOPS_SECRETS_LOADED` не выставлен — избегает ошибок при старте без YubiKey
 - `sops-nix.service` настроен `After/Wants gpg-agent.service` + `Restart=on-failure` — автоповтор при первом запуске без YubiKey
 - Редактировать секреты: `sops ./secrets.yaml` (YubiKey PIN)

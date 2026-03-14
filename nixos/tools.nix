@@ -49,6 +49,17 @@
       autoload -z edit-command-line
       zle -N edit-command-line
       bindkey "^e" edit-command-line
+
+      # Post-install reminder until hardware-configuration.nix is committed
+      if [[ -n "$(git -C ~/dotfiles status --porcelain nixos/hardware-configuration.nix 2>/dev/null)" ]]; then
+        sed -n '/^## После первой загрузки/,$p' ~/dotfiles/README.md | glow -
+      fi
+
+      # Post-install reminder until password-store is cloned
+      if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass-store/clone-cmd".path} ]]; then
+        echo "Клонировать хранилище паролей:"
+        echo "  $(cat ${config.sops.secrets."pass-store/clone-cmd".path})"
+      fi
     '';
     oh-my-zsh = {
       enable = true;
