@@ -19,7 +19,7 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 ```
 
 Скрипт спросит целевой диск, всё остальное сделает сам:
-- разметит диск (GPT → EFI + LUKS2 → LVM → swap 32G + btrfs)
+- разметит диск (GPT → EFI + swap 32G + LUKS2 → btrfs)
 - сгенерирует `hardware-configuration.nix` для нового железа
 - склонирует репозиторий в `/home/dias/dotfiles`
 - установит NixOS

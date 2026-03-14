@@ -1,3 +1,4 @@
+jetbrains/ja-netfilter.jar filter=lfs diff=lfs merge=lfs -text
 wallpapers/hyprland.png filter=lfs diff=lfs merge=lfs -text
 wallpapers/nixos.png filter=lfs diff=lfs merge=lfs -text
 wallpapers/solar-system.png filter=lfs diff=lfs merge=lfs -text

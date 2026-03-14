@@ -10,6 +10,8 @@ pkgs.writeShellApplication {
   name = "install";
   runtimeInputs = [
     pkgs.git
+    pkgs.git-lfs
+    pkgs.gnused
     disko.packages.${system}.disko
   ];
   text = ''
@@ -19,6 +21,7 @@ pkgs.writeShellApplication {
     TARGET="/mnt"
     DOTFILES_TARGET="$TARGET/home/$USERNAME/dotfiles"
     DISKO_CONFIG="${./disko.nix}"
+    README="${../README.md}"
 
     if [ "$(id -u)" -ne 0 ]; then
       echo "Run as root: sudo nix run ..." >&2
@@ -33,6 +36,11 @@ pkgs.writeShellApplication {
 
     read -rp "Target disk (e.g. /dev/nvme0n1 or /dev/sda): " DISK
 
+    if [ ! -b "$DISK" ]; then
+      echo "Error: $DISK is not a block device" >&2
+      exit 1
+    fi
+
     echo ""
     echo "WARNING: ALL DATA ON $DISK WILL BE ERASED!"
     read -rp "Type 'yes' to continue: " CONFIRM
@@ -45,11 +53,16 @@ pkgs.writeShellApplication {
       "$DISKO_CONFIG"
 
     echo ""
+    echo ">>> Activating swap..."
+    swapon /dev/disk/by-partlabel/disk-main-swap
+
+    echo ""
     echo ">>> Generating hardware configuration..."
     nixos-generate-config --root "$TARGET"
 
     echo ""
     echo ">>> Cloning dotfiles..."
+    git lfs install
     mkdir -p "$DOTFILES_TARGET"
     git clone "$REPO_URL" "$DOTFILES_TARGET"
 
@@ -73,12 +86,6 @@ pkgs.writeShellApplication {
     echo ""
     echo "=== Done! Reboot and then: ==="
     echo ""
-    echo "  cd ~/dotfiles"
-    echo "  git add nixos/hardware-configuration.nix"
-    echo "  git commit -m 'nixos: add hardware-configuration'"
-    echo "  git remote set-url origin git@github.com:Raimguzhinov/dotfiles.git"
-    echo "  mkdir -p ~/.config/nix"
-    echo "  echo 'access-tokens = github.com=<token>' > ~/.config/nix/nix.conf"
-    echo ""
+    sed -n '/^## После первой загрузки/,$p' "$README"
   '';
 }
