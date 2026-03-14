@@ -49,6 +49,7 @@
       version = "25.11";
 
       installScript = import ./install.nix {
+        pkgs = import nixpkgs { inherit system; };
         inherit system;
         inherit hostname;
         inherit username;

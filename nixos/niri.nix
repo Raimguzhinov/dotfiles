@@ -44,7 +44,13 @@
         eDP-1 = {
           scale = 1.25;
         };
-        "Virtual-1" = { };
+        "Virtual-1" = {
+          mode = {
+            width = 1920;
+            height = 1080;
+            refresh = 60.0;
+          };
+        };
       };
       layout = {
         default-column-width.proportion = 0.975;

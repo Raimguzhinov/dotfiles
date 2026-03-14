@@ -12,8 +12,8 @@ sudo nixos-rebuild switch --flake ~/dotfiles/nixos
 sudo nixos-rebuild build --flake ~/dotfiles/nixos
 
 # Собрать и запустить виртуальную машину (GL-дисплей)
-sudo nixos-rebuild build-vm-with-bootloader --flake ~/dotfiles/nixos
-~/result/bin/run-*-vm -device virtio-vga-gl -display gtk,gl=on
+sudo nixos-rebuild build-vm --flake ~/dotfiles/nixos
+./result/bin/run-raimguzhinov-vm -device virtio-vga-gl -display gtk,gl=on
 
 # Форматирование Nix-файлов
 nixfmt-rfc-style nixos/
@@ -58,6 +58,7 @@ nixfmt-rfc-style nixos/
 - `pkgs.replaceVars` вместо `pkgs.substituteAll` (убран в nixpkgs 25.11)
 - Активация dev-окружения (`~/Work/flake.nix`, `~/Work/.envrc`) пишет файлы только при изменении содержимого (`diff -q`) — иначе nix-direnv инвалидирует кэш
 - Формат коммитов: `nixos: <сообщение>`; после каждого коммита обновить `CLAUDE.md` при необходимости (изменились соглашения, архитектура, ключевые решения)
+- Стиль `inherit` в атрсетах: каждый аргумент на отдельной строке (`inherit foo;` / `inherit bar;`), НЕ группировать в одну строку (`inherit foo bar;`)
 - `pkgs-unstable` доступен в HM модулях через `extraSpecialArgs = { inherit pkgs-unstable; }` в configuration.nix
 - `alias sudo='sudo '` в shellAliases — позволяет sudo видеть shell-алиасы; `security.sudo.extraConfig` с `env_keep += "PATH"` — для бинарей в пользовательском PATH
 
