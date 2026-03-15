@@ -8,6 +8,7 @@
     nvf.url = "github:notashelf/nvf";
     claude-code.url = "github:sadjow/claude-code-nix";
     max-messanger.url = "github:Raimguzhinov/max-messanger-flake";
+    tankionline.url = "github:Raimguzhinov/tankionline-flake";
     niri-float-sticky.url = "github:probeldev/niri-float-sticky";
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";

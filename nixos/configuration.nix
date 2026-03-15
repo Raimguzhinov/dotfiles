@@ -24,15 +24,15 @@
 
   # Systemd initrd + YubiKey FIDO2 unlock for LUKS systems
   boot.initrd.systemd.enable = true;
-  boot.initrd.luks.devices = lib.mkIf
-    (lib.hasPrefix "/dev/mapper/" (config.fileSystems."/".device or ""))
-    {
-      "cryptroot".crypttabExtraOpts = [
-        "fido2-device=auto"
-        "fido2-with-client-pin"
-        "token-timeout=10"
-      ];
-    };
+  boot.initrd.luks.devices =
+    lib.mkIf (lib.hasPrefix "/dev/mapper/" (config.fileSystems."/".device or ""))
+      {
+        "cryptroot".crypttabExtraOpts = [
+          "fido2-device=auto"
+          "fido2-with-client-pin"
+          "token-timeout=10"
+        ];
+      };
 
   # Flakes
   nix.settings = {
@@ -541,7 +541,12 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages =
-    (with pkgs-unstable; [
+    (with inputs; [
+      # max-messanger.packages.${pkgs.stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
+      niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
+      tankionline.packages.${pkgs.stdenv.hostPlatform.system}.default
+    ])
+    ++ (with pkgs-unstable; [
       censor # PDF document redaction
     ])
     ++ (with pkgs; [
@@ -581,9 +586,7 @@
       libsForQt5.qt5.qtwayland # for Qt apps
       libwebp
       loupe # image viewer
-      # inputs.max-messanger.packages.${stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
       nettools
-      inputs.niri-float-sticky.packages.${stdenv.hostPlatform.system}.default
       nixfmt-rfc-style
       nurl # nix fetcher
       nwg-drawer
