@@ -107,8 +107,6 @@
           ++ (with pkgs; [
             alacritty
             cmatrix
-            kdePackages.kpat
-            kdePackages.partitionmanager
             keypunch
             nautilus
             networkmanagerapplet
@@ -384,11 +382,17 @@
   services.yubikey-agent.enable = true;
   hardware.gpgSmartcards.enable = true;
 
-  security.polkit.enable = true; # polkit
+  # Polkit agent
+  security.polkit.enable = true;
+  systemd.user.services.niri-flake-polkit.enable = false;
+  security.soteria.enable = true;
+
+  # Sudo
   security.sudo.extraConfig = ''
     Defaults env_keep += "PATH"
   '';
 
+  # Fonts
   fonts = {
     fontconfig.enable = true;
     fontDir.enable = true;
@@ -578,6 +582,8 @@
       htop-vim
       imagemagick
       jq
+      kdePackages.kpat
+      kdePackages.partitionmanager
       lazydocker
       lazyssh
       libheif

@@ -54,6 +54,10 @@ nixfmt-rfc-style nixos/
 ## Ключевые соглашения
 
 - Десктопные пакеты — в `home.packages` пользователя `dias`, НЕ в `environment.systemPackages`
+- **Исключение — в `environment.systemPackages`**:
+  - Пакеты, требующие polkit (например, `kdePackages.partitionmanager`) — в HM polkit-правила не работают → файловые системы не монтируются
+  - Игры (`kdePackages.kpat`, `tankionline`) — тоже в `environment.systemPackages`
+- `security.soteria.enable = true` — polkit authentication agent (вместо `niri-flake-polkit`); `systemd.user.services.niri-flake-polkit.enable = false`
 - `rr` — обёртка yazi: `programs.yazi.shellWrapperName = "rr"` даёт shell-функцию с поддержкой `cd`; плюс `writeShellScriptBin "rr"` в `home.packages` как реальный бинарник для `sudo rr` (sudo не видит shell-функции)
 - `pkgs.replaceVars` вместо `pkgs.substituteAll` (убран в nixpkgs 25.11)
 - Активация dev-окружения (`~/Work/flake.nix`, `~/Work/.envrc`) пишет файлы только при изменении содержимого (`diff -q`) — иначе nix-direnv инвалидирует кэш
