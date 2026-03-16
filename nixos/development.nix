@@ -38,7 +38,7 @@
   home.packages =
     let
       fetch-srv-from-docker = pkgs.writeShellScriptBin "fetch-srv-from-docker" ''
-        svc_root=$(cat ${config.sops.secrets."product/services-root".path})
+        svc_root=$(cat ${config.sops.secrets."product/services_root".path})
         echo "docker cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") ."
         ${pkgs.docker}/bin/docker cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") .
       '';
@@ -67,7 +67,7 @@
         echo "Далее следуйте инструкциям"
       '';
       remoteDebugRawScript = pkgs.writeText "remoteDebugRawScript" ''
-        svc_root=$(cat ${config.sops.secrets."product/services-root".path})
+        svc_root=$(cat ${config.sops.secrets."product/services_root".path})
         export SERVICE_PATH=$(dirname $(dirname $(sudo find $svc_root -follow -type f -path "*/bin/$SERVICE" | grep -v -- "-[0-9]\+/" | head -1))) && \
         echo $SERVICE_PATH && \
         sudo mv $SERVICE_PATH/bin/$SERVICE $SERVICE_PATH/bin/$SERVICE.bak && \

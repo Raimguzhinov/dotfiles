@@ -17,7 +17,8 @@
         st = "status";
         hist = "log --oneline --decorate --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an> %G?'%Creset --abbrev-commit --date=relative";
         hist-full = "log --oneline --decorate --graph --all";
-        bcommit = "!f() { git commit -m '$(git symbolic-ref --short HEAD) $@'; }; f";
+        bcommit = "!f(){ git commit -m \"$(git symbolic-ref --short HEAD) $*\"; }; f";
+        pushall = "!f(){ git push -u origin \"$@\" || exit 1; git push mirror \"$@\" || echo \"mirror push failed\"; }; f";
       };
       init.defaultBranch = "main";
       core.editor = "nvim";
@@ -32,6 +33,9 @@
       difftool.prompt = false;
       merge.tool = "nvimdiff";
       mergetool.prompt = false;
+      commit.gpgsign = true;
+      gpg.program = "${pkgs.gnupg}/bin/gpg";
+      user.signingkey = "0x719B8382A9DBA991";
     };
   };
 

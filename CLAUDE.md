@@ -45,7 +45,7 @@ nixfmt-rfc-style nixos/
 - `chromium.nix`, `zen-browser.nix` — браузеры с расширениями
 - `jetbrains.nix` — JetBrains IDE (pkgs-unstable)
 - `zed-editor.nix` — Zed editor
-- `sops.nix` — sops-nix секреты (GPG/YubiKey): github_token, youtrack/*, git/private, product/services-root
+- `sops.nix` — sops-nix секреты (GPG/YubiKey): github_token, youtrack/*, git/github, git/gitlab_work, product/services_root, pass_store/clone_cmd
 
 **Модули Home Manager пользователя `root`**: `neovim.nix`, `tools.nix`
 
@@ -68,12 +68,15 @@ nixfmt-rfc-style nixos/
 
 ## Секреты (sops-nix)
 
-- `nixos/.sops.yaml` — GPG fingerprint YubiKey, path_regex: `secrets\.yaml$`
+- `nixos/.sops.yaml` — GPG fingerprint YubiKey (`6E06AD1573F0D606704F4A32719B8382A9DBA991`), path_regex: `secrets\.yaml$`
 - `nixos/secrets.yaml` — зашифрованный файл секретов
-- `nixos/sops.nix` — HM модуль: объявление секретов и их использование в zsh/git
+- `nixos/sops.nix` — HM модуль: объявление секретов, git identity includes, zsh env
 - `sops-nix.homeManagerModules.sops` подключён через `home-manager.sharedModules`
-- Секреты: `github_token`, `youtrack/url`, `youtrack/token`, `git/private`, `product/services-root`, `pass-store/clone-cmd`
-- `pass-store/clone-cmd` — команда клонирования приватного репо паролей, показывается в zsh при отсутствии `~/.password-store`
+- Секреты: `github_token`, `youtrack/url`, `youtrack/token`, `git/github`, `git/gitlab_work`, `product/services_root`, `pass_store/clone_cmd`
+- `git/github` и `git/gitlab_work` — gitconfig-формат (`[user] name/email`), подключаются через `programs.git.includes`
+- Git identity: github — дефолт (plain include), gitlab_work — для `~/Work/` (`gitdir:~/Work/`)
+- `hasconfig:remote.*.url` **не работает** с SSH URL (`git@github.com:...`) — использовать `gitdir:` или plain include
+- `pass_store/clone_cmd` — команда клонирования приватного репо паролей, показывается в zsh при отсутствии `~/.password-store`
 - Секреты загружаются лениво через `precmd` хук (`_sops_load_secrets`), только если файл существует и `$SOPS_SECRETS_LOADED` не выставлен — избегает ошибок при старте без YubiKey
 - `sops-nix.service` настроен `After/Wants gpg-agent.service` + `Restart=on-failure` — автоповтор при первом запуске без YubiKey
 - Редактировать секреты: `sops ./secrets.yaml` (YubiKey PIN)

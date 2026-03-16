@@ -18,12 +18,21 @@
     secrets.github_token = { };
     secrets."youtrack/url" = { };
     secrets."youtrack/token" = { };
-    secrets."git/private" = { };
-    secrets."product/services-root" = { };
-    secrets."pass-store/clone-cmd" = { };
+    secrets."git/github" = { };
+    secrets."git/gitlab_work" = { };
+    secrets."product/services_root" = { };
+    secrets."pass_store/clone_cmd" = { };
   };
 
-  programs.git.includes = [ { path = config.sops.secrets."git/private".path; } ];
+  programs.git.includes = [
+    {
+      path = config.sops.secrets."git/github".path;
+    }
+    {
+      condition = "gitdir:~/Work/";
+      path = config.sops.secrets."git/gitlab_work".path;
+    }
+  ];
 
   programs.zsh.initContent = ''
     _sops_load_secrets() {
@@ -37,9 +46,9 @@
     add-zsh-hook precmd _sops_load_secrets
 
     # Post-install reminder until password-store is cloned
-    if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass-store/clone-cmd".path} ]]; then
+    if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass_store/clone_cmd".path} ]]; then
       echo "Клонировать хранилище паролей:"
-      echo "  $(cat ${config.sops.secrets."pass-store/clone-cmd".path})"
+      echo "  $(cat ${config.sops.secrets."pass_store/clone_cmd".path})"
     fi
   '';
 }
