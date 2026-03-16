@@ -348,6 +348,7 @@
     nm-applet.enable = true;
     virt-manager.enable = true;
     localsend.enable = true;
+    partition-manager.enable = true;
   };
 
   # Define a user account. Don’t forget to set a password with ‘passwd’.
@@ -583,7 +584,6 @@
       imagemagick
       jq
       kdePackages.kpat
-      kdePackages.partitionmanager
       lazydocker
       lazyssh
       libheif
