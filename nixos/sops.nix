@@ -26,11 +26,12 @@
 
   programs.git.includes = [
     {
-      path = config.sops.secrets."git/github".path;
-    }
-    {
       condition = "gitdir:~/Work/";
       path = config.sops.secrets."git/gitlab_work".path;
+    }
+    {
+      condition = "hasconfig:remote.*.url:git@github.com:*/**";
+      path = config.sops.secrets."git/github".path;
     }
   ];
 
