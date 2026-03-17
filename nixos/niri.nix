@@ -6,6 +6,10 @@
 }:
 
 {
+  xdg.configFile."soteria/config.toml".text = ''
+    helper_path = "/run/wrappers/bin/polkit-agent-helper-1"
+  '';
+
   programs.niri = {
     package = pkgs.niri-unstable;
     settings = {
