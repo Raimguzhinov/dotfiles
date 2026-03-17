@@ -599,6 +599,7 @@
       onlyoffice-desktopeditors
       papers
       papirus-icon-theme
+      pdfchain # pdftk GUI
       popsicle # USB flasher
       postgresql
       procs # ps → procs
