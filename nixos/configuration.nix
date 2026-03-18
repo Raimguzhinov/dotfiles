@@ -101,11 +101,11 @@
         home.file."Pictures/Wallpapers".source = ../wallpapers;
         home.packages =
           (with pkgs-unstable; [
-            amnezia-vpn
             telegram-desktop
           ])
           ++ (with pkgs; [
             alacritty
+            amnezia-vpn
             cmatrix
             keypunch
             nautilus
