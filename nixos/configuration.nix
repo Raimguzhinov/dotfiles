@@ -277,6 +277,7 @@
     wifi.powersave = true;
     plugins = with pkgs; [
       networkmanager-openvpn
+      networkmanager-sstp
     ];
   };
 
@@ -341,14 +342,13 @@
   # For global user
   users.defaultUserShell = pkgs.zsh;
   programs = {
-    zsh.enable = true;
-    wireshark.enable = true;
     amnezia-vpn.enable = true;
-    thunderbird.enable = true;
-    nm-applet.enable = true;
-    virt-manager.enable = true;
     localsend.enable = true;
+    nm-applet.enable = true;
     partition-manager.enable = true;
+    thunderbird.enable = true;
+    virt-manager.enable = true;
+    zsh.enable = true;
   };
 
   # Define a user account. Don’t forget to set a password with ‘passwd’.
@@ -454,6 +454,15 @@
     enable = true;
     terminal = "foot";
   };
+
+  # Wireshark
+  programs.wireshark = {
+    enable = true;
+    package = pkgs.wireshark;
+  };
+
+  # pppd (sstp-client) needs /etc/ppp to write resolv.conf
+  systemd.tmpfiles.rules = [ "d /etc/ppp 0755 root root -" ];
 
   # Logging
   services.logrotate = {
