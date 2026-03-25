@@ -12,8 +12,12 @@
       url = "github:NixOS/nixpkgs/ebe4301cbd8f81c4f8d3244b3632338bbeb6d49c";
       flake = false;
     };
-    nixpkgs-gen-go-grpc1_3_0 = {
+    nixpkgs-protoc-gen-go-grpc1_3_0 = {
       url = "github:NixOS/nixpkgs/566e53c2ad750c84f6d31f9ccb9d00f823165550";
+      flake = false;
+    };
+    nixpkgs-protoc-gen-go1_36_1 = {
+      url = "github:NixOS/nixpkgs/a1945f760a8fe019a4d753808de424dcd4e5b3cf";
       flake = false;
     };
   };
@@ -25,7 +29,8 @@
       flake-utils,
       nixpkgs-go21,
       nixpkgs-protobuf23,
-      nixpkgs-gen-go-grpc1_3_0,
+      nixpkgs-protoc-gen-go-grpc1_3_0,
+      nixpkgs-protoc-gen-go1_36_1,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
@@ -55,7 +60,14 @@
             hash = "sha256-DBoxJFNjEKJYWtuVPlUR0JnFcDDBONGzQ9V3G1OAXpU=";
           };
         };
-        pkgs-gen-go-grpc1_3_0 = import nixpkgs-gen-go-grpc1_3_0 {
+        pkgs-protoc-gen-go-grpc1_3_0 = import nixpkgs-protoc-gen-go-grpc1_3_0 {
+          inherit system;
+          config = {
+            allowUnfree = true;
+            permittedInsecurePackages = [ ];
+          };
+        };
+        pkgs-protoc-gen-go1_36_1 = import nixpkgs-protoc-gen-go1_36_1 {
           inherit system;
           config = {
             allowUnfree = true;
@@ -114,9 +126,9 @@
             libwebp
             nodejs_20
             pkg-config
-            pkgs-gen-go-grpc1_3_0.protoc-gen-go-grpc
             pkgs-go21.go_1_21
-            pkgs-go21.protoc-gen-go
+            pkgs-protoc-gen-go-grpc1_3_0.protoc-gen-go-grpc
+            pkgs-protoc-gen-go1_36_1.protoc-gen-go
             protobuf23
             python3
             rustc
@@ -125,9 +137,9 @@
             zstd
             (pkgs.python3.withPackages (
               python-pkgs: with python-pkgs; [
+                configparser
                 python-dotenv
                 requests
-                configparser
               ]
             ))
           ];

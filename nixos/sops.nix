@@ -15,30 +15,32 @@
 
     gnupg.home = "${config.home.homeDirectory}/.gnupg";
 
-    secrets.github_token = { };
     secrets."youtrack/url" = { };
     secrets."youtrack/token" = { };
-    secrets."git/github" = { };
-    secrets."git/gitlab_work" = { };
+    secrets."git/github_token" = { };
+    secrets."git/github_user" = { };
+    secrets."git/gitlab_work_user" = { };
+    secrets."git/gitlab_work_url" = { };
     secrets."product/services_root" = { };
     secrets."pass_store/clone_cmd" = { };
   };
 
   programs.git.includes = [
+    { path = config.sops.secrets."git/gitlab_work_url".path; }
     {
       condition = "gitdir:~/Work/";
-      path = config.sops.secrets."git/gitlab_work".path;
+      path = config.sops.secrets."git/gitlab_work_user".path;
     }
     {
       condition = "hasconfig:remote.*.url:git@github.com:*/**";
-      path = config.sops.secrets."git/github".path;
+      path = config.sops.secrets."git/github_user".path;
     }
   ];
 
   programs.zsh.initContent = ''
     _sops_load_secrets() {
-      if [[ -z "$SOPS_SECRETS_LOADED" && -f ${config.sops.secrets.github_token.path} ]]; then
-        export GITHUB_TOKEN=$(cat ${config.sops.secrets.github_token.path} 2> /dev/null)
+      if [[ -z "$SOPS_SECRETS_LOADED" && -f ${config.sops.secrets."git/github_token".path} ]]; then
+        export GITHUB_TOKEN=$(cat ${config.sops.secrets."git/github_token".path} 2> /dev/null)
         export YOUTRACK_URL=$(cat ${config.sops.secrets."youtrack/url".path} 2> /dev/null)
         export YOUTRACK_TOKEN=$(cat ${config.sops.secrets."youtrack/token".path} 2> /dev/null)
         export SOPS_SECRETS_LOADED=1
