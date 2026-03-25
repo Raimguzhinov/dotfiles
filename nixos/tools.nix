@@ -2,6 +2,7 @@
   config,
   pkgs,
   pkgs-unstable,
+  username,
   ...
 }:
 
@@ -37,6 +38,17 @@
       gpg.program = "${pkgs.gnupg}/bin/gpg";
       user.signingkey = "0x719B8382A9DBA991";
     };
+    includes = [
+      { path = "/home/${username}/.config/git/identities/gitlab_work_url"; }
+      {
+        condition = "gitdir:~/Work/";
+        path = "/home/${username}/.config/git/identities/gitlab_work_user";
+      }
+      {
+        condition = "hasconfig:remote.*.url:git@github.com:*/**";
+        path = "/home/${username}/.config/git/identities/github_user";
+      }
+    ];
   };
 
   programs.delta = {

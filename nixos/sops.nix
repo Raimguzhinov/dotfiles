@@ -18,24 +18,21 @@
     secrets."youtrack/url" = { };
     secrets."youtrack/token" = { };
     secrets."git/github_token" = { };
-    secrets."git/github_user" = { };
-    secrets."git/gitlab_work_user" = { };
-    secrets."git/gitlab_work_url" = { };
+    secrets."git/github_user" = {
+      path = "${config.home.homeDirectory}/.config/git/identities/github_user";
+      mode = "0644";
+    };
+    secrets."git/gitlab_work_user" = {
+      path = "${config.home.homeDirectory}/.config/git/identities/gitlab_work_user";
+      mode = "0644";
+    };
+    secrets."git/gitlab_work_url" = {
+      path = "${config.home.homeDirectory}/.config/git/identities/gitlab_work_url";
+      mode = "0644";
+    };
     secrets."product/services_root" = { };
     secrets."pass_store/clone_cmd" = { };
   };
-
-  programs.git.includes = [
-    { path = config.sops.secrets."git/gitlab_work_url".path; }
-    {
-      condition = "gitdir:~/Work/";
-      path = config.sops.secrets."git/gitlab_work_user".path;
-    }
-    {
-      condition = "hasconfig:remote.*.url:git@github.com:*/**";
-      path = config.sops.secrets."git/github_user".path;
-    }
-  ];
 
   programs.zsh.initContent = ''
     _sops_load_secrets() {

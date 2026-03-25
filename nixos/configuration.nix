@@ -77,7 +77,10 @@
     useUserPackages = true;
     backupFileExtension = "backup";
     sharedModules = [ inputs.sops-nix.homeManagerModules.sops ];
-    extraSpecialArgs = { inherit pkgs-unstable; };
+    extraSpecialArgs = {
+      inherit pkgs-unstable;
+      inherit username;
+    };
     users.root =
       { config, lib, ... }:
       {
