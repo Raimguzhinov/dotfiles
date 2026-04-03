@@ -383,7 +383,7 @@
       # nix store prefetch-file --hash-type sha256 https://github.com/Raimguzhinov.keys
       (builtins.fetchurl {
         url = "https://github.com/Raimguzhinov.keys";
-        sha256 = "sha256-uN+e1rqwBNmpAWkADbMOJycB1iPaJssmemwpk7LHfR0=";
+        sha256 = "sha256-ReZd2hD5+iS0jtrQhDTvuOXMMP1DO45LjFcsZuh2Wp4=";
       })
     ];
     extraGroups = [
@@ -449,6 +449,7 @@
   # Power
   services.tuned.enable = true;
   services.upower.enable = true;
+  services.fwupd.enable = true;
 
   services.fstrim.enable = true; # SSD TRIM (weekly)
 
@@ -578,6 +579,7 @@
   environment.systemPackages =
     (with inputs; [
       # max-messanger.packages.${pkgs.stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
+      lmstudio.packages.${pkgs.stdenv.hostPlatform.system}.lmstudio
       niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
       tankionline.packages.${pkgs.stdenv.hostPlatform.system}.default
     ])
@@ -595,6 +597,7 @@
       cliphist
       docker-buildx
       docker-compose
+      docker-init
       dysk # df → dysk
       file-roller
       firefoxpwa

@@ -8,8 +8,8 @@
       "docker-compose"
       "dockerfile"
       "go"
-      "gosum"
       "golangci-lint"
+      "gosum"
       "html"
       "jetbrains-new-ui-icons"
       "jetbrains-themes"
@@ -48,6 +48,7 @@
         };
       };
       vim_mode = true;
+      load_direnv = "shell_hook";
       ui_font_family = "Inter Nerd Font";
       ui_font_size = 14;
       buffer_font_family = "JetBrainsMono Nerd Font";
@@ -93,7 +94,8 @@
           "space m P" = "markdown::OpenPreviewToTheSide";
           "space f p" = "projects::OpenRecent";
           "space s w" = "pane::DeploySearch";
-          "space a c" = "assistant::ToggleFocus";
+          "space a c" = "agent::ToggleFocus";
+          "space /" = "editor::ToggleComments";
           "g f" = "editor::OpenExcerpts";
         };
       }
@@ -124,12 +126,21 @@
           "s s" = "outline::Toggle"; # Symbol search
           "s S" = "project_symbols::Toggle"; # Symbol search
           "space x x" = "diagnostics::Deploy"; # Diagnostic
-          "space /" = "editor::ToggleComments";
           "space r a" = "editor::Rename";
 
           # +Git
           "] h" = "editor::GoToHunk";
           "[ h" = "editor::GoToPreviousHunk";
+
+          # Into word
+          "c i w" = [
+            "workspace::SendKeystrokes"
+            "b c e"
+          ];
+          "v i w" = [
+            "workspace::SendKeystrokes"
+            "b v e"
+          ];
 
           # +Buffers
           shift-tab = "pane::ActivatePreviousItem";
@@ -144,6 +155,12 @@
           "v v" = "vim::ToggleVisualLine";
         };
       }
+      # {
+      #   context = "Editor && vim_mode == visual && !VimWaiting && !menu";
+      #   bindings = {
+      #     d = "editor::DeleteLine";
+      #   };
+      # }
       {
         context = "EmptyPane || SharedScreen";
         bindings = {
