@@ -44,10 +44,7 @@
         condition = "gitdir:~/Work/";
         path = "/home/${username}/.config/git/identities/gitlab_work_user";
       }
-      {
-        condition = "hasconfig:remote.*.url:git@github.com:*/**";
-        path = "/home/${username}/.config/git/identities/github_user";
-      }
+      { path = "/home/${username}/.config/git/identities/github_user"; }
     ];
   };
 
