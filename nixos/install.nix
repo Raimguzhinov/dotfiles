@@ -76,6 +76,14 @@ pkgs.writeShellApplication {
     chown -R 1000:1000 "$TARGET/home/$USERNAME"
 
     echo ""
+    echo ">>> Increasing file descriptor limit for nix builds..."
+    mkdir -p /etc/systemd/system/nix-daemon.service.d
+    printf '[Service]\nLimitNOFILE=1048576\n' \
+      > /etc/systemd/system/nix-daemon.service.d/limits.conf
+    systemctl daemon-reload
+    systemctl restart nix-daemon
+
+    echo ""
     echo ">>> Installing NixOS..."
     nixos-install \
       --flake "$DOTFILES_TARGET/nixos#$HOSTNAME" \
