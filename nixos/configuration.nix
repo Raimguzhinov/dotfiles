@@ -296,6 +296,7 @@
           ./tools.nix
           ./zed-editor.nix
           ./zen-browser.nix
+          ./thunderbird.nix
         ];
       };
   };
@@ -392,9 +393,16 @@
     pulse.enable = true;
     jack.enable = true;
     wireplumber.extraConfig = {
-      # Disable V4L2 monitor — use only libcamera for IPU6 webcam
-      "monitor.v4l2" = {
-        "monitor.v4l2.disable" = true;
+      # Disable raw IPU6 V4L2 sub-devices — only expose v4l2loopback (libcamera Virtual)
+      # so Firefox/Zen can access the camera via PipeWire Camera portal.
+      # v4l2loopback (video40) is fed by camera-bridge (libcamera → loopback).
+      "monitor.v4l2.rules" = {
+        "monitor.v4l2.rules" = [
+          {
+            matches = [ { "api.v4l2.cap.driver" = "intel-ipu6-isys"; } ];
+            actions."update-props"."device.disabled" = true;
+          }
+        ];
       };
     };
   };
@@ -417,7 +425,6 @@
     localsend.enable = true;
     nm-applet.enable = true;
     partition-manager.enable = true;
-    thunderbird.enable = true;
     virt-manager.enable = true;
     zsh.enable = true;
   };
