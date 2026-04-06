@@ -31,52 +31,72 @@ pkgs.writeShellApplication {
     fi
 
     echo "=== NixOS Install ==="
-    echo ""
-    echo "Available disks:"
-    lsblk -dpno NAME,SIZE,MODEL | grep -v "loop\|rom"
-    echo ""
 
-    read -rp "Target disk (e.g. /dev/nvme0n1 or /dev/sda): " DISK
-
-    if [ ! -b "$DISK" ]; then
-      echo "Error: $DISK is not a block device" >&2
-      exit 1
+    # Detect previous partial install
+    RESUME=false
+    if mountpoint -q "$TARGET" && [ -d "$DOTFILES_TARGET/.git" ]; then
+      echo ""
+      echo "Detected existing installation at $TARGET."
+      read -rp "Resume previous install? (yes/no): " RESUME_CONFIRM
+      if [ "$RESUME_CONFIRM" = "yes" ]; then
+        RESUME=true
+      fi
     fi
 
-    echo ""
-    echo "WARNING: ALL DATA ON $DISK WILL BE ERASED!"
-    read -rp "Type 'yes' to continue: " CONFIRM
-    [ "$CONFIRM" = "yes" ] || { echo "Aborted."; exit 1; }
+    if [ "$RESUME" = "false" ]; then
+      echo ""
+      echo "Available disks:"
+      lsblk -dpno NAME,SIZE,MODEL | grep -v "loop\|rom"
+      echo ""
 
-    echo ""
-    echo ">>> Partitioning $DISK..."
-    disko --mode destroy,format,mount \
-      --arg disk "\"$DISK\"" \
-      "$DISKO_CONFIG"
+      read -rp "Target disk (e.g. /dev/nvme0n1 or /dev/sda): " DISK
 
-    echo ""
-    echo ">>> Activating swap..."
-    swapon /dev/disk/by-partlabel/disk-main-swap
+      if [ ! -b "$DISK" ]; then
+        echo "Error: $DISK is not a block device" >&2
+        exit 1
+      fi
 
-    echo ""
-    echo ">>> Generating hardware configuration..."
-    nixos-generate-config --root "$TARGET"
+      echo ""
+      echo "WARNING: ALL DATA ON $DISK WILL BE ERASED!"
+      read -rp "Type 'yes' to continue: " CONFIRM
+      [ "$CONFIRM" = "yes" ] || { echo "Aborted."; exit 1; }
 
-    echo ""
-    echo ">>> Cloning dotfiles..."
-    git lfs install
-    mkdir -p "$DOTFILES_TARGET"
-    git clone "$REPO_URL" "$DOTFILES_TARGET"
+      echo ""
+      echo ">>> Partitioning $DISK..."
+      disko --mode destroy,format,mount \
+        --arg disk "\"$DISK\"" \
+        "$DISKO_CONFIG"
 
-    echo ""
-    echo ">>> Copying hardware configuration..."
-    cp "$TARGET/etc/nixos/hardware-configuration.nix" \
-      "$DOTFILES_TARGET/nixos/hardware-configuration.nix"
+      echo ""
+      echo ">>> Activating swap..."
+      swapon /dev/disk/by-partlabel/disk-main-swap
 
-    chown -R 1000:1000 "$TARGET/home/$USERNAME"
+      echo ""
+      echo ">>> Generating hardware configuration..."
+      nixos-generate-config --root "$TARGET"
 
-    echo ""
-    echo ">>> Increasing file descriptor limit for nix builds..."
+      echo ""
+      echo ">>> Cloning dotfiles..."
+      git lfs install
+      mkdir -p "$DOTFILES_TARGET"
+      git clone "$REPO_URL" "$DOTFILES_TARGET"
+
+      echo ""
+      echo ">>> Copying hardware configuration..."
+      cp "$TARGET/etc/nixos/hardware-configuration.nix" \
+        "$DOTFILES_TARGET/nixos/hardware-configuration.nix"
+
+      chown -R 1000:1000 "$TARGET/home/$USERNAME"
+    else
+      echo ""
+      echo ">>> Activating swap (if not active)..."
+      swapon /dev/disk/by-partlabel/disk-main-swap 2>/dev/null || true
+
+      echo ""
+      echo ">>> Pulling latest dotfiles..."
+      git -C "$DOTFILES_TARGET" pull
+    fi
+
     echo ""
     echo ">>> Installing NixOS..."
     nixos-install \
