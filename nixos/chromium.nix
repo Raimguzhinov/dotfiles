@@ -8,6 +8,12 @@
     ];
   };
 
+  home.file.".config/chromium/policies/managed/policy.json".text = builtins.toJSON {
+    DefaultBrowserSettingEnabled = false;
+    PasswordManagerEnabled = false;
+    TranslationEnabled = false;
+  };
+
   home.packages = with pkgs; [ chromium ];
 
   home.file.".config/zen/native-messaging-hosts/com.add0n.node.json".text = ''

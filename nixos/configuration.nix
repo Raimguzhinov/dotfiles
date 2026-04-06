@@ -119,6 +119,17 @@
             spotify
           ]);
 
+        xdg.mimeApps = {
+          enable = true;
+          defaultApplications = {
+            "text/html" = "zen-beta.desktop";
+            "x-scheme-handler/http" = "zen-beta.desktop";
+            "x-scheme-handler/https" = "zen-beta.desktop";
+            "x-scheme-handler/about" = "zen-beta.desktop";
+            "x-scheme-handler/unknown" = "zen-beta.desktop";
+          };
+        };
+
         xdg.userDirs = {
           enable = true;
           createDirectories = true;
@@ -137,6 +148,7 @@
           settings = {
             "org/gnome/desktop/interface" = {
               color-scheme = "prefer-dark";
+              gtk-enable-primary-paste = false;
             };
             "org/virt-manager/virt-manager/connections" = {
               autoconnect = [ "qemu:///system" ];
@@ -159,6 +171,11 @@
             package = pkgs.papirus-icon-theme;
           };
         };
+
+        xdg.configFile."gopass/config".text = ''
+          [mounts]
+              path = /home/${username}/.password-store
+        '';
 
         programs.gpg.enable = true;
         services.gpg-agent = {

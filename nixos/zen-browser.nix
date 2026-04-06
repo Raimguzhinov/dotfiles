@@ -20,10 +20,13 @@
         DisableFeedbackCommands = true;
         DisableFirefoxStudies = true;
         DisablePocket = true;
+        DefaultBrowserSettingEnabled = true;
         DisableTelemetry = true;
         DontCheckDefaultBrowser = true;
         NoDefaultBookmarks = true;
         OfferToSaveLogins = false;
+        PasswordManagerEnabled = false;
+        TranslateEnabled = false;
         EnableTrackingProtection = {
           Value = true;
           Locked = true;
@@ -204,6 +207,9 @@
         };
       in
       {
+        settings = {
+          "intl.locale.requested" = "ru,en-US";
+        };
         containersForce = true;
         pinsForce = false;
         spacesForce = true;

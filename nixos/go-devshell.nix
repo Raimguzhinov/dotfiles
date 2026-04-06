@@ -74,7 +74,7 @@
             permittedInsecurePackages = [ ];
           };
         };
-        delve1_25_2 = pkgs.buildGoModule rec {
+        delve1_25_2 = pkgs-go21.buildGoModule rec {
           pname = "delve";
           version = "1.25.2";
           src = pkgs.fetchFromGitHub {
@@ -88,14 +88,12 @@
           preCheck = ''
             XDG_CONFIG_HOME=$(mktemp -d)
           '';
+          CGO_ENABLED = 0;
+          GO111MODULE = "on";
           preBuild = ''
             export CGO_ENABLED=0
             export GO111MODULE=on
           '';
-          env = {
-            CGO_ENABLED = 0;
-            GO111MODULE = "on";
-          };
           doCheck = true;
           postInstall = ''
             # add symlink for vscode golang extension

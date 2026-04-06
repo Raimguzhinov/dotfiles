@@ -33,7 +33,7 @@
         # mouse.accel-speed = 1.0;
         touchpad = {
           tap = false;
-          dwt = true;
+          dwt = false;
           natural-scroll = true;
           accel-speed = 0.2;
           click-method = "clickfinger";
