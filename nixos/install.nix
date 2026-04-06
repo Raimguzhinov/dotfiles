@@ -77,11 +77,10 @@ pkgs.writeShellApplication {
 
     echo ""
     echo ">>> Increasing file descriptor limit for nix builds..."
-    mkdir -p /etc/systemd/system/nix-daemon.service.d
-    printf '[Service]\nLimitNOFILE=1048576\n' \
-      > /etc/systemd/system/nix-daemon.service.d/limits.conf
-    systemctl daemon-reload
-    systemctl restart nix-daemon
+    DAEMON_PID=$(systemctl show -p MainPID nix-daemon.service | cut -d= -f2)
+    if [ -n "$DAEMON_PID" ] && [ "$DAEMON_PID" != "0" ]; then
+      prlimit --nofile=1048576:1048576 --pid "$DAEMON_PID"
+    fi
 
     echo ""
     echo ">>> Installing NixOS..."
