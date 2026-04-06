@@ -32,11 +32,11 @@ pkgs.writeShellApplication {
 
     echo "=== NixOS Install ==="
 
-    # Detect previous partial install
+    # Detect previous partial install by partition labels (survive reboot)
     RESUME=false
-    if mountpoint -q "$TARGET" && [ -d "$DOTFILES_TARGET/.git" ]; then
+    if [ -e /dev/disk/by-partlabel/disk-main-luks ]; then
       echo ""
-      echo "Detected existing installation at $TARGET."
+      echo "Detected existing partition layout."
       read -rp "Resume previous install? (yes/no): " RESUME_CONFIRM
       if [ "$RESUME_CONFIRM" = "yes" ]; then
         RESUME=true
@@ -89,7 +89,19 @@ pkgs.writeShellApplication {
       chown -R 1000:1000 "$TARGET/home/$USERNAME"
     else
       echo ""
-      echo ">>> Activating swap (if not active)..."
+      echo ">>> Unlocking LUKS (enter passphrase)..."
+      cryptsetup open /dev/disk/by-partlabel/disk-main-luks cryptroot
+
+      echo ""
+      echo ">>> Mounting filesystems..."
+      mount -o subvol=/root,compress=zstd,noatime /dev/mapper/cryptroot "$TARGET"
+      mkdir -p "$TARGET"/{home,nix,boot}
+      mount -o subvol=/home,compress=zstd,noatime /dev/mapper/cryptroot "$TARGET/home"
+      mount -o subvol=/nix,compress=zstd,noatime  /dev/mapper/cryptroot "$TARGET/nix"
+      mount /dev/disk/by-partlabel/disk-main-ESP "$TARGET/boot"
+
+      echo ""
+      echo ">>> Activating swap..."
       swapon /dev/disk/by-partlabel/disk-main-swap 2>/dev/null || true
 
       echo ""
