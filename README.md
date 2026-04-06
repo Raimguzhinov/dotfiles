@@ -42,7 +42,13 @@ gpg --card-edit
 # Импортировать SSH SK-ключи с YubiKey
 mkdir -p ~/.ssh && cd ~/.ssh && ssh-keygen -K
 mv ~/.ssh/id_ed25519_sk_rk ~/.ssh/id_ed25519_sk
+mv ~/.ssh/id_ed25519_sk_rk.pub ~/.ssh/id_ed25519_sk.pub
+chmod 600 ~/.ssh/id_ed25519_sk
+chmod 644 ~/.ssh/id_ed25519_sk.pub
 cd ~
+
+# Сгенерировать обычный SSH-ключ для Git LFS
+ssh-keygen -t ed25519
 
 # Применить конфигурацию (sops-nix требует GPG-ключ)
 sudo nixos-rebuild switch --flake ~/dotfiles/nixos
