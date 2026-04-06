@@ -77,16 +77,13 @@ pkgs.writeShellApplication {
 
     echo ""
     echo ">>> Increasing file descriptor limit for nix builds..."
-    DAEMON_PID=$(systemctl show -p MainPID nix-daemon.service | cut -d= -f2)
-    if [ -n "$DAEMON_PID" ] && [ "$DAEMON_PID" != "0" ]; then
-      prlimit --nofile=1048576:1048576 --pid "$DAEMON_PID"
-    fi
-
     echo ""
     echo ">>> Installing NixOS..."
     nixos-install \
       --flake "$DOTFILES_TARGET/nixos#$HOSTNAME" \
-      --no-root-passwd
+      --no-root-passwd \
+      --option substituters "https://cache.nixos.org https://niri.cachix.org https://notashelf.cachix.org https://nix-community.cachix.org" \
+      --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964= notashelf.cachix.org-1:VTTBFNQWbfyLuRzgm2I7AWSDJdqAa11ytLXHBhrprZk= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
 
     echo ""
     echo ">>> Set password for user $USERNAME:"
