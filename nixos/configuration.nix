@@ -354,6 +354,9 @@
   # Enable CUPS to print documents.
   services.printing.enable = true;
 
+  # Fingerprint reader (Goodix, XPS 13 Plus 9320)
+  services.fprintd.enable = true;
+
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
   security.rtkit.enable = true;
@@ -362,13 +365,18 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
-
-    # use the example session manager (no others are packaged yet so this is enabled by default,
-    # no need to redefine it in your config for now)
-    #media-session.enable = true;
+    jack.enable = true;
+    wireplumber.extraConfig = {
+      # Disable V4L2 monitor — use only libcamera for IPU6 webcam
+      "monitor.v4l2" = {
+        "monitor.v4l2.disable" = true;
+      };
+    };
   };
+
+  # Thunderbolt and color management
+  services.hardware.bolt.enable = true;
+  services.colord.enable = true;
   # Cron: отключён. Пример добавления задачи:
   # services.cron = {
   #   enable = true;
@@ -411,6 +419,8 @@
       "wireshark"
       "libvirtd"
       "kvm"
+      "camera"
+      "video"
     ];
     shell = pkgs.zsh;
   };
@@ -427,9 +437,26 @@
   security.soteria.enable = true;
 
   # Sudo
-  security.sudo.extraConfig = ''
-    Defaults env_keep += "PATH"
-  '';
+  security.sudo = {
+    extraConfig = ''
+      Defaults env_keep += "PATH"
+    '';
+    extraRules = [
+      {
+        users = [ username ];
+        commands = [
+          {
+            command = "${pkgs.systemd}/bin/systemctl start camera-bridge.service";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "${pkgs.systemd}/bin/systemctl stop camera-bridge.service";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }
+    ];
+  };
 
   # Fonts
   fonts = {
@@ -567,12 +594,6 @@
   services.spice-vdagentd.enable = true;
   services.spice-autorandr.enable = true;
 
-  # V4L2 Loopback
-  boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback ];
-  boot.extraModprobeConfig = ''
-    options v4l2loopback devices=1 video_nr=1 card_label="OBS Cam" exclusive_caps=1
-  '';
-
   # Open ports in the firewall.
   networking.firewall.allowedTCPPorts = [
     8081
@@ -603,7 +624,18 @@
     ++ (with pkgs-unstable; [
       censor # PDF document redaction
     ])
+    ++ (with pkgs.gst_all_1; [
+      gstreamer
+      gst-plugins-base
+      gst-plugins-good
+      gst-plugins-bad
+      gst-plugins-ugly
+      gst-libav
+      gst-vaapi
+    ])
     ++ (with pkgs; [
+      libcamera
+      v4l-utils
       aichat
       alsa-utils
       brightnessctl

@@ -10,6 +10,42 @@
     helper_path = "/run/wrappers/bin/polkit-agent-helper-1"
   '';
 
+  home.packages = [
+    (pkgs.writeShellScriptBin "cam-on" ''
+      set -euo pipefail
+      exec sudo ${pkgs.systemd}/bin/systemctl start camera-bridge.service
+    '')
+
+    (pkgs.writeShellScriptBin "cam-off" ''
+      set -euo pipefail
+      exec sudo ${pkgs.systemd}/bin/systemctl stop camera-bridge.service
+    '')
+
+    (pkgs.writeShellScriptBin "cam-status" ''
+      set -euo pipefail
+      exec ${pkgs.systemd}/bin/systemctl status camera-bridge.service --no-pager
+    '')
+
+    (pkgs.writeShellScriptBin "cam-log" ''
+      set -euo pipefail
+      journalctl -u camera-bridge.service -b --no-pager | tail -50
+    '')
+
+    (pkgs.writeShellScriptBin "cam-toggle" ''
+      set -euo pipefail
+
+      UNIT="camera-bridge.service"
+
+      if ${pkgs.systemd}/bin/systemctl is-active --quiet "$UNIT"; then
+        sudo ${pkgs.systemd}/bin/systemctl stop "$UNIT"
+        echo "Camera bridge: stopped"
+      else
+        sudo ${pkgs.systemd}/bin/systemctl start "$UNIT"
+        echo "Camera bridge: started"
+      fi
+    '')
+  ];
+
   programs.niri = {
     package = pkgs.niri-unstable;
     settings = {
@@ -209,6 +245,10 @@
             "Mod+Shift+P" = {
               action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
               hotkey-overlay.title = "Password Manager: tessen";
+            };
+            "Mod+Shift+C" = {
+              action = spawn "cam-toggle";
+              hotkey-overlay.title = "Toggle camera bridge";
             };
             "Mod+Alt+Q" = {
               action.spawn = noctalia "lockScreen lock";

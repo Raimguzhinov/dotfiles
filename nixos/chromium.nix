@@ -3,6 +3,10 @@
 {
   programs.chromium = {
     enable = true;
+    commandLineArgs = [
+      # Use PipeWire camera portal (xdg-desktop-portal) instead of V4L2
+      "--enable-features=WebRtcPipeWireCapturer"
+    ];
     extensions = [
       { id = "lmeddoobegbaiopohmpmmobpnpjifpii"; } # Open in Firefox™ Browser
     ];
@@ -13,8 +17,6 @@
     PasswordManagerEnabled = false;
     TranslationEnabled = false;
   };
-
-  home.packages = with pkgs; [ chromium ];
 
   home.file.".config/zen/native-messaging-hosts/com.add0n.node.json".text = ''
     {

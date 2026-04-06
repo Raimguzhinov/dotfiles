@@ -209,6 +209,8 @@
       {
         settings = {
           "intl.locale.requested" = "ru,en-US";
+          # Use PipeWire camera portal (xdg-desktop-portal) instead of V4L2
+          "media.webrtc.camera.allow-pipewire" = true;
         };
         containersForce = true;
         pinsForce = false;
