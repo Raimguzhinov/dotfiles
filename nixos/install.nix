@@ -89,16 +89,24 @@ pkgs.writeShellApplication {
       chown -R 1000:1000 "$TARGET/home/$USERNAME"
     else
       echo ""
-      echo ">>> Unlocking LUKS (enter passphrase)..."
-      cryptsetup open /dev/disk/by-partlabel/disk-main-luks cryptroot
+      echo ">>> Unlocking LUKS..."
+      if [ ! -e /dev/mapper/cryptroot ]; then
+        cryptsetup open /dev/disk/by-partlabel/disk-main-luks cryptroot
+      else
+        echo "    Already unlocked, skipping."
+      fi
 
       echo ""
       echo ">>> Mounting filesystems..."
-      mount -o subvol=/root,compress=zstd,noatime /dev/mapper/cryptroot "$TARGET"
+      mountpoint -q "$TARGET" || \
+        mount -o subvol=/root,compress=zstd,noatime /dev/mapper/cryptroot "$TARGET"
       mkdir -p "$TARGET"/{home,nix,boot}
-      mount -o subvol=/home,compress=zstd,noatime /dev/mapper/cryptroot "$TARGET/home"
-      mount -o subvol=/nix,compress=zstd,noatime  /dev/mapper/cryptroot "$TARGET/nix"
-      mount /dev/disk/by-partlabel/disk-main-ESP "$TARGET/boot"
+      mountpoint -q "$TARGET/home" || \
+        mount -o subvol=/home,compress=zstd,noatime /dev/mapper/cryptroot "$TARGET/home"
+      mountpoint -q "$TARGET/nix" || \
+        mount -o subvol=/nix,compress=zstd,noatime  /dev/mapper/cryptroot "$TARGET/nix"
+      mountpoint -q "$TARGET/boot" || \
+        mount /dev/disk/by-partlabel/disk-main-ESP "$TARGET/boot"
 
       echo ""
       echo ">>> Activating swap..."
