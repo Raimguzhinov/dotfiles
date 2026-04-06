@@ -17,5 +17,10 @@
     })
     inputs.claude-code.overlays.default
     inputs.niri.overlays.niri
+    (final: prev: {
+      niri = prev.niri.overrideAttrs (_: {
+        doCheck = false;
+      });
+    })
   ];
 }
