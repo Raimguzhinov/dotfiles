@@ -12,9 +12,7 @@
     (final: prev: {
       amnezia-vpn = inputs.nixpkgs-amnezia.legacyPackages.${pkgs.stdenv.hostPlatform.system}.amnezia-vpn;
     })
-    (final: prev: {
-      firefox-addons = inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
-    })
+    inputs.nix-firefox-addons.overlays.default
     inputs.claude-code.overlays.default
     inputs.niri.overlays.niri
     (final: prev: {

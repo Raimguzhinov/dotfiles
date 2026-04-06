@@ -83,7 +83,7 @@
       };
       colorSchemes.predefinedScheme = "Rose Pine";
       general = {
-        avatarImage = "/home/dias/.face";
+        avatarImage = "${config.home.homeDirectory}/.face";
         radiusRatio = 0.2;
       };
       location = {
@@ -93,7 +93,7 @@
       wallpaper = {
         enable = true;
         overviewEnabled = true;
-        directory = "${config.home.homeDirectory}/Pictures/Wallpapers";
+        directory = "${config.home.homeDirectory}/dotfiles/wallpapers";
       };
       audio = {
         volumeOverdrive = true;

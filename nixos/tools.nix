@@ -149,8 +149,8 @@
         };
       };
       web_server_ip = "0.0.0.0";
-      web_server_cert = "/home/dias/.cert/zellij.local/zellij.crt";
-      web_server_key = "/home/dias/.cert/zellij.local/zellij.key";
+      web_server_cert = "${config.home.homeDirectory}/.cert/zellij.local/zellij.crt";
+      web_server_key = "${config.home.homeDirectory}/.cert/zellij.local/zellij.key";
     };
     extraConfig = ''
       keybinds clear-defaults=true {

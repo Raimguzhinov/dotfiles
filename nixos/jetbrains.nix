@@ -26,8 +26,8 @@
         --add-opens=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED
         --add-opens=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED
             
-        -Dawt.toolkit.name=WLToolkit-javaagent:/home/dias/dotfiles/jetbrains/ja-netfilter.jar=jetbrains
-        -javaagent:/home/dias/dotfiles/jetbrains/ja-netfilter.jar=jetbrains
+        -Dawt.toolkit.name=WLToolkit-javaagent:${config.home.homeDirectory}/dotfiles/jetbrains/ja-netfilter.jar=jetbrains
+        -javaagent:${config.home.homeDirectory}/dotfiles/jetbrains/ja-netfilter.jar=jetbrains
         -Dawt.toolkit.name=WLToolkit
       '';
     })
@@ -54,7 +54,7 @@
         --add-opens=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED
         --add-opens=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED
 
-        -javaagent:/home/dias/dotfiles/jetbrains/ja-netfilter.jar=jetbrains
+        -javaagent:${config.home.homeDirectory}/dotfiles/jetbrains/ja-netfilter.jar=jetbrains
       '';
     })
   ];
