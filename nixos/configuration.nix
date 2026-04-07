@@ -697,6 +697,7 @@
       docker-compose
       docker-init
       dysk # df → dysk
+      ffmpeg
       file-roller
       firefoxpwa
       gcc
@@ -725,6 +726,7 @@
       libsForQt5.qt5.qtwayland # for Qt apps
       libwebp
       loupe # image viewer
+      lsof
       nettools
       nixfmt-rfc-style
       nurl # nix fetcher
@@ -736,6 +738,7 @@
       popsicle # USB flasher
       postgresql
       procs # ps → procs
+      psmisc
       python3
       qrencode
       sops

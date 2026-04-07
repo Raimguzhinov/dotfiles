@@ -42,14 +42,36 @@ nixfmt-rfc-style nixos/
 - `niri.nix` — Wayland compositor niri: раскладки, биндинги клавиш, правила окон, автозапуск
 - `noctalia.nix` — noctalia-shell (панель/уведомления)
 - `rofi.nix` — лаунчер приложений
-- `chromium.nix`, `zen-browser.nix` — браузеры с расширениями
+- `chromium.nix`, `zen-browser.nix` — браузеры с расширениями + gopass-jsonapi native messaging
 - `jetbrains.nix` — JetBrains IDE (pkgs-unstable)
 - `zed-editor.nix` — Zed editor
-- `sops.nix` — sops-nix секреты (GPG/YubiKey): github_token, youtrack/*, git/github, git/gitlab_work, product/services_root, pass_store/clone_cmd
+- `thunderbird.nix` — Thunderbird: `mkEmailAccount`/`mkProviderAccount` хелперы, провайдеры mail-ru/gmail/yandex, аккаунты с OAuth2 и normal-password auth, ru-langpack через `home.file` XPI
+- `claude.nix` — `claude-protei` враппер (корпоративный litellm + MCP серверы demo_mcp/youtrack), `programs.claude-code` конфиг
+- `sops.nix` — sops-nix секреты (GPG/YubiKey): github_token, youtrack/*, git/github, git/gitlab_work, product/services_root, pass_store/clone_cmd, work_ai/*
 
 **Модули Home Manager пользователя `root`**: `neovim.nix`, `tools.nix`
 
-**Go devshell** (`go-devshell.nix`): флейк для `~/Work/` с Go 1.21, gopls, delve, protobuf, grpc-gen. `libwebp.dev`/`libwebp.out` используются напрямую через Nix-интерполяцию в shellHook (`${pkgs.libwebp.dev}`, `${pkgs.libwebp.out}`).
+**Go devshell** (`go-devshell.nix`): флейк для `~/Work/` с Go 1.21, gopls, delve, protobuf, grpc-gen. `libwebp.dev`/`libwebp.out` используются напрямую через Nix-интерполяцию в shellHook. `GOROOT` экспортируется, `$GOROOT/bin` добавлен в PATH.
+
+## Dell XPS 13 Plus 9320 — особенности железа
+
+- **Ядро**: `boot.kernelPackages = pkgs.linuxPackages_latest` — обязательно для ipu6ep камеры и SoundWire микрофона
+- **Камера (IPU6EP)**:
+  - `hardware.ipu6.platform = "ipu6ep"` + `libcamera` — современный подход без icamerasrc
+  - `services.v4l2-relayd.instances.ipu6.enable = lib.mkForce false` — дефолтный ipu6 инстанс не работает на 9320
+  - `intel-int3472-gpio-type.patch` — патч ядра: без него "GPIO type 0x02 unknown", камера не инициализируется
+  - `systemd.services.camera-bridge` — мост для браузеров: находит активное ipu6 устройство, создаёт `/dev/camera-active` симлинк; запускается вручную: `systemctl start camera-bridge`
+  - sudo NOPASSWD для `systemctl start/stop camera-bridge.service`
+  - WirePlumber: `monitor.v4l2.disable = true` — только libcamera, без v4l2 монитора
+  - xdg-desktop-portal: `org.freedesktop.impl.portal.Access = "gtk"` (диалог камеры требует gtk-портала)
+- **Дисплей**: eDP-1 position `x=0, y=200` в niri.nix
+
+## GTK/Qt оформление
+
+- GTK2/3: тема `adw-gtk3-dark` (`pkgs.adw-gtk3`); GTK4: `gtk-theme-name = "adw-gtk3-dark"` через `extraConfig`
+- Иконки: `Papirus-Dark` (`pkgs.papirus-icon-theme`)
+- Qt: `style.name = "Adwaita-Dark"` (через `adwaita-qt6`), `qt5ctSettings`/`qt6ctSettings` — декларативно; `kdePackages.qt6ct` в `environment.systemPackages`
+- `adw-gtk3`, `adwaita-icon-theme`, `adwaita-qt6`, `gtk3`, `hicolor-icon-theme` — в `environment.systemPackages` (нужны системно для тем)
 
 ## Ключевые соглашения
 
@@ -73,12 +95,12 @@ nixfmt-rfc-style nixos/
 - `nixos/secrets.yaml` — зашифрованный файл секретов
 - `nixos/sops.nix` — HM модуль: объявление секретов, git identity includes, zsh env
 - `sops-nix.homeManagerModules.sops` подключён через `home-manager.sharedModules`
-- Секреты: `github_token`, `youtrack/url`, `youtrack/token`, `git/github`, `git/gitlab_work`, `product/services_root`, `pass_store/clone_cmd`
+- Секреты: `github_token`, `youtrack/url`, `youtrack/token`, `git/github`, `git/gitlab_work`, `product/services_root`, `pass_store/clone_cmd`, `work_ai/litellm_url`, `work_ai/litellm_api_key`, `work_ai/mcp_sse_url`
 - `git/github` и `git/gitlab_work` — gitconfig-формат (`[user] name/email`), подключаются через `programs.git.includes`
 - Git identity: github — дефолт (plain include), gitlab_work — для `~/Work/` (`gitdir:~/Work/`)
 - `hasconfig:remote.*.url` **не работает** с SSH URL (`git@github.com:...`) — использовать `gitdir:` или plain include
 - `pass_store/clone_cmd` — команда клонирования приватного репо паролей, показывается в zsh при отсутствии `~/.password-store`
-- Секреты загружаются лениво через `precmd` хук (`_sops_load_secrets`), только если файл существует и `$SOPS_SECRETS_LOADED` не выставлен — избегает ошибок при старте без YubiKey
+- Секреты загружаются лениво через `precmd` хук (`_sops_load_secrets`): github и youtrack — независимые проверки, без общего `SOPS_SECRETS_LOADED` guard-а
 - `sops-nix.service` настроен `After/Wants gpg-agent.service` + `Restart=on-failure` — автоповтор при первом запуске без YubiKey
 - Редактировать секреты: `sops ./secrets.yaml` (YubiKey PIN)
 - На первой загрузке без YubiKey HM activation падает — вставить YubiKey и повторить rebuild

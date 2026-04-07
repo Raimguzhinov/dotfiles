@@ -37,11 +37,11 @@ in
       fi
 
       if [[ -f ${config.sops.secrets."work_ai/mcp_sse_url".path} ]]; then
-        MCP_SSE_URL="$(cat ${config.sops.secrets."work_ai/mcp_sse_url".path})"
-        YOUTRACK_TOKEN="$(cat ${config.sops.secrets."youtrack/token".path})"
+        export MCP_SSE_URL="$(cat ${config.sops.secrets."work_ai/mcp_sse_url".path})"
+        export YOUTRACK_TOKEN="$(cat ${config.sops.secrets."youtrack/token".path})"
 
         MCP_CONFIG=$(mktemp)
-        echo '${builtins.toJSON mcpConfig}' > "$MCP_CONFIG"
+        echo '${builtins.toJSON mcpConfig}' | ${pkgs.gettext}/bin/envsubst > "$MCP_CONFIG"
 
         trap "rm -f $MCP_CONFIG" EXIT
         exec ${pkgs.claude-code}/bin/claude --mcp-config "$MCP_CONFIG" "$@"
