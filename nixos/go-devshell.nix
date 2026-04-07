@@ -143,9 +143,10 @@
           ];
 
           shellHook = ''
+            export GOROOT="${pkgs-go21.go_1_21}/share/go"
             export GOPATH="$HOME/go"
             export GOBIN="$GOPATH/bin"
-            export PATH="$GOBIN:$PATH"
+            export PATH="$GOROOT/bin:$GOBIN:$PATH"
             export CGO_ENABLED=0
             export GO111MODULE=on
             export CGO_CFLAGS="-I${pkgs.libwebp}/include"

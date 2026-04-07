@@ -32,15 +32,21 @@
     };
     secrets."product/services_root" = { };
     secrets."pass_store/clone_cmd" = { };
+    secrets."work_ai/litellm_url" = { };
+    secrets."work_ai/litellm_api_key" = { };
+    secrets."work_ai/mcp_sse_url" = { };
   };
 
   programs.zsh.initContent = ''
     _sops_load_secrets() {
-      if [[ -z "$SOPS_SECRETS_LOADED" && -f ${config.sops.secrets."git/github_token".path} ]]; then
+      if [[ -f ${config.sops.secrets."git/github_token".path} ]]; then
         export GITHUB_TOKEN=$(cat ${config.sops.secrets."git/github_token".path} 2> /dev/null)
+      fi
+      if [[ -f ${config.sops.secrets."youtrack/url".path} && -f ${
+        config.sops.secrets."youtrack/token".path
+      } ]]; then
         export YOUTRACK_URL=$(cat ${config.sops.secrets."youtrack/url".path} 2> /dev/null)
         export YOUTRACK_TOKEN=$(cat ${config.sops.secrets."youtrack/token".path} 2> /dev/null)
-        export SOPS_SECRETS_LOADED=1
       fi
     }
     add-zsh-hook precmd _sops_load_secrets

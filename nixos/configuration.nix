@@ -192,14 +192,39 @@
 
         gtk = {
           enable = true;
-          theme = {
-            name = "Adwaita-dark";
-            package = pkgs.gnome-themes-extra;
+          gtk2.theme = {
+            package = pkgs.adw-gtk3;
+            name = "adw-gtk3-dark";
           };
+          gtk3.theme = {
+            package = pkgs.adw-gtk3;
+            name = "adw-gtk3-dark";
+          };
+          gtk4.extraConfig = {
+            gtk-theme-name = "adw-gtk3-dark";
+          };
+          colorScheme = "dark";
           iconTheme = {
             name = "Papirus-Dark";
             package = pkgs.papirus-icon-theme;
           };
+        };
+
+        qt = rec {
+          enable = true;
+          style.name = "Adwaita-Dark";
+          qt5ctSettings = {
+            Appearance = {
+              style = "Adwaita-Dark";
+              icon_theme = "Papirus-Dark";
+              standard_dialogs = "default";
+            };
+            Fonts = {
+              fixed = "\"JetBrainsMono NF, 10\"";
+              general = "\"Inter, 10\"";
+            };
+          };
+          qt6ctSettings = qt5ctSettings;
         };
 
         programs.gpg.enable = true;
@@ -296,16 +321,12 @@
           ./tools.nix
           ./zed-editor.nix
           ./zen-browser.nix
+          ./claude.nix
           ./thunderbird.nix
         ];
       };
   };
 
-  qt = {
-    enable = true;
-    style = null;
-    platformTheme = "qt5ct";
-  };
   xdg.portal = {
     enable = true;
     config = {
@@ -318,6 +339,9 @@
         "org.freedesktop.impl.portal.ScreenCast" = "gnome";
         "org.freedesktop.impl.portal.Screenshot" = "gnome";
         "org.freedesktop.impl.portal.RemoteDesktop" = "gnome";
+        # Camera access dialog must go to gtk — gnome backend requires GNOME shell
+        # (unavailable in niri), causing silent denial without dialog
+        "org.freedesktop.impl.portal.Access" = "gtk";
       };
     };
     xdgOpenUsePortal = true;
@@ -393,16 +417,9 @@
     pulse.enable = true;
     jack.enable = true;
     wireplumber.extraConfig = {
-      # Disable raw IPU6 V4L2 sub-devices — only expose v4l2loopback (libcamera Virtual)
-      # so Firefox/Zen can access the camera via PipeWire Camera portal.
-      # v4l2loopback (video40) is fed by camera-bridge (libcamera → loopback).
-      "monitor.v4l2.rules" = {
-        "monitor.v4l2.rules" = [
-          {
-            matches = [ { "api.v4l2.cap.driver" = "intel-ipu6-isys"; } ];
-            actions."update-props"."device.disabled" = true;
-          }
-        ];
+      # Disable V4L2 monitor — use only libcamera for IPU6 webcam
+      "monitor.v4l2" = {
+        "monitor.v4l2.disable" = true;
       };
     };
   };
@@ -638,7 +655,7 @@
 
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
+  # on your system were taken. It’s perfectly fine and recommended to leave
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
@@ -657,24 +674,24 @@
       censor # PDF document redaction
     ])
     ++ (with pkgs.gst_all_1; [
-      gstreamer
+      gst-libav
+      gst-plugins-bad
       gst-plugins-base
       gst-plugins-good
-      gst-plugins-bad
       gst-plugins-ugly
-      gst-libav
       gst-vaapi
+      gstreamer
     ])
     ++ (with pkgs; [
-      libcamera
-      v4l-utils
+      adw-gtk3
+      adwaita-icon-theme
+      adwaita-qt6
       aichat
       alsa-utils
       brightnessctl
       bruno # lightweight insomnia
       chafa # terminal image viewer
       choose # cut → choose
-      claude-code
       cliphist
       docker-buildx
       docker-compose
@@ -688,7 +705,6 @@
       glab
       glow
       gnome-settings-daemon
-      gnome-themes-extra
       gnumake
       gnupg
       gopass
@@ -699,8 +715,10 @@
       imagemagick
       jq
       kdePackages.kpat
+      kdePackages.qt6ct
       lazydocker
       lazyssh
+      libcamera
       libheif
       libnotify
       libpng
@@ -727,6 +745,7 @@
       tlrc
       transmission_4-gtk
       unzip
+      v4l-utils
       wget
       wl-clipboard
       wl-color-picker

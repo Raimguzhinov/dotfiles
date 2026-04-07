@@ -82,6 +82,10 @@
       outputs = {
         eDP-1 = {
           scale = 2;
+          position = {
+            x = 0;
+            y = 200;
+          };
         };
         "Virtual-1" = {
           mode = {

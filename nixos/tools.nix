@@ -63,10 +63,10 @@
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     initContent = ''
-      # open commands in $EDITOR with C-e
+      # open commands in $EDITOR with C-g, inspired by Claude Code behavior
       autoload -z edit-command-line
       zle -N edit-command-line
-      bindkey "^e" edit-command-line
+      bindkey "^g" edit-command-line
 
       # Post-install reminder until hardware-configuration.nix is committed
       if [[ -n "$(git -C ~/dotfiles status --porcelain nixos/hardware-configuration.nix 2>/dev/null)" ]]; then

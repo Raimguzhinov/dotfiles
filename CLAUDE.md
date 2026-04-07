@@ -61,7 +61,8 @@ nixfmt-rfc-style nixos/
 - `rr` — обёртка yazi: `programs.yazi.shellWrapperName = "rr"` даёт shell-функцию с поддержкой `cd`; плюс `writeShellScriptBin "rr"` в `home.packages` как реальный бинарник для `sudo rr` (sudo не видит shell-функции)
 - `pkgs.replaceVars` вместо `pkgs.substituteAll` (убран в nixpkgs 25.11)
 - Активация dev-окружения (`~/Work/flake.nix`, `~/Work/.envrc`) пишет файлы только при изменении содержимого (`diff -q`) — иначе nix-direnv инвалидирует кэш
-- Формат коммитов: `nixos: <сообщение>`; после каждого коммита обновить `CLAUDE.md` при необходимости (изменились соглашения, архитектура, ключевые решения)
+- Формат коммитов: `nixos: <сообщение>`
+- **Обновление CLAUDE.md**: после добавления новой фичи/изменения архитектуры — обновить `CLAUDE.md`. Перед обновлением проверить последние 3 коммита (`git log -3`), чтобы учесть ручные изменения
 - Стиль `inherit` в атрсетах: каждый аргумент на отдельной строке (`inherit foo;` / `inherit bar;`), НЕ группировать в одну строку (`inherit foo bar;`)
 - `pkgs-unstable` доступен в HM модулях через `extraSpecialArgs = { inherit pkgs-unstable; }` в configuration.nix
 - `alias sudo='sudo '` в shellAliases — позволяет sudo видеть shell-алиасы; `security.sudo.extraConfig` с `env_keep += "PATH"` — для бинарей в пользовательском PATH
