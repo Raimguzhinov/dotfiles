@@ -234,6 +234,9 @@
           enableBashIntegration = true;
           enableSshSupport = true;
           pinentry.package = pkgs.pinentry-gnome3;
+          extraConfig = ''
+            pinentry-timeout 10
+          '';
         };
 
         programs.foot = {
