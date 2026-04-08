@@ -40,11 +40,11 @@
     };
     includes = [
       { path = "/home/${username}/.config/git/identities/gitlab_work_url"; }
+      { path = "/home/${username}/.config/git/identities/github_user"; }
       {
         condition = "gitdir:~/Work/";
         path = "/home/${username}/.config/git/identities/gitlab_work_user";
       }
-      { path = "/home/${username}/.config/git/identities/github_user"; }
     ];
   };
 

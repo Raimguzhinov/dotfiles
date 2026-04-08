@@ -203,6 +203,33 @@
     };
   };
 
+  # Fix SOF audio (SoundWire rt714 mic noise) after S4 hibernate.
+  # Root cause: sof-audio-pci-intel-tgl restores DSP state from hibernate snapshot but
+  # SoundWire codec rt714 is not properly re-enumerated → mic produces noise instead of voice.
+  # Fix: force rebind of PCI device to reload DSP firmware + re-enumerate SoundWire codecs.
+  #
+  # NOTE: Camera (ov01a10 via intel_vsc/IVSC) cannot be recovered after S4 hibernate without
+  # a cold reboot. The IVSC chip requires hardware power cycle — vsc-tp firmware wakeup times
+  # out (-ETIMEDOUT) even after USB LJCA rebind or full USB device-level rebind (3-8).
+  powerManagement.resumeCommands = ''
+    echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/unbind || true
+    ${pkgs.coreutils}/bin/sleep 1
+    echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/bind || true
+    # Wait for SOF firmware load + SoundWire rt714 re-enumeration (~5s)
+    ${pkgs.coreutils}/bin/sleep 5
+    # Reapply rt714 ALSA routing (lost after SOF rebind)
+    for dev in /sys/bus/soundwire/devices/*/power/control; do
+      echo on > "$dev" || true
+    done
+    ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1' || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
+    ${pkgs.systemd}/bin/loginctl list-users --no-legend | ${pkgs.gawk}/bin/awk '{print $2}' | while read -r user; do
+      ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart wireplumber.service 2>/dev/null || true
+    done
+  '';
+
   # SoundWire microphone fix — CyberT3C approach (rt714 codec, XPS 13 Plus 9320)
   systemd.services.xps-mic-fix = {
     after = [ "sound.target" ];
