@@ -40,7 +40,9 @@ nixfmt-rfc-style nixos/
 - `development.nix` — direnv + nix-direnv, Go devshell активация (записывает `~/Work/flake.nix` и `~/Work/.envrc`), вспомогательные shell-скрипты (ssh-setup-dlv, ssh-run-debugger, tracktime и др.)
 - `neovim.nix` — nvf (Neovim framework), LSP для Go/Nix/Python/Bash/YAML/Markdown
 - `niri.nix` — Wayland compositor niri: раскладки, биндинги клавиш, правила окон, автозапуск
-- `noctalia.nix` — noctalia-shell (панель/уведомления)
+- `noctalia.nix` — noctalia-shell (панель/уведомления); эталонная конфига разработчиков: https://docs.noctalia.dev/getting-started/nixos/
+  - `general.lockOnSuspend = true` — автоблокировка при suspend (без отдельного systemd-сервиса)
+  - `general.allowPasswordWithFprintd = false` — только отпечаток на lockscreen, без поля пароля
 - `rofi.nix` — лаунчер приложений
 - `chromium.nix`, `zen-browser.nix` — браузеры с расширениями + gopass-jsonapi native messaging
 - `jetbrains.nix` — JetBrains IDE (pkgs-unstable)

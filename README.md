@@ -60,6 +60,9 @@ git commit -m "nixos: add hardware-configuration"
 
 # Переключить remote на SSH
 git remote set-url origin git@github.com:Raimguzhinov/dotfiles.git
+
+# Зарегистрировать отпечаток пальца
+sudo fprintd-enroll dias
 ```
 
 > **Примечание:** swap-раздел 32G. Для гибернации он должен быть не меньше

@@ -60,6 +60,9 @@
     { device = "/dev/disk/by-uuid/67de0ed7-3439-4495-a77b-124b27ab717a"; }
   ];
 
+  # Resume from hibernate: must match swap device UUID above
+  boot.resumeDevice = "/dev/disk/by-uuid/67de0ed7-3439-4495-a77b-124b27ab717a";
+
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   hardware.enableAllFirmware = true;

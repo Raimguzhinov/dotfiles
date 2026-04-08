@@ -1,6 +1,7 @@
 { config, pkgs, ... }:
 
 {
+
   programs.noctalia-shell = {
     enable = true;
     settings = {
@@ -42,6 +43,9 @@
             }
           ];
           right = [
+            {
+              id = "plugin:screen-recorder";
+            }
             {
               id = "plugin:sticky-notes";
             }
@@ -85,6 +89,12 @@
       general = {
         avatarImage = "${config.home.homeDirectory}/.face";
         radiusRatio = 0.2;
+        passwordChars = true;
+        lockOnSuspend = true;
+        autoStartAuth = true;
+        compactLockScreen = true;
+        lockScreenAnimations = true;
+        allowPasswordWithFprintd = true;
       };
       location = {
         monthBeforeDay = true;
@@ -148,6 +158,10 @@
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };
           sticky-notes = {
+            enabled = true;
+            sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+          };
+          screen-recorder = {
             enabled = true;
             sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
           };

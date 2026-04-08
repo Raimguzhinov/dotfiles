@@ -68,7 +68,13 @@
   # Niri
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
-  hardware.graphics.enable = true;
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      intel-media-driver
+      intel-compute-runtime
+    ];
+  };
   services.dbus.enable = true;
 
   # Home Manager configuration
@@ -409,6 +415,15 @@
 
   # Fingerprint reader (Goodix, XPS 13 Plus 9320)
   services.fprintd.enable = true;
+  security.pam.services.ly.fprintAuth = true;
+  security.pam.services.noctalia-shell.fprintAuth = true;
+
+  services.logind.settings.Login = {
+    HandlePowerKey = "suspend-then-hibernate";
+    HandlePowerKeyLongPress = "poweroff";
+    HandleLidSwitch = "hibernate";
+    HandleLidSwitchExternalPower = "hibernate";
+  };
 
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
@@ -713,6 +728,7 @@
       gnupg
       gopass
       gopass-jsonapi
+      gpu-screen-recorder
       gtk3
       hicolor-icon-theme
       htop-vim
