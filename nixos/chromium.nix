@@ -3,6 +3,7 @@
 {
   programs.chromium = {
     enable = true;
+    package = pkgs.chromium;
     commandLineArgs = [
       # Use PipeWire camera portal (xdg-desktop-portal) instead of V4L2
       "--enable-features=WebRtcPipeWireCapturer"
@@ -11,12 +12,6 @@
       { id = "lmeddoobegbaiopohmpmmobpnpjifpii"; } # Open in Firefox™ Browser
       { id = "kkhfnlkhiapbiehimabddjbimfaijdhk"; } # Gopass Bridge
     ];
-  };
-
-  home.file.".config/chromium/policies/managed/policy.json".text = builtins.toJSON {
-    DefaultBrowserSettingEnabled = false;
-    PasswordManagerEnabled = false;
-    TranslationEnabled = false;
   };
 
   home.file.".config/chromium/NativeMessagingHosts/com.justwatch.gopass.json".text = ''

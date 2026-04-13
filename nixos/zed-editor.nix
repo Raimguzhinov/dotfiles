@@ -155,12 +155,6 @@
           "v v" = "vim::ToggleVisualLine";
         };
       }
-      # {
-      #   context = "Editor && vim_mode == visual && !VimWaiting && !menu";
-      #   bindings = {
-      #     d = "editor::DeleteLine";
-      #   };
-      # }
       {
         context = "EmptyPane || SharedScreen";
         bindings = {

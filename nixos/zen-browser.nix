@@ -98,6 +98,20 @@
             id = "c6de089c-410d-4206-961d-ab11f988d40a";
             icon = "👽";
             position = 1000;
+            theme = {
+              type = "gradient";
+              colors = [
+                {
+                  red = 200;
+                  green = 200;
+                  blue = 200;
+                  algorithm = "floating";
+                  type = "explicit-lightness";
+                }
+              ];
+              opacity = 0.2;
+              texture = 0.3;
+            };
           };
           "dev" = {
             id = "cdd10fab-4fc5-494b-9041-325e5759195b";
@@ -133,6 +147,20 @@
           };
         };
         pins = {
+          "YouTube (fun)" = {
+            id = "56dee82e-0031-4a6d-987f-5e260984f6f1";
+            workspace = spaces."tmp".id;
+            url = "https://youtube.com";
+            isEssential = true;
+            position = 101;
+          };
+          "VK Video" = {
+            id = "e26521a5-8680-44b6-84fe-237eba982988";
+            workspace = spaces."tmp".id;
+            url = "https://vkvideo.ru/";
+            isEssential = true;
+            position = 102;
+          };
           "GitHub" = {
             id = "9d8a8f91-7e29-4688-ae2e-da4e49d4a179";
             container = containers."Work".id;
@@ -147,12 +175,125 @@
             isEssential = true;
             position = 102;
           };
-          "Folo" = {
+          "Portal" = {
             id = "fb316d70-2b5e-4c46-bf42-f4e82d635153";
             container = containers."Work".id;
             url = "https://portal.protei.ru";
             isEssential = true;
             position = 103;
+          };
+          "Cloud" = {
+            id = "0412dc27-50b0-436b-9672-484826c16a4a";
+            container = containers."Work".id;
+            url = "https://cloud.protei.ru";
+            isEssential = true;
+            position = 104;
+          };
+          "Work AI" = {
+            id = "5cb769dd-b81c-448f-8d49-db3b7b21f382";
+            container = containers."Work".id;
+            url = "https://chat.ai.protei.ru";
+            isEssential = true;
+            position = 105;
+          };
+          "Prosto Retro" = {
+            id = "94358878-dd2e-452a-8a5e-9d640b7a16ca";
+            container = containers."Work".id;
+            url = "https://prostoretro.ru";
+            isEssential = true;
+            position = 106;
+          };
+          "Mermaid" = {
+            id = "627c9c45-b667-4407-ae76-89946defcc30";
+            container = containers."Work".id;
+            url = "https://mermaid.ai";
+            isEssential = true;
+            position = 107;
+          };
+          "Claude" = {
+            id = "c443f4f7-053c-470c-81fe-f5d027ab7e2a";
+            container = containers."Work".id;
+            url = "https://claude.ai";
+            isEssential = true;
+            position = 108;
+          };
+          "Local UC" = {
+            id = "9274bec7-62f9-410d-b069-7f473e0c2771";
+            workspace = spaces."dev".id;
+            isGroup = true;
+            isFolderCollapsed = true;
+            editedTitle = true;
+            position = 200;
+          };
+          "UC DEV 1" = {
+            id = "dafd26a1-a8a7-43d2-b35f-afd9041548c2";
+            workspace = spaces."dev".id;
+            folderParentId = pins."Local UC".id;
+            url = "https://localhost:8443";
+            position = 201;
+          };
+          "UC DEV 2" = {
+            id = "0145e878-e08b-4416-9359-f358772abfa7";
+            workspace = spaces."dev".id;
+            folderParentId = pins."Local UC".id;
+            url = "https://localhost:28443";
+            position = 201;
+          };
+          "Rapidoc" = {
+            id = "316f559c-98cc-4943-bf06-8e91cf50e2eb";
+            workspace = spaces."dev".id;
+            folderParentId = pins."Local UC".id;
+            url = "http://localhost:8088";
+            position = 202;
+          };
+          "Swagger" = {
+            id = "c9861491-6a28-4768-b8aa-f31775f8a210";
+            workspace = spaces."dev".id;
+            folderParentId = pins."Local UC".id;
+            url = "http://localhost:8089";
+            position = 202;
+          };
+          "LDAP DEV 1" = {
+            id = "a177da02-d0bb-4ba0-bd3a-b13f01d625b1";
+            workspace = spaces."dev".id;
+            folderParentId = pins."Local UC".id;
+            url = "http://localhost:20080";
+            position = 203;
+          };
+          "LDAP DEV 2" = {
+            id = "c4e42ddb-bfe1-4e65-8fc5-ecf94b8fb2f1";
+            workspace = spaces."dev".id;
+            folderParentId = pins."Local UC".id;
+            url = "http://localhost:22080";
+            position = 203;
+          };
+          "YouTube" = {
+            id = "4de8d683-27cd-46fa-81be-916aba7cbbf9";
+            container = containers."Personal".id;
+            url = "https://youtube.com";
+            isEssential = true;
+            position = 101;
+          };
+          "ChatGPT" = {
+            id = "d16715d1-32ee-42ff-9702-82484d8a1e98";
+            container = containers."Personal".id;
+            url = "https://chatgpt.com";
+            isEssential = true;
+            position = 102;
+          };
+          "Netcraze" = {
+            id = "45920e9d-5d99-47d9-ad36-eceb174ca236";
+            container = containers."Personal".id;
+            url = "https://nixos.netcraze.pro";
+            isEssential = true;
+            position = 103;
+          };
+          "Amnezia" = {
+            id = "19a42484-1174-4215-b27d-5033be52b877";
+            container = containers."Personal".id;
+            url = "https://m-3-3w5hsuiikq-ma.a.run.app/ru";
+            isEssential = true;
+            position = 104;
           };
           "Nix awesome" = {
             id = "d85a9026-1458-4db6-b115-346746bcc692";
@@ -162,32 +303,41 @@
             editedTitle = true;
             position = 200;
           };
+          "Vimjoyer" = {
+            id = "f2109d9f-ce16-47ab-959b-81536692d158";
+            workspace = spaces."nix".id;
+            folderParentId = pins."Nix awesome".id;
+            url = "https://www.vimjoyer.com";
+            position = 201;
+          };
           "Nix Packages" = {
             id = "f8dd784e-11d7-430a-8f57-7b05ecdb4c77";
             workspace = spaces."nix".id;
             folderParentId = pins."Nix awesome".id;
             url = "https://search.nixos.org/packages";
-            position = 201;
+            position = 202;
           };
           "Nix Options" = {
             id = "92931d60-fd40-4707-9512-a57b1a6a3919";
             workspace = spaces."nix".id;
             folderParentId = pins."Nix awesome".id;
             url = "https://search.nixos.org/options";
-            position = 202;
+            position = 203;
           };
           "Home Manager Options" = {
             id = "2eed5614-3896-41a1-9d0a-a3283985359b";
             workspace = spaces."nix".id;
             folderParentId = pins."Nix awesome".id;
             url = "https://home-manager-options.extranix.com";
-            position = 203;
+            position = 204;
           };
         };
         search = {
           force = true;
           default = "ddg"; # duckduckgo
           engines = {
+            google.metaData.alias = "@goo";
+            wikipedia-ru.metaData.alias = "@wiki";
             mynixos = {
               name = "My NixOS";
               urls = [
@@ -224,9 +374,33 @@
               icon = "${pkgs.nixos-icons}/share/icons/hicolor/scalable/apps/nix-snowflake.svg";
               definedAliases = [ "@nix" ];
             };
-            google.metaData.alias = "@goo";
-            youtube.metaData.alias = "@you";
-            wikipedia-ru.metaData.alis = "@wiki";
+            youtube = {
+              name = "YouTube";
+              urls = [ { template = "https://www.youtube.com/results?search_query={searchTerms}"; } ];
+              iconMapObj."16" = "https://www.youtube.com/favicon.ico";
+              definedAliases = [ "@you" ];
+            };
+            habr = {
+              name = "Habr";
+              urls = [ { template = "https://habr.com/ru/search/?q={searchTerms}"; } ];
+              iconMapObj."16" = "https://habr.com/favicon.ico";
+              definedAliases = [ "@habr" ];
+            };
+            github = {
+              name = "GitHub";
+              urls = [ { template = "https://github.com/search?q={searchTerms}"; } ];
+              iconMapObj."16" = "https://github.com/favicon.ico";
+              definedAliases = [
+                "@gh"
+                "@git"
+              ];
+            };
+            gitlab = {
+              name = "GitLab";
+              urls = [ { template = "https://git.protei.ru/search?q={searchTerms}"; } ];
+              iconMapObj."16" = "https://gitlab.com/favicon.ico";
+              definedAliases = [ "@glab" ];
+            };
             yandex = {
               name = "Yandex";
               urls = [ { template = "https://ya.ru/search?text={searchTerms}"; } ];
@@ -276,9 +450,6 @@
             disabled = false;
           }
         ];
-        # Fails activation on schema changes to detect potential regressions
-        # Find this in about:config or prefs.js of your profile
-        keyboardShortcutsVersion = 16;
         # Search addons:
         # nix run github:osipog/nix-firefox-addons#search-addon ublock
         extensions.packages = with pkgs.firefoxAddons; [

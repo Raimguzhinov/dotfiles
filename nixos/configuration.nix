@@ -65,6 +65,31 @@
   nix.registry.nixpkgs.flake = inputs.nixpkgs;
   nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
 
+  # Chromium policies
+  programs.chromium.enable = true;
+  programs.chromium.extraOpts = {
+    DefaultBrowserSettingEnabled = false;
+    TranslationEnabled = false;
+    MetricsReportingEnabled = false;
+    PasswordManagerEnabled = false;
+    PasswordSharingEnabled = false;
+    PasswordLeakDetectionEnabled = true;
+    WebAppInstallForceList = [
+      {
+        url = "https://tankionline.com/play/";
+        default_launch_container = "window";
+      }
+      {
+        url = "https://uc.protei.ru";
+        default_launch_container = "window";
+      }
+      {
+        url = "https://web.max.ru/";
+        default_launch_container = "window";
+      }
+    ];
+  };
+
   # Niri
   niri-flake.cache.enable = true;
   programs.niri.enable = true;
@@ -686,7 +711,7 @@
       # max-messanger.packages.${pkgs.stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
       lmstudio.packages.${pkgs.stdenv.hostPlatform.system}.lmstudio
       niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
-      tankionline.packages.${pkgs.stdenv.hostPlatform.system}.default
+      # tankionline.packages.${pkgs.stdenv.hostPlatform.system}.default
     ])
     ++ (with pkgs-unstable; [
       censor # PDF document redaction
