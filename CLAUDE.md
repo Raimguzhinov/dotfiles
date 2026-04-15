@@ -48,7 +48,7 @@ nixfmt-rfc-style nixos/
 - `jetbrains.nix` — JetBrains IDE (pkgs-unstable)
 - `zed-editor.nix` — Zed editor
 - `thunderbird.nix` — Thunderbird: `mkEmailAccount`/`mkProviderAccount` хелперы, провайдеры mail-ru/gmail/yandex, аккаунты с OAuth2 и normal-password auth, ru-langpack через `home.file` XPI
-- `claude.nix` — `claude-protei` враппер (корпоративный litellm + MCP серверы demo_mcp/youtrack), `programs.claude-code` конфиг
+- `claude.nix` — `claudeWrapperMCP` враппер: подхватывает MCP-конфиг (demo_mcp/youtrack) если доступен `mcp_sse_url`; `claude-protei` — корпоративная модель через внешний litellm; `programs.claude-code.package = claudeWrapperMCP`
 - `sops.nix` — sops-nix секреты (GPG/YubiKey): github_token, youtrack/*, git/github, git/gitlab_work, product/services_root, pass_store/clone_cmd, work_ai/*
 
 **Модули Home Manager пользователя `root`**: `neovim.nix`, `tools.nix`

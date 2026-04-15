@@ -1,11 +1,16 @@
-{ config, pkgs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   mcpConfig = {
     mcpServers = {
       demo_mcp = {
         type = "http";
-        url = "${"$"}ANTHROPIC_BASE_URL/litellm/mcp/demo_mcp";
+        url = "${"$"}ANTHROPIC_BASE_URL/mcp/demo_mcp";
         headers = {
           "x-litellm-api-key" = "Bearer ${"$"}ANTHROPIC_AUTH_TOKEN";
         };
@@ -19,11 +24,25 @@ let
       };
     };
   };
+  claudeWrapperMCP = pkgs.writeShellScriptBin "claude" ''
+    if [[ -f ${config.sops.secrets."work_ai/mcp_sse_url".path} ]]; then
+      export MCP_SSE_URL="$(cat ${config.sops.secrets."work_ai/mcp_sse_url".path})"
+      export YOUTRACK_TOKEN="$(cat ${config.sops.secrets."youtrack/token".path})"
+
+      MCP_CONFIG=$(mktemp)
+      echo '${builtins.toJSON mcpConfig}' | ${pkgs.gettext}/bin/envsubst > "$MCP_CONFIG"
+
+      trap "rm -f $MCP_CONFIG" EXIT
+      exec ${pkgs.claude-code}/bin/claude --mcp-config "$MCP_CONFIG" "$@"
+    else
+      exec ${pkgs.claude-code}/bin/claude "$@"
+    fi
+  '';
 in
 {
   home.packages = [
     (pkgs.writeShellScriptBin "claude-protei" ''
-      export ANTHROPIC_MODEL="Qwen/Qwen3.5-122B-A10B-FP8"
+      export ANTHROPIC_MODEL="ПротеЯ-2-Thinking"
 
       if [[ -f ${config.sops.secrets."work_ai/litellm_url".path} && -f ${
         config.sops.secrets."work_ai/litellm_api_key".path
@@ -36,23 +55,12 @@ in
         } 2>/dev/null)"
       fi
 
-      if [[ -f ${config.sops.secrets."work_ai/mcp_sse_url".path} ]]; then
-        export MCP_SSE_URL="$(cat ${config.sops.secrets."work_ai/mcp_sse_url".path})"
-        export YOUTRACK_TOKEN="$(cat ${config.sops.secrets."youtrack/token".path})"
-
-        MCP_CONFIG=$(mktemp)
-        echo '${builtins.toJSON mcpConfig}' | ${pkgs.gettext}/bin/envsubst > "$MCP_CONFIG"
-
-        trap "rm -f $MCP_CONFIG" EXIT
-        exec ${pkgs.claude-code}/bin/claude --mcp-config "$MCP_CONFIG" "$@"
-      else
-        exec ${pkgs.claude-code}/bin/claude "$@"
-      fi
+      exec ${lib.getExe claudeWrapperMCP} "$@"
     '')
   ];
 
   programs.claude-code = {
     enable = true;
-    package = pkgs.claude-code;
+    package = claudeWrapperMCP;
   };
 }
