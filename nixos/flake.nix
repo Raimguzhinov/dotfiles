@@ -21,16 +21,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
-    max-messanger = {
-      url = "github:Raimguzhinov/max-messanger-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-    tankionline = {
-      url = "github:Raimguzhinov/tankionline-flake";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-    };
     nix-firefox-addons = {
       url = "github:osipog/nix-firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -83,7 +73,7 @@
         config.allowUnfree = true;
       };
 
-      installScript = import ./install.nix {
+      installScript = import ./modules/hosts/dell-xps-13-9320/install.nix {
         inherit pkgs;
         inherit system;
         inherit hostname;
@@ -102,8 +92,7 @@
           inherit inputs;
         };
         modules = [
-          ./configuration.nix
-          ./overlays.nix
+          ./modules/hosts/dell-xps-13-9320
           inputs.home-manager.nixosModules.home-manager
           inputs.niri.nixosModules.niri
         ];

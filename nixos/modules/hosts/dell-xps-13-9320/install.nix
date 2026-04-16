@@ -23,7 +23,7 @@ pkgs.writeShellApplication {
     TARGET="/mnt"
     DOTFILES_TARGET="$TARGET/home/$USERNAME/dotfiles"
     DISKO_CONFIG="${./disko.nix}"
-    README="${../README.md}"
+    README="${../../../../README.md}"
 
     if [ "$(id -u)" -ne 0 ]; then
       echo "Run as root: sudo nix run ..." >&2
@@ -84,7 +84,7 @@ pkgs.writeShellApplication {
       echo ""
       echo ">>> Copying hardware configuration..."
       cp "$TARGET/etc/nixos/hardware-configuration.nix" \
-        "$DOTFILES_TARGET/nixos/hardware-configuration.nix"
+        "$DOTFILES_TARGET/nixos/modules/hosts/dell-xps-13-9320/hardware-configuration.nix"
 
       chown -R 1000:1000 "$TARGET/home/$USERNAME"
     else

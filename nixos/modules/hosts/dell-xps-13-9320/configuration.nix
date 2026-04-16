@@ -121,8 +121,8 @@
         home.stateVersion = version;
         imports = [
           inputs.nvf.homeManagerModules.default
-          ./neovim.nix
-          ./tools.nix
+          ../../features/neovim.nix
+          ../../features/tools.nix
         ];
       };
     users.${username} =
@@ -132,7 +132,7 @@
         home.username = username;
         home.stateVersion = version;
         home.homeDirectory = "/home/${username}";
-        home.file."Pictures/Wallpapers".source = ../wallpapers;
+        home.file."Pictures/Wallpapers".source = ../../../../wallpapers;
         home.packages =
           (with pkgs-unstable; [
             telegram-desktop
@@ -344,19 +344,19 @@
           inputs.noctalia.homeModules.default
           inputs.nvf.homeManagerModules.default
           inputs.zen-browser.homeModules.beta
-          ./chromium.nix
-          ./sops.nix
-          ./development.nix
-          ./jetbrains.nix
-          ./neovim.nix
-          ./niri.nix
-          ./noctalia.nix
-          ./rofi.nix
-          ./tools.nix
-          ./zed-editor.nix
-          ./zen-browser.nix
-          ./claude.nix
-          ./thunderbird.nix
+          ../../features/chromium.nix
+          ../../features/sops.nix
+          ../../features/development.nix
+          ../../features/jetbrains.nix
+          ../../features/neovim.nix
+          ../../features/niri.nix
+          ../../features/noctalia.nix
+          ../../features/rofi.nix
+          ../../features/tools.nix
+          ../../features/zed-editor.nix
+          ../../features/zen-browser.nix
+          ../../features/claude.nix
+          ../../features/thunderbird.nix
         ];
       };
   };
@@ -708,10 +708,8 @@
   # $ nix search wget
   environment.systemPackages =
     (with inputs; [
-      # max-messanger.packages.${pkgs.stdenv.hostPlatform.system}.default TODO: repack from deb-pkg
       lmstudio.packages.${pkgs.stdenv.hostPlatform.system}.lmstudio
       niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
-      # tankionline.packages.${pkgs.stdenv.hostPlatform.system}.default
     ])
     ++ (with pkgs-unstable; [
       censor # PDF document redaction
