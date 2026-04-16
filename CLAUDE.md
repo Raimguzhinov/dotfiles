@@ -56,7 +56,11 @@ nixos/
     features/                 ← общие HM-модули, переиспользуются между хостами
       tools.nix, development.nix, neovim.nix, niri.nix, noctalia.nix,
       rofi.nix, chromium.nix, zen-browser.nix, jetbrains.nix, zed-editor.nix,
-      thunderbird.nix, claude.nix, sops.nix, go-devshell.nix
+      thunderbird.nix, claude.nix, sops.nix
+    devshells/                ← автономный флейк (flake-parts) для ~/Work
+      flake.nix               ← точка входа, imports = [./go.nix ./python.nix]
+      go.nix                  ← perSystem devShells.go (Go 1.21, protobuf, delve...)
+      python.nix              ← perSystem devShells.python
 ```
 
 **Слои конфигурации:**
@@ -74,9 +78,9 @@ nixos/
 
 - `tools.nix` — zsh, git, delta, zoxide, atuin, zellij, yazi (`rr`), bat, eza,
   starship, lazygit, pgcli, fd, fzf, ripgrep
-- `development.nix` — direnv + nix-direnv, Go devshell активация (записывает
-  `~/Work/flake.nix` и `~/Work/.envrc`), вспомогательные shell-скрипты
-  (ssh-setup-dlv, ssh-run-debugger, tracktime и др.)
+- `development.nix` — direnv + nix-direnv, создаёт `~/Work/.envrc` с
+  `use flake ~/dotfiles/nixos/modules/devshells#{go,python}`, вспомогательные
+  shell-скрипты (ssh-setup-dlv, ssh-run-debugger, tracktime и др.)
 - `neovim.nix` — nvf (Neovim framework), LSP для
   Go/Nix/Python/Bash/YAML/Markdown
 - `niri.nix` — Wayland compositor niri: раскладки, биндинги клавиш, правила
@@ -106,10 +110,18 @@ nixos/
 **Модули Home Manager пользователя `root`**: `modules/features/neovim.nix`,
 `modules/features/tools.nix`
 
-**Go devshell** (`modules/features/go-devshell.nix`): флейк для `~/Work/` с Go
-1.21, gopls, delve, protobuf, grpc-gen. `libwebp.dev`/`libwebp.out` используются
-напрямую через Nix-интерполяцию в shellHook. `GOROOT` экспортируется,
-`$GOROOT/bin` добавлен в PATH.
+**Devshells** (`modules/devshells/`): автономный flake-parts флейк с двумя
+devShells для `~/Work/`. `go.nix` — Go 1.21 (pinned), gopls, delve 1.25.2,
+protobuf 23.2, protoc-gen-go, libwebp; используется `inputs'` алиас вместо
+ручного `import`. `python.nix` — python3 с black/mypy/ruff/pytest/requests.
+`development.nix` записывает `.envrc` со ссылкой на живой путь в dotfiles —
+изменения в devshells подхватываются direnv без rebuild системы.
+
+Использовать без установки системы (напрямую с GitHub):
+```bash
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#go'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#python'
+```
 
 ## Dell XPS 13 Plus 9320 — особенности железа
 

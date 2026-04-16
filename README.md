@@ -71,6 +71,22 @@ sudo fprintd-enroll dias
 
 ---
 
+## Devshells (без установки системы)
+
+Воспользоваться Go или Python окружением можно напрямую с GitHub — без клонирования репозитория и без установки NixOS:
+
+```bash
+# Go 1.21 + gopls + delve + protobuf + libwebp + ...
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#go'
+
+# Python 3 + black + mypy + ruff + pytest + requests + ...
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#python'
+```
+
+На машине с установленной конфигурацией direnv подхватывает шеллы автоматически в `~/Work/` через `.envrc`.
+
+---
+
 ## Тестирование в virt-manager (KVM/QEMU)
 
 ### Создание VM
