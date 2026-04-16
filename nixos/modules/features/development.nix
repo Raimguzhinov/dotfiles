@@ -10,27 +10,22 @@
 
   home.activation.createWorkDir =
     let
-      goDevShell = ./go-devshell.nix;
-      goEnvrc = pkgs.writeText "go-devshell-envrc" ''
+      shellsDir = "${config.home.homeDirectory}/dotfiles/nixos/modules/shells";
+      workEnvrc = pkgs.writeText "work-envrc" ''
         count=$(find . -type s -name 'mgmt.sock' -printf . | wc -c)
         if [ "$count" -gt 0 ]; then
             sudo find . -type s -name 'mgmt.sock' -delete
             echo "Cleaned up $count mgmt.sock files"
         fi
-        use flake
-        export GOPATH="$HOME/go"
-        export PATH="$GOPATH/bin:$PATH"
+        use flake ${shellsDir}#go
+        use flake ${shellsDir}#python
       '';
     in
     config.lib.dag.entryAfter [ "writeBoundary" ] ''
       mkdir -p ~/Work
 
-      if ! diff -q ${goDevShell} ~/Work/flake.nix > /dev/null 2>&1; then
-        install -m 644 ${goDevShell} ~/Work/flake.nix
-      fi
-
-      if ! diff -q ${goEnvrc} ~/Work/.envrc > /dev/null 2>&1; then
-        install -m 644 ${goEnvrc} ~/Work/.envrc
+      if ! diff -q ${workEnvrc} ~/Work/.envrc > /dev/null 2>&1; then
+        install -m 644 ${workEnvrc} ~/Work/.envrc
       fi
     '';
 

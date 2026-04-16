@@ -200,29 +200,6 @@
         "type": "github"
       }
     },
-    "max-messanger": {
-      "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1772902958,
-        "narHash": "sha256-q0LY1+/62Im0nRbgCEhcVvThoJeLMAsSj5a9uK1mWbs=",
-        "owner": "Raimguzhinov",
-        "repo": "max-messanger-flake",
-        "rev": "a85794e400652ae397f68bbe792392f773c87716",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Raimguzhinov",
-        "repo": "max-messanger-flake",
-        "type": "github"
-      }
-    },
     "mnw": {
       "locked": {
         "lastModified": 1770419553,
@@ -522,7 +499,6 @@
         "flake-utils": "flake-utils",
         "home-manager": "home-manager",
         "lmstudio": "lmstudio",
-        "max-messanger": "max-messanger",
         "niri": "niri",
         "niri-float-sticky": "niri-float-sticky",
         "nix-firefox-addons": "nix-firefox-addons",
@@ -532,7 +508,6 @@
         "noctalia": "noctalia",
         "nvf": "nvf",
         "sops-nix": "sops-nix",
-        "tankionline": "tankionline",
         "zen-browser": "zen-browser"
       }
     },
@@ -598,29 +573,6 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
-        "type": "github"
-      }
-    },
-    "tankionline": {
-      "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1773584851,
-        "narHash": "sha256-xt12a6sP4PzbMD8Xtb3V7PBDfW2whUekvt3Z20o8ANk=",
-        "owner": "Raimguzhinov",
-        "repo": "tankionline-flake",
-        "rev": "36d2bc6af3a507b9bfdde3ccf563f9814aa4a291",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Raimguzhinov",
-        "repo": "tankionline-flake",
         "type": "github"
       }
     },
