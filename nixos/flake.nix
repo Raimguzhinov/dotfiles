@@ -6,6 +6,7 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-amnezia.url = "github:NixOS/nixpkgs/1ebf2de9af636a5752c15b4f40e504183f0b2ec8";
     flake-utils.url = "github:numtide/flake-utils";
+    lmstudio.url = "github:Daaboulex/lmstudio-nix";
     niri = {
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
@@ -40,7 +41,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
     };
-    lmstudio.url = "github:Daaboulex/lmstudio-nix";
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -77,8 +77,14 @@
       username = "dias";
       version = "25.11";
 
+      pkgs = import nixpkgs { inherit system; };
+      pkgs-unstable = import nixpkgs-unstable {
+        inherit system;
+        config.allowUnfree = true;
+      };
+
       installScript = import ./install.nix {
-        pkgs = import nixpkgs { inherit system; };
+        inherit pkgs;
         inherit system;
         inherit hostname;
         inherit username;
@@ -89,14 +95,11 @@
       nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = {
-          pkgs-unstable = import nixpkgs-unstable {
-            inherit system;
-            config.allowUnfree = true;
-          };
-          inherit inputs;
+          inherit pkgs-unstable;
           inherit hostname;
           inherit username;
           inherit version;
+          inherit inputs;
         };
         modules = [
           ./configuration.nix

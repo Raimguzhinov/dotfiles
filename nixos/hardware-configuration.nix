@@ -222,6 +222,7 @@
       echo on > "$dev" || true
     done
     ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1' || true
+    ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on' || true
     ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
     ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
     ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
@@ -234,14 +235,24 @@
   systemd.services.xps-mic-fix = {
     after = [ "sound.target" ];
     wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+    };
     script = ''
+      # Wait for card 0 to become available (SOF firmware load can take a few seconds)
+      for i in $(seq 1 30); do
+        ${pkgs.alsa-utils}/bin/amixer -c 0 info &>/dev/null && break
+        ${pkgs.coreutils}/bin/sleep 0.5
+      done
       # Disable SoundWire device power management
       for dev in /sys/bus/soundwire/devices/*/power/control; do
-        echo on > $dev || true
+        echo on > "$dev" || true
       done
       # Route ADC 22 to DMIC1
       ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1'
-      # Enable capture path FU02 (used by UCM)
+      # Enable capture path (PGA5.0 + FU02, used by UCM)
+      ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on'
       ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on'
       ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70'
       # Set boost

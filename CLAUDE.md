@@ -58,6 +58,10 @@ nixfmt-rfc-style nixos/
 ## Dell XPS 13 Plus 9320 — особенности железа
 
 - **Ядро**: `boot.kernelPackages = pkgs.linuxPackages_latest` — обязательно для ipu6ep камеры и SoundWire микрофона
+- **SoundWire микрофон (rt714)**:
+  - `systemd.services.xps-mic-fix` — применяет ALSA routing при загрузке: ждёт готовности карты 0 (цикл до 15 сек), затем устанавливает `rt714 ADC 22 Mux → DMIC1`, `PGA5.0 5 Master Capture Switch on,on`, `rt714 FU02 Capture Switch on`, `rt714 FU02 Capture Volume 70`, `rt714 FU0C Boost 0`
+  - `PGA5.0 5 Master Capture Switch` — системный capture enable; если `off,off` — микрофон молчит несмотря на то что WirePlumber видит источник
+  - `powerManagement.resumeCommands` — после hibernate: PCI rebind sof-audio-pci-intel-tgl + те же ALSA настройки (включая `PGA5.0 5 Master Capture Switch`) + restart wireplumber для всех сессий
 - **Камера (IPU6EP)**:
   - `hardware.ipu6.platform = "ipu6ep"` + `libcamera` — современный подход без icamerasrc
   - `services.v4l2-relayd.instances.ipu6.enable = lib.mkForce false` — дефолтный ipu6 инстанс не работает на 9320
