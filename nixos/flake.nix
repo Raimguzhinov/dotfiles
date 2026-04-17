@@ -6,6 +6,8 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-amnezia.url = "github:NixOS/nixpkgs/1ebf2de9af636a5752c15b4f40e504183f0b2ec8";
     flake-utils.url = "github:numtide/flake-utils";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    import-tree.url = "github:vic/import-tree";
     lmstudio.url = "github:Daaboulex/lmstudio-nix";
     niri = {
       url = "github:sodiboo/niri-flake";
@@ -54,66 +56,5 @@
     };
   };
 
-  outputs =
-    {
-      self,
-      nixpkgs,
-      nixpkgs-unstable,
-      ...
-    }@inputs:
-    let
-      system = "x86_64-linux";
-      hostname = "raimguzhinov";
-      username = "dias";
-      version = "25.11";
-
-      lib = nixpkgs.lib;
-
-      pkgs = import nixpkgs { inherit system; };
-      pkgs-unstable = import nixpkgs-unstable {
-        inherit system;
-        config.allowUnfree = true;
-      };
-
-      installScript = import ./modules/hosts/dell-xps-13-9320/install.nix {
-        inherit pkgs;
-        inherit system;
-        inherit hostname;
-        inherit username;
-        disko = inputs.disko;
-      };
-
-      jbPkgs = (import ./modules/features/jetbrains.nix { inherit pkgs pkgs-unstable; }).packages;
-    in
-    {
-      nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
-        inherit system;
-        specialArgs = {
-          inherit pkgs-unstable;
-          inherit hostname;
-          inherit username;
-          inherit version;
-          inherit inputs;
-        };
-        modules = [
-          ./modules/hosts/dell-xps-13-9320
-          inputs.home-manager.nixosModules.home-manager
-          inputs.niri.nixosModules.niri
-        ];
-      };
-
-      packages.${system} = jbPkgs;
-
-      apps.${system} =
-        {
-          install = {
-            type = "app";
-            program = "${installScript}/bin/install";
-          };
-        }
-        // lib.mapAttrs (_: pkg: {
-          type = "app";
-          program = lib.getExe pkg;
-        }) jbPkgs;
-    };
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
 }

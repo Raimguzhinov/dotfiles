@@ -1,383 +1,402 @@
+{ inputs, ... }:
 {
-  config,
-  pkgs,
-  lib,
-  ...
-}:
-
-{
-  xdg.configFile."soteria/config.toml".text = ''
-    helper_path = "/run/wrappers/bin/polkit-agent-helper-1"
-  '';
-
-  home.packages = [
-    (pkgs.writeShellScriptBin "cam-on" ''
-      set -euo pipefail
-      exec sudo ${pkgs.systemd}/bin/systemctl start camera-bridge.service
-    '')
-
-    (pkgs.writeShellScriptBin "cam-off" ''
-      set -euo pipefail
-      exec sudo ${pkgs.systemd}/bin/systemctl stop camera-bridge.service
-    '')
-
-    (pkgs.writeShellScriptBin "cam-status" ''
-      set -euo pipefail
-      exec ${pkgs.systemd}/bin/systemctl status camera-bridge.service --no-pager
-    '')
-
-    (pkgs.writeShellScriptBin "cam-log" ''
-      set -euo pipefail
-      journalctl -u camera-bridge.service -b --no-pager | tail -50
-    '')
-
-    (pkgs.writeShellScriptBin "cam-toggle" ''
-      set -euo pipefail
-
-      UNIT="camera-bridge.service"
-
-      if ${pkgs.systemd}/bin/systemctl is-active --quiet "$UNIT"; then
-        sudo ${pkgs.systemd}/bin/systemctl stop "$UNIT"
-        echo "Camera bridge: stopped"
-      else
-        sudo ${pkgs.systemd}/bin/systemctl start "$UNIT"
-        echo "Camera bridge: started"
-      fi
-    '')
-  ];
-
-  programs.niri = {
-    package = pkgs.niri-unstable;
-    settings =
-      let
-        noctalia =
-          cmd:
-          [
-            "noctalia-shell"
-            "ipc"
-            "call"
-          ]
-          ++ (lib.splitString " " cmd);
-      in
+  perSystem =
+    {
+      inputs',
+      lib,
+      system,
+      ...
+    }:
+    lib.optionalAttrs
+      (builtins.elem system [
+        "x86_64-linux"
+        "aarch64-linux"
+      ])
       {
-        environment = {
-          CLUTTER_BACKEND = "wayland";
-          DISPLAY = ":0";
-          GTK_BACKEND = "wayland,x11";
-          MOZ_ENABLE_WAYLAND = "1";
-          NIXOS_OZONE_WL = "1";
-          QT_QPA_PLATFORMTHEME = "qt6ct";
-          QT_QPA_PLATFORM = "wayland;xcb";
-          QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
-          SDL_VIDEODRIVER = "wayland";
-          ELECTRON_OZONE_PLATFORM_HINT = "auto";
-          LIBVA_DRIVER_NAME = "iHD"; # GPU
-        };
-        input = {
-          keyboard.xkb = {
-            layout = "us,ru";
-            options = "grp:alt_space_toggle,grp:ralt_space_toggle";
-          };
-          # mouse.accel-speed = 1.0;
-          touchpad = {
-            tap = false;
-            dwt = false;
-            natural-scroll = true;
-            accel-speed = 0.2;
-            click-method = "clickfinger";
-          };
-          focus-follows-mouse = {
-            enable = true;
-            max-scroll-amount = "0%";
-          };
-        };
-        outputs = {
-          eDP-1 = {
-            scale = 2;
-            position = {
-              x = 0;
-              y = 200;
-            };
-          };
-          "Virtual-1" = {
-            mode = {
-              width = 1920;
-              height = 1080;
-              refresh = 60.0;
-            };
-          };
-        };
-        layout = {
-          default-column-width.proportion = 0.975;
-        };
-        window-rules = [
-          {
-            geometry-corner-radius = {
-              bottom-left = 5.0;
-              bottom-right = 5.0;
-              top-left = 5.0;
-              top-right = 5.0;
-            };
-            clip-to-geometry = true;
-          }
-          {
-            matches = [
-              { app-id = "^spotify$"; }
-              { app-id = "^Alacritty$"; }
-              { app-id = "^ONLYOFFICE$"; }
-              { app-id = "^localsend_app$"; }
-              { app-id = "^chromium-browser$"; }
-              { title = "^Virtual Machine Manager$"; }
-              { title = "^Интернетометр"; }
-              { title = "^Speedted by Ookla"; }
-              { title = "^Картинка в картинке$"; }
-            ];
-            open-floating = true;
-          }
-        ];
-        debug = {
-          honor-xdg-activation-with-invalid-serial = { };
-        };
-        prefer-no-csd = true;
-        spawn-at-startup = [
-          { command = [ "noctalia-shell" ]; }
-          { command = [ "xwayland-satellite" ]; }
-          { command = [ "soteria" ]; }
-          {
-            command = [
-              "bash"
-              "-c"
-              "niri-float-sticky -debug >> /tmp/niri-float-sticky.log" # -title 'Картинка в картинке'
-            ];
-          }
-        ];
-        layer-rules = [
-          {
-            matches = [ { namespace = "^noctalia-notifications*"; } ];
-            block-out-from = "screen-capture";
-          }
-          {
-            matches = [ { namespace = "^noctalia-overview*"; } ];
-            place-within-backdrop = true;
-          }
-        ];
-        binds =
-          with pkgs.lib;
-          let
-            binds =
-              {
-                suffixes,
-                prefixes,
-                substitutions ? { },
-              }:
-              let
-                replacer = replaceStrings (attrNames substitutions) (attrValues substitutions);
-                mapper =
-                  { prefix, suffix }:
-                  let
-                    actual-suffix =
-                      if isList suffix.value then
-                        {
-                          action = head suffix.value;
-                          args = tail suffix.value;
-                        }
-                      else
-                        {
-                          action = suffix.value;
-                          args = [ ];
-                        };
-                    action = replacer "${prefix.value}-${actual-suffix.action}";
-                  in
-                  {
-                    name = "${prefix.name}+${suffix.name}";
-                    value.action.${action} = actual-suffix.args;
-                  };
-              in
-              listToAttrs (
-                mapCartesianProduct mapper {
-                  prefix = attrsToList prefixes;
-                  suffix = attrsToList suffixes;
-                }
-              );
-          in
-          with config.lib.niri.actions;
-          mergeAttrsList [
-            {
-              "Mod+Shift+Slash".action = show-hotkey-overlay;
-              "Mod+W".action = toggle-overview;
-              "Mod+Return" = {
-                action = spawn "${pkgs.foot}/bin/foot";
-                hotkey-overlay.title = "Open a Terminal: foot";
-              };
-              "Mod+A" = {
-                action.spawn = noctalia "launcher toggle"; # "rofi" "-show" "drun";
-                hotkey-overlay.title = "Run an Application: noctalia launcher";
-              };
-              "Mod+D" = {
-                action = spawn "${pkgs.nwg-drawer}/bin/nwg-drawer";
-                hotkey-overlay.title = "Open The Launcher";
-              };
-              "Mod+E" = {
-                action = spawn "${pkgs.foot}/bin/foot" "--app-id=yazi" "yazi";
-                hotkey-overlay.title = "File manager: yazi";
-              };
-              "Mod+Shift+E" = {
-                action = spawn "${pkgs.nautilus}/bin/nautilus" "--new-window";
-                hotkey-overlay.title = "File manager: nautilus";
-              };
-              "Mod+O" = {
-                action =
-                  let
-                    rofiCalc = pkgs.writeShellScriptBin "rofiCalc" ''
-                      rofi -show calc -no-show-match -no-sort -calc-command "echo -n '{result}' | wl-copy"
-                    '';
-                  in
-                  spawn "${lib.getExe rofiCalc}";
-                hotkey-overlay.title = "Calculator: rofi-calc";
-              };
-              "Mod+V" = {
-                action.spawn = noctalia "launcher clipboard";
-                # let
-                #   cliphistRofi = pkgs.writeShellScriptBin "cliphistRofi" ''
-                #     cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 \
-                #     -width 35 | cliphist decode | wl-copy
-                #   '';
-                # in
-                # spawn "${lib.getExe cliphistRofi}";
-                hotkey-overlay.title = "Clipboard: noctalia launcher";
-              };
-              "Mod+G" = {
-                action = spawn "niri-float-sticky" "-ipc" "toggle_sticky";
-                hotkey-overlay.title = "Toggle sticky";
-              };
-              "Mod+Shift+P" = {
-                action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
-                hotkey-overlay.title = "Password Manager: tessen";
-              };
-              "Mod+Shift+C" = {
-                action = spawn "cam-toggle";
-                hotkey-overlay.title = "Toggle camera bridge";
-              };
-              "Mod+Alt+Q" = {
-                action.spawn = noctalia "lockScreen lock";
-                hotkey-overlay.title = "Lock Screen";
-              };
-              XF86AudioRaiseVolume = {
-                action.spawn = noctalia "volume increase"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+";
-                allow-when-locked = true;
-              };
-              XF86AudioLowerVolume = {
-                action.spawn = noctalia "volume decrease"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-";
-                allow-when-locked = true;
-              };
-              XF86AudioMute = {
-                action.spawn = noctalia "volume muteOutput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
-                allow-when-locked = true;
-              };
-              XF86AudioMicMute = {
-                action.spawn = noctalia "volume muteInput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
-                allow-when-locked = true;
-              };
-              XF86MonBrightnessUp = {
-                action.spawn = noctalia "brightness increase"; # "brightnessctl" "set" "+10%";
-                allow-when-locked = true;
-              };
-              XF86MonBrightnessDown = {
-                action.spawn = noctalia "brightness decrease"; # "brightnessctl" "set" "10%-";
-                allow-when-locked = true;
-              };
-
-              "Mod+Q".action = close-window;
-
-              "Mod+Tab".action = focus-window-down-or-column-right;
-              "Mod+Shift+Tab".action = focus-window-up-or-column-left;
-
-              "Mod+Comma".action = consume-window-into-column;
-              "Mod+Period".action = expel-window-from-column;
-
-              "Mod+R".action = switch-preset-column-width;
-              "Mod+F".action = toggle-window-floating;
-              "Mod+Shift+F".action = fullscreen-window;
-              "Alt+Return".action = maximize-column;
-              "Mod+C".action = center-column;
-
-              "Mod+Minus".action = set-column-width "-10%";
-              "Mod+Equal".action = set-column-width "+10%";
-              "Mod+Shift+Minus".action = set-window-height "-10%";
-              "Mod+Shift+Equal".action = set-window-height "+10%";
-
-              Print.action.screenshot = [ ];
-              "Mod+Print".action.screenshot-screen = [ ];
-              "Alt+Print".action.screenshot-window = [ ];
-
-              # "Mod+Shift+E".action = quit;
-              # "Mod+Shift+P".action = power-off-monitors;
-              # "Mod+B".action = spawn "rfkill" "toggle" "bluetooth";
-            }
-            (binds {
-              suffixes.H = "column-left";
-              suffixes.L = "column-right";
-              prefixes.Mod = "focus";
-              prefixes."Mod+Alt" = "move";
-              prefixes."Mod+Shift" = "focus-monitor";
-              prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
-              substitutions."monitor-column" = "monitor";
-              substitutions."monitor-window" = "monitor";
-            })
-            (binds {
-              suffixes.J = "down";
-              prefixes.Mod = "focus-window-or-workspace";
-              prefixes."Mod+Alt" = "move-window-down-or-to-workspace";
-              prefixes."Mod+Shift" = "focus-monitor";
-              prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
-              substitutions."monitor-column" = "monitor";
-              substitutions."monitor-window" = "monitor";
-            })
-            (binds {
-              suffixes.K = "up";
-              prefixes.Mod = "focus-window-or-workspace";
-              prefixes."Mod+Alt" = "move-window-up-or-to-workspace";
-              prefixes."Mod+Shift" = "focus-monitor";
-              prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
-              substitutions."monitor-column" = "monitor";
-              substitutions."monitor-window" = "monitor";
-            })
-            (binds {
-              suffixes.MouseForward = "column-left";
-              suffixes.MouseBack = "column-right";
-              suffixes.WheelScrollUp = "workspace-up";
-              suffixes.WheelScrollDown = "workspace-down";
-              prefixes.Mod = "focus";
-              substitutions."monitor-column" = "monitor";
-              substitutions."monitor-window" = "monitor";
-            })
-            (binds {
-              suffixes = builtins.listToAttrs (
-                map (n: {
-                  name = toString n;
-                  value = [
-                    "workspace"
-                    n
-                  ];
-                }) (range 1 9)
-              );
-              prefixes.Mod = "focus";
-              prefixes."Mod+Alt" = "move-window-to";
-            })
-          ];
-        switch-events = {
-          lid-close.action.spawn = noctalia "lockScreen lock";
-          tablet-mode-on.action.spawn = [
-            "bash"
-            "-c"
-            "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true"
-          ];
-          tablet-mode-off.action.spawn = [
-            "bash"
-            "-c"
-            "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false"
-          ];
-        };
+        packages.niri = inputs'.niri.packages.niri-unstable;
       };
-  };
+
+  flake.homeModules.niri =
+    {
+      config,
+      pkgs,
+      lib,
+      ...
+    }:
+    {
+      xdg.configFile."soteria/config.toml".text = ''
+        helper_path = "/run/wrappers/bin/polkit-agent-helper-1"
+      '';
+
+      home.packages = [
+        (pkgs.writeShellScriptBin "cam-on" ''
+          set -euo pipefail
+          exec sudo ${pkgs.systemd}/bin/systemctl start camera-bridge.service
+        '')
+
+        (pkgs.writeShellScriptBin "cam-off" ''
+          set -euo pipefail
+          exec sudo ${pkgs.systemd}/bin/systemctl stop camera-bridge.service
+        '')
+
+        (pkgs.writeShellScriptBin "cam-status" ''
+          set -euo pipefail
+          exec ${pkgs.systemd}/bin/systemctl status camera-bridge.service --no-pager
+        '')
+
+        (pkgs.writeShellScriptBin "cam-log" ''
+          set -euo pipefail
+          journalctl -u camera-bridge.service -b --no-pager | tail -50
+        '')
+
+        (pkgs.writeShellScriptBin "cam-toggle" ''
+          set -euo pipefail
+
+          UNIT="camera-bridge.service"
+
+          if ${pkgs.systemd}/bin/systemctl is-active --quiet "$UNIT"; then
+            sudo ${pkgs.systemd}/bin/systemctl stop "$UNIT"
+            echo "Camera bridge: stopped"
+          else
+            sudo ${pkgs.systemd}/bin/systemctl start "$UNIT"
+            echo "Camera bridge: started"
+          fi
+        '')
+      ];
+
+      programs.niri = {
+        package = pkgs.niri-unstable;
+        settings =
+          let
+            noctalia =
+              cmd:
+              [
+                "noctalia-shell"
+                "ipc"
+                "call"
+              ]
+              ++ (lib.splitString " " cmd);
+          in
+          {
+            environment = {
+              CLUTTER_BACKEND = "wayland";
+              DISPLAY = ":0";
+              GTK_BACKEND = "wayland,x11";
+              MOZ_ENABLE_WAYLAND = "1";
+              NIXOS_OZONE_WL = "1";
+              QT_QPA_PLATFORMTHEME = "qt6ct";
+              QT_QPA_PLATFORM = "wayland;xcb";
+              QT_WAYLAND_DISABLE_WINDOWDECORATION = "1";
+              SDL_VIDEODRIVER = "wayland";
+              ELECTRON_OZONE_PLATFORM_HINT = "auto";
+              LIBVA_DRIVER_NAME = "iHD"; # GPU
+            };
+            input = {
+              keyboard.xkb = {
+                layout = "us,ru";
+                options = "grp:alt_space_toggle,grp:ralt_space_toggle";
+              };
+              # mouse.accel-speed = 1.0;
+              touchpad = {
+                tap = false;
+                dwt = false;
+                natural-scroll = true;
+                accel-speed = 0.2;
+                click-method = "clickfinger";
+              };
+              focus-follows-mouse = {
+                enable = true;
+                max-scroll-amount = "0%";
+              };
+            };
+            outputs = {
+              eDP-1 = {
+                scale = 2;
+                position = {
+                  x = 0;
+                  y = 200;
+                };
+              };
+              "Virtual-1" = {
+                mode = {
+                  width = 1920;
+                  height = 1080;
+                  refresh = 60.0;
+                };
+              };
+            };
+            layout = {
+              default-column-width.proportion = 0.975;
+            };
+            window-rules = [
+              {
+                geometry-corner-radius = {
+                  bottom-left = 5.0;
+                  bottom-right = 5.0;
+                  top-left = 5.0;
+                  top-right = 5.0;
+                };
+                clip-to-geometry = true;
+              }
+              {
+                matches = [
+                  { app-id = "^spotify$"; }
+                  { app-id = "^Alacritty$"; }
+                  { app-id = "^ONLYOFFICE$"; }
+                  { app-id = "^localsend_app$"; }
+                  { app-id = "^chromium-browser$"; }
+                  { title = "^Virtual Machine Manager$"; }
+                  { title = "^Интернетометр"; }
+                  { title = "^Speedted by Ookla"; }
+                  { title = "^Картинка в картинке$"; }
+                ];
+                open-floating = true;
+              }
+            ];
+            debug = {
+              honor-xdg-activation-with-invalid-serial = { };
+            };
+            prefer-no-csd = true;
+            spawn-at-startup = [
+              { command = [ "noctalia-shell" ]; }
+              { command = [ "xwayland-satellite" ]; }
+              { command = [ "soteria" ]; }
+              {
+                command = [
+                  "bash"
+                  "-c"
+                  "niri-float-sticky -debug >> /tmp/niri-float-sticky.log" # -title 'Картинка в картинке'
+                ];
+              }
+            ];
+            layer-rules = [
+              {
+                matches = [ { namespace = "^noctalia-notifications*"; } ];
+                block-out-from = "screen-capture";
+              }
+              {
+                matches = [ { namespace = "^noctalia-overview*"; } ];
+                place-within-backdrop = true;
+              }
+            ];
+            binds =
+              with pkgs.lib;
+              let
+                binds =
+                  {
+                    suffixes,
+                    prefixes,
+                    substitutions ? { },
+                  }:
+                  let
+                    replacer = replaceStrings (attrNames substitutions) (attrValues substitutions);
+                    mapper =
+                      { prefix, suffix }:
+                      let
+                        actual-suffix =
+                          if isList suffix.value then
+                            {
+                              action = head suffix.value;
+                              args = tail suffix.value;
+                            }
+                          else
+                            {
+                              action = suffix.value;
+                              args = [ ];
+                            };
+                        action = replacer "${prefix.value}-${actual-suffix.action}";
+                      in
+                      {
+                        name = "${prefix.name}+${suffix.name}";
+                        value.action.${action} = actual-suffix.args;
+                      };
+                  in
+                  listToAttrs (
+                    mapCartesianProduct mapper {
+                      prefix = attrsToList prefixes;
+                      suffix = attrsToList suffixes;
+                    }
+                  );
+              in
+              with config.lib.niri.actions;
+              mergeAttrsList [
+                {
+                  "Mod+Shift+Slash".action = show-hotkey-overlay;
+                  "Mod+W".action = toggle-overview;
+                  "Mod+Return" = {
+                    action = spawn "${pkgs.foot}/bin/foot";
+                    hotkey-overlay.title = "Open a Terminal: foot";
+                  };
+                  "Mod+A" = {
+                    action.spawn = noctalia "launcher toggle"; # "rofi" "-show" "drun";
+                    hotkey-overlay.title = "Run an Application: noctalia launcher";
+                  };
+                  "Mod+D" = {
+                    action = spawn "${pkgs.nwg-drawer}/bin/nwg-drawer";
+                    hotkey-overlay.title = "Open The Launcher";
+                  };
+                  "Mod+E" = {
+                    action = spawn "${pkgs.foot}/bin/foot" "--app-id=yazi" "yazi";
+                    hotkey-overlay.title = "File manager: yazi";
+                  };
+                  "Mod+Shift+E" = {
+                    action = spawn "${pkgs.nautilus}/bin/nautilus" "--new-window";
+                    hotkey-overlay.title = "File manager: nautilus";
+                  };
+                  "Mod+O" = {
+                    action =
+                      let
+                        rofiCalc = pkgs.writeShellScriptBin "rofiCalc" ''
+                          rofi -show calc -no-show-match -no-sort -calc-command "echo -n '{result}' | wl-copy"
+                        '';
+                      in
+                      spawn "${lib.getExe rofiCalc}";
+                    hotkey-overlay.title = "Calculator: rofi-calc";
+                  };
+                  "Mod+V" = {
+                    action.spawn = noctalia "launcher clipboard";
+                    # let
+                    #   cliphistRofi = pkgs.writeShellScriptBin "cliphistRofi" ''
+                    #     cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 \
+                    #     -width 35 | cliphist decode | wl-copy
+                    #   '';
+                    # in
+                    # spawn "${lib.getExe cliphistRofi}";
+                    hotkey-overlay.title = "Clipboard: noctalia launcher";
+                  };
+                  "Mod+G" = {
+                    action = spawn "niri-float-sticky" "-ipc" "toggle_sticky";
+                    hotkey-overlay.title = "Toggle sticky";
+                  };
+                  "Mod+Shift+P" = {
+                    action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
+                    hotkey-overlay.title = "Password Manager: tessen";
+                  };
+                  "Mod+Shift+C" = {
+                    action = spawn "cam-toggle";
+                    hotkey-overlay.title = "Toggle camera bridge";
+                  };
+                  "Mod+Alt+Q" = {
+                    action.spawn = noctalia "lockScreen lock";
+                    hotkey-overlay.title = "Lock Screen";
+                  };
+                  XF86AudioRaiseVolume = {
+                    action.spawn = noctalia "volume increase"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+";
+                    allow-when-locked = true;
+                  };
+                  XF86AudioLowerVolume = {
+                    action.spawn = noctalia "volume decrease"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-";
+                    allow-when-locked = true;
+                  };
+                  XF86AudioMute = {
+                    action.spawn = noctalia "volume muteOutput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+                    allow-when-locked = true;
+                  };
+                  XF86AudioMicMute = {
+                    action.spawn = noctalia "volume muteInput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
+                    allow-when-locked = true;
+                  };
+                  XF86MonBrightnessUp = {
+                    action.spawn = noctalia "brightness increase"; # "brightnessctl" "set" "+10%";
+                    allow-when-locked = true;
+                  };
+                  XF86MonBrightnessDown = {
+                    action.spawn = noctalia "brightness decrease"; # "brightnessctl" "set" "10%-";
+                    allow-when-locked = true;
+                  };
+
+                  "Mod+Q".action = close-window;
+
+                  "Mod+Tab".action = focus-window-down-or-column-right;
+                  "Mod+Shift+Tab".action = focus-window-up-or-column-left;
+
+                  "Mod+Comma".action = consume-window-into-column;
+                  "Mod+Period".action = expel-window-from-column;
+
+                  "Mod+R".action = switch-preset-column-width;
+                  "Mod+F".action = toggle-window-floating;
+                  "Mod+Shift+F".action = fullscreen-window;
+                  "Alt+Return".action = maximize-column;
+                  "Mod+C".action = center-column;
+
+                  "Mod+Minus".action = set-column-width "-10%";
+                  "Mod+Equal".action = set-column-width "+10%";
+                  "Mod+Shift+Minus".action = set-window-height "-10%";
+                  "Mod+Shift+Equal".action = set-window-height "+10%";
+
+                  Print.action.screenshot = [ ];
+                  "Mod+Print".action.screenshot-screen = [ ];
+                  "Alt+Print".action.screenshot-window = [ ];
+
+                  # "Mod+Shift+E".action = quit;
+                  # "Mod+Shift+P".action = power-off-monitors;
+                  # "Mod+B".action = spawn "rfkill" "toggle" "bluetooth";
+                }
+                (binds {
+                  suffixes.H = "column-left";
+                  suffixes.L = "column-right";
+                  prefixes.Mod = "focus";
+                  prefixes."Mod+Alt" = "move";
+                  prefixes."Mod+Shift" = "focus-monitor";
+                  prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
+                  substitutions."monitor-column" = "monitor";
+                  substitutions."monitor-window" = "monitor";
+                })
+                (binds {
+                  suffixes.J = "down";
+                  prefixes.Mod = "focus-window-or-workspace";
+                  prefixes."Mod+Alt" = "move-window-down-or-to-workspace";
+                  prefixes."Mod+Shift" = "focus-monitor";
+                  prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
+                  substitutions."monitor-column" = "monitor";
+                  substitutions."monitor-window" = "monitor";
+                })
+                (binds {
+                  suffixes.K = "up";
+                  prefixes.Mod = "focus-window-or-workspace";
+                  prefixes."Mod+Alt" = "move-window-up-or-to-workspace";
+                  prefixes."Mod+Shift" = "focus-monitor";
+                  prefixes."Mod+Shift+Alt" = "move-window-to-monitor";
+                  substitutions."monitor-column" = "monitor";
+                  substitutions."monitor-window" = "monitor";
+                })
+                (binds {
+                  suffixes.MouseForward = "column-left";
+                  suffixes.MouseBack = "column-right";
+                  suffixes.WheelScrollUp = "workspace-up";
+                  suffixes.WheelScrollDown = "workspace-down";
+                  prefixes.Mod = "focus";
+                  substitutions."monitor-column" = "monitor";
+                  substitutions."monitor-window" = "monitor";
+                })
+                (binds {
+                  suffixes = builtins.listToAttrs (
+                    map (n: {
+                      name = toString n;
+                      value = [
+                        "workspace"
+                        n
+                      ];
+                    }) (range 1 9)
+                  );
+                  prefixes.Mod = "focus";
+                  prefixes."Mod+Alt" = "move-window-to";
+                })
+              ];
+            switch-events = {
+              lid-close.action.spawn = noctalia "lockScreen lock";
+              tablet-mode-on.action.spawn = [
+                "bash"
+                "-c"
+                "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled true"
+              ];
+              tablet-mode-off.action.spawn = [
+                "bash"
+                "-c"
+                "gsettings set org.gnome.desktop.a11y.applications screen-keyboard-enabled false"
+              ];
+            };
+          };
+      };
+    };
 }

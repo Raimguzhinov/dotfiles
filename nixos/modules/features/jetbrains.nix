@@ -1,131 +1,148 @@
-{ pkgs, pkgs-unstable }:
-
+{ ... }:
 let
-  # tar c -C nixos/modules/features jetbrains-agent/ | xz -9 | base64 -w76 > nixos/modules/features/jetbrains-agent.b64
-  jetbrainsAgent =
-    pkgs.runCommandLocal "jetbrains-agent"
-      {
-        nativeBuildInputs = [ pkgs.xz ];
-      }
-      ''
-        mkdir -p $out
-        base64 -d ${pkgs.writeText "agent.b64" (builtins.readFile ./jetbrains-agent.b64)} \
-          | tar xJ --strip-components=1 -C $out
+  makeJetbrainsPkgs =
+    pkgs: pkgs-unstable:
+
+    let
+      # tar c -C nixos/modules/features jetbrains-agent/ | xz -9 | base64 -w76 > nixos/modules/features/jetbrains-agent.b64
+      jetbrainsAgent =
+        pkgs.runCommandLocal "jetbrains-agent"
+          {
+            nativeBuildInputs = [ pkgs.xz ];
+          }
+          ''
+            mkdir -p $out
+            base64 -d ${pkgs.writeText "agent.b64" (builtins.readFile ./jetbrains-agent.b64)} \
+              | tar xJ --strip-components=1 -C $out
+          '';
+
+      commonVmopts =
+        xmx: # e.g. "4096m" or "1024m"
+        ''
+          -Xms128m
+          -Xmx${xmx}
+          -XX:ReservedCodeCacheSize=512m
+          -XX:+IgnoreUnrecognizedVMOptions
+          -XX:+UseG1GC
+          -XX:SoftRefLRUPolicyMSPerMB=50
+          -XX:CICompilerCount=2
+          -XX:+HeapDumpOnOutOfMemoryError
+          -XX:-OmitStackTraceInFastThrow
+          -ea
+          -Dsun.io.useCanonCaches=false
+          -Djdk.http.auth.tunneling.disabledSchemes=""
+          -Djdk.attach.allowAttachSelf=true
+          -Djdk.module.illegalAccess.silent=true
+          -Dkotlinx.coroutines.debug=off
+          -XX:ErrorFile=$USER_HOME/java_error_in_idea_%p.log
+          -XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof
+
+          --add-opens=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED
+          --add-opens=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED
+        '';
+
+      jaAgent = ''
+        -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
       '';
 
-  commonVmopts =
-    xmx: # e.g. "4096m" or "1024m"
-    ''
-      -Xms128m
-      -Xmx${xmx}
-      -XX:ReservedCodeCacheSize=512m
-      -XX:+IgnoreUnrecognizedVMOptions
-      -XX:+UseG1GC
-      -XX:SoftRefLRUPolicyMSPerMB=50
-      -XX:CICompilerCount=2
-      -XX:+HeapDumpOnOutOfMemoryError
-      -XX:-OmitStackTraceInFastThrow
-      -ea
-      -Dsun.io.useCanonCaches=false
-      -Djdk.http.auth.tunneling.disabledSchemes=""
-      -Djdk.attach.allowAttachSelf=true
-      -Djdk.module.illegalAccess.silent=true
-      -Dkotlinx.coroutines.debug=off
-      -XX:ErrorFile=$USER_HOME/java_error_in_idea_%p.log
-      -XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof
+      jaAgentWL = ''
+        -Dawt.toolkit.name=WLToolkit-javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
+        -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
+        -Dawt.toolkit.name=WLToolkit
+      '';
 
-      --add-opens=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED
-      --add-opens=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED
-    '';
-
-  jaAgent = ''
-    -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
-  '';
-
-  jaAgentWL = ''
-    -Dawt.toolkit.name=WLToolkit-javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
-    -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
-    -Dawt.toolkit.name=WLToolkit
-  '';
-
-  goland = pkgs-unstable.jetbrains.goland.override {
-    vmopts = commonVmopts "4096m" + jaAgentWL;
-  };
-  goland-x11 = pkgs-unstable.jetbrains.goland.override {
-    vmopts = commonVmopts "4096m" + jaAgent;
-  };
-  pycharm = pkgs-unstable.jetbrains.pycharm.override {
-    vmopts = commonVmopts "4096m" + jaAgentWL;
-  };
-  pycharm-x11 = pkgs-unstable.jetbrains.pycharm.override {
-    vmopts = commonVmopts "4096m" + jaAgent;
-  };
-  idea-ultimate = pkgs-unstable.jetbrains.idea-ultimate.override {
-    vmopts = commonVmopts "4096m" + jaAgentWL;
-  };
-  idea-ultimate-x11 = pkgs-unstable.jetbrains.idea-ultimate.override {
-    vmopts = commonVmopts "4096m" + jaAgent;
-  };
-  clion = pkgs-unstable.jetbrains.clion.override {
-    vmopts = commonVmopts "1024m" + jaAgentWL;
-  };
-  clion-x11 = pkgs-unstable.jetbrains.clion.override {
-    vmopts = commonVmopts "1024m" + jaAgent;
-  };
-  datagrip = pkgs-unstable.jetbrains.datagrip.override {
-    vmopts = commonVmopts "1024m" + jaAgentWL;
-  };
-  datagrip-x11 = pkgs-unstable.jetbrains.datagrip.override {
-    vmopts = commonVmopts "1024m" + jaAgent;
-  };
-  phpstorm = pkgs-unstable.jetbrains.phpstorm.override {
-    vmopts = commonVmopts "1024m" + jaAgentWL;
-  };
-  phpstorm-x11 = pkgs-unstable.jetbrains.phpstorm.override {
-    vmopts = commonVmopts "1024m" + jaAgent;
-  };
-  rider = pkgs-unstable.jetbrains.rider.override {
-    vmopts = commonVmopts "1024m" + jaAgentWL;
-  };
-  rider-x11 = pkgs-unstable.jetbrains.rider.override {
-    vmopts = commonVmopts "1024m" + jaAgent;
-  };
-  webstorm = pkgs-unstable.jetbrains.webstorm.override {
-    vmopts = commonVmopts "1024m" + jaAgentWL;
-  };
-  webstorm-x11 = pkgs-unstable.jetbrains.webstorm.override {
-    vmopts = commonVmopts "1024m" + jaAgent;
-  };
+      goland = pkgs-unstable.jetbrains.goland.override {
+        vmopts = commonVmopts "4096m" + jaAgentWL;
+      };
+      goland-x11 = pkgs-unstable.jetbrains.goland.override {
+        vmopts = commonVmopts "4096m" + jaAgent;
+      };
+      pycharm = pkgs-unstable.jetbrains.pycharm.override {
+        vmopts = commonVmopts "4096m" + jaAgentWL;
+      };
+      pycharm-x11 = pkgs-unstable.jetbrains.pycharm.override {
+        vmopts = commonVmopts "4096m" + jaAgent;
+      };
+      idea = pkgs-unstable.jetbrains.idea.override {
+        vmopts = commonVmopts "4096m" + jaAgentWL;
+      };
+      idea-x11 = pkgs-unstable.jetbrains.idea.override {
+        vmopts = commonVmopts "4096m" + jaAgent;
+      };
+      clion = pkgs-unstable.jetbrains.clion.override {
+        vmopts = commonVmopts "1024m" + jaAgentWL;
+      };
+      clion-x11 = pkgs-unstable.jetbrains.clion.override {
+        vmopts = commonVmopts "1024m" + jaAgent;
+      };
+      datagrip = pkgs-unstable.jetbrains.datagrip.override {
+        vmopts = commonVmopts "1024m" + jaAgentWL;
+      };
+      datagrip-x11 = pkgs-unstable.jetbrains.datagrip.override {
+        vmopts = commonVmopts "1024m" + jaAgent;
+      };
+      phpstorm = pkgs-unstable.jetbrains.phpstorm.override {
+        vmopts = commonVmopts "1024m" + jaAgentWL;
+      };
+      phpstorm-x11 = pkgs-unstable.jetbrains.phpstorm.override {
+        vmopts = commonVmopts "1024m" + jaAgent;
+      };
+      rider = pkgs-unstable.jetbrains.rider.override {
+        vmopts = commonVmopts "1024m" + jaAgentWL;
+      };
+      rider-x11 = pkgs-unstable.jetbrains.rider.override {
+        vmopts = commonVmopts "1024m" + jaAgent;
+      };
+      webstorm = pkgs-unstable.jetbrains.webstorm.override {
+        vmopts = commonVmopts "1024m" + jaAgentWL;
+      };
+      webstorm-x11 = pkgs-unstable.jetbrains.webstorm.override {
+        vmopts = commonVmopts "1024m" + jaAgent;
+      };
+    in
+    {
+      # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
+      packages = {
+        inherit
+          goland
+          goland-x11
+          pycharm
+          pycharm-x11
+          idea
+          idea-x11
+          clion
+          clion-x11
+          datagrip
+          datagrip-x11
+          phpstorm
+          phpstorm-x11
+          rider
+          rider-x11
+          webstorm
+          webstorm-x11
+          ;
+      };
+    };
 in
 {
-  # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
-  packages = {
-    inherit
-      goland
-      goland-x11
-      pycharm
-      pycharm-x11
-      idea-ultimate
-      idea-ultimate-x11
-      clion
-      clion-x11
-      datagrip
-      datagrip-x11
-      phpstorm
-      phpstorm-x11
-      rider
-      rider-x11
-      webstorm
-      webstorm-x11
-      ;
-  };
+  perSystem =
+    { pkgs, pkgs-unstable, ... }:
+    let
+      jbPkgs = makeJetbrainsPkgs pkgs pkgs-unstable;
+    in
+    {
+      packages = jbPkgs.packages;
+    };
 
-  module =
-    { ... }:
+  flake.homeModules.jetbrains =
+    { pkgs, pkgs-unstable, ... }:
+    let
+      jbPkgs = makeJetbrainsPkgs pkgs pkgs-unstable;
+    in
     {
       home.packages = [
-        goland
-        pycharm
+        jbPkgs.packages.goland
+        jbPkgs.packages.pycharm
       ];
       home.file.".ideavimrc".text = # vim
         ''

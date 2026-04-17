@@ -57,7 +57,7 @@ nixos/
       tools.nix, development.nix, neovim.nix, niri.nix, noctalia.nix,
       rofi.nix, chromium.nix, zen-browser.nix, jetbrains.nix, zed-editor.nix,
       thunderbird.nix, claude.nix, sops.nix
-    devshells/                ← автономный флейк (flake-parts) для ~/Work
+    _devshells/               ← автономный флейк (flake-parts) для ~/Work (префикс _ исключает из import-tree)
       flake.nix               ← точка входа, imports = [./go.nix ./python.nix]
       go.nix                  ← perSystem devShells.go (Go 1.21, protobuf, delve...)
       python.nix              ← perSystem devShells.python
@@ -79,7 +79,7 @@ nixos/
 - `tools.nix` — zsh, git, delta, zoxide, atuin, zellij, yazi (`rr`), bat, eza,
   starship, lazygit, pgcli, fd, fzf, ripgrep
 - `development.nix` — direnv + nix-direnv, создаёт `~/Work/.envrc` с
-  `use flake ~/dotfiles/nixos/modules/devshells#{go,python}`, вспомогательные
+  `use flake ~/dotfiles/nixos/modules/_devshells#{go,python}`, вспомогательные
   shell-скрипты (ssh-setup-dlv, ssh-run-debugger, tracktime и др.)
 - `neovim.nix` — nvf (Neovim framework), LSP для
   Go/Nix/Python/Bash/YAML/Markdown
@@ -110,17 +110,18 @@ nixos/
 **Модули Home Manager пользователя `root`**: `modules/features/neovim.nix`,
 `modules/features/tools.nix`
 
-**Devshells** (`modules/devshells/`): автономный flake-parts флейк с двумя
+**Devshells** (`modules/_devshells/`): автономный flake-parts флейк с двумя
 devShells для `~/Work/`. `go.nix` — Go 1.21 (pinned), gopls, delve 1.25.2,
 protobuf 23.2, protoc-gen-go, libwebp; используется `inputs'` алиас вместо
 ручного `import`. `python.nix` — python3 с black/mypy/ruff/pytest/requests.
 `development.nix` записывает `.envrc` со ссылкой на живой путь в dotfiles —
 изменения в devshells подхватываются direnv без rebuild системы.
+Директория `_devshells/` — префикс `_` исключает её из import-tree сканирования.
 
 Использовать без установки системы (напрямую с GitHub):
 ```bash
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#go'
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#python'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#go'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
 ```
 
 ## Dell XPS 13 Plus 9320 — особенности железа
