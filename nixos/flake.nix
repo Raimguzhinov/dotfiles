@@ -83,7 +83,7 @@
         disko = inputs.disko;
       };
 
-      jbPkgs = (import ./modules/features/jetbrains.nix { inherit pkgs-unstable; }).packages;
+      jbPkgs = (import ./modules/features/jetbrains.nix { inherit pkgs pkgs-unstable; }).packages;
     in
     {
       nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
@@ -104,19 +104,16 @@
 
       packages.${system} = jbPkgs;
 
-      apps.${system} = {
-        install = {
+      apps.${system} =
+        {
+          install = {
+            type = "app";
+            program = "${installScript}/bin/install";
+          };
+        }
+        // lib.mapAttrs (_: pkg: {
           type = "app";
-          program = "${installScript}/bin/install";
-        };
-        goland = {
-          type = "app";
-          program = lib.getExe jbPkgs.goland;
-        };
-        pycharm = {
-          type = "app";
-          program = lib.getExe jbPkgs.pycharm;
-        };
-      };
+          program = lib.getExe pkg;
+        }) jbPkgs;
     };
 }

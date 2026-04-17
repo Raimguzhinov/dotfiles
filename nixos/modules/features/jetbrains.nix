@@ -1,6 +1,15 @@
-{ pkgs-unstable }:
+{ pkgs, pkgs-unstable }:
 
 let
+  # tar c -C nixos/modules/features jetbrains-agent/ | xz -9 | base64 -w76 > nixos/modules/features/jetbrains-agent.b64
+  jetbrainsAgent = pkgs.runCommandLocal "jetbrains-agent" {
+    nativeBuildInputs = [ pkgs.xz ];
+  } ''
+    mkdir -p $out
+    base64 -d ${pkgs.writeText "agent.b64" (builtins.readFile ./jetbrains-agent.b64)} \
+      | tar xJ --strip-components=1 -C $out
+  '';
+
   commonVmopts =
     xmx: # e.g. "4096m" or "1024m"
     ''
@@ -27,13 +36,13 @@ let
     '';
 
   jaAgent = ''
-    -javaagent:${./jetbrains-agent}/ja-netfilter.jar=jetbrains
+    -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
   '';
 
   goland = pkgs-unstable.jetbrains.goland.override {
     vmopts = commonVmopts "4096m" + ''
-      -Dawt.toolkit.name=WLToolkit-javaagent:${./jetbrains-agent}/ja-netfilter.jar=jetbrains
-      -javaagent:${./jetbrains-agent}/ja-netfilter.jar=jetbrains
+      -Dawt.toolkit.name=WLToolkit-javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
+      -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
       -Dawt.toolkit.name=WLToolkit
     '';
   };
@@ -41,36 +50,48 @@ let
   pycharm = pkgs-unstable.jetbrains.pycharm.override {
     vmopts = commonVmopts "4096m" + jaAgent;
   };
+
+  idea-ultimate = pkgs-unstable.jetbrains.idea-ultimate.override {
+    vmopts = commonVmopts "4096m" + jaAgent;
+  };
+
+  clion = pkgs-unstable.jetbrains.clion.override {
+    vmopts = commonVmopts "1024m" + jaAgent;
+  };
+
+  datagrip = pkgs-unstable.jetbrains.datagrip.override {
+    vmopts = commonVmopts "1024m" + jaAgent;
+  };
+
+  phpstorm = pkgs-unstable.jetbrains.phpstorm.override {
+    vmopts = commonVmopts "1024m" + jaAgent;
+  };
+
+  rider = pkgs-unstable.jetbrains.rider.override {
+    vmopts = commonVmopts "1024m" + jaAgent;
+  };
+
+  webstorm = pkgs-unstable.jetbrains.webstorm.override {
+    vmopts = commonVmopts "1024m" + jaAgent;
+  };
 in
 {
-  # Exposed as flake packages/apps:
-  #   nix run 'github:Raimguzhinov/dotfiles?dir=nixos#goland'
-  #   nix run 'github:Raimguzhinov/dotfiles?dir=nixos#pycharm'
-  packages = { inherit goland pycharm; };
-
-  module = { ... }: {
-    home.packages = [
+  # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
+  packages = {
+    inherit
       goland
       pycharm
-      # (pkgs-unstable.jetbrains.idea-ultimate.override {
-      #   vmopts = commonVmopts "4096m" + jaAgent;
-      # })
-      # (pkgs-unstable.jetbrains.clion.override {
-      #   vmopts = commonVmopts "1024m" + jaAgent;
-      # })
-      # (pkgs-unstable.jetbrains.datagrip.override {
-      #   vmopts = commonVmopts "1024m" + jaAgent;
-      # })
-      # (pkgs-unstable.jetbrains.phpstorm.override {
-      #   vmopts = commonVmopts "1024m" + jaAgent;
-      # })
-      # (pkgs-unstable.jetbrains.rider.override {
-      #   vmopts = commonVmopts "1024m" + jaAgent;
-      # })
-      # (pkgs-unstable.jetbrains.webstorm.override {
-      #   vmopts = commonVmopts "1024m" + jaAgent;
-      # })
-    ];
+      idea-ultimate
+      clion
+      datagrip
+      phpstorm
+      rider
+      webstorm
+      ;
+  };
+
+  module = { ... }: {
+    home.packages = [ goland pycharm ];
     home.file.".ideavimrc".text = # vim
       ''
         " .ideavimrc is a configuration file for IdeaVim plugin. It uses
