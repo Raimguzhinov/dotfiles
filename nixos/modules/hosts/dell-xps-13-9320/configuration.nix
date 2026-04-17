@@ -681,6 +681,10 @@
       };
     };
   };
+  systemd.services.libvirtd.postStart = ''
+    ${pkgs.libvirt}/bin/virsh net-autostart default
+    ${pkgs.libvirt}/bin/virsh net-start default || true
+  '';
   users.groups.libvirtd.members = [ username ];
   # services.qemuGuest.enable = true;
   services.spice-vdagentd.enable = true;
