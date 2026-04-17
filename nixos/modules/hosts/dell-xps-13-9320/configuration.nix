@@ -347,7 +347,7 @@
           ../../features/chromium.nix
           ../../features/sops.nix
           ../../features/development.nix
-          ../../features/jetbrains.nix
+          (import ../../features/jetbrains.nix { inherit pkgs-unstable; }).module
           ../../features/neovim.nix
           ../../features/niri.nix
           ../../features/noctalia.nix

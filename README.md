@@ -25,6 +25,7 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 - склонирует репозиторий в `/home/dias/dotfiles`
 - установит NixOS
 - предложит задать пароль пользователя `dias`
+- запишет YubiKey (FIDO2) в LUKS2 (`systemd-cryptenroll`)
 
 3. Перезагрузиться: `reboot`
 
@@ -55,7 +56,7 @@ sudo nixos-rebuild switch --flake ~/dotfiles/nixos
 
 # Закоммитить hardware-configuration для нового железа
 cd ~/dotfiles
-git add nixos/hardware-configuration.nix
+git add nixos/modules/hosts/dell-xps-13-9320/hardware-configuration.nix
 git commit -m "nixos: add hardware-configuration"
 
 # Переключить remote на SSH
@@ -66,7 +67,7 @@ sudo fprintd-enroll dias
 ```
 
 > **Примечание:** swap-раздел 32G. Для гибернации он должен быть не меньше
-> объёма RAM. Если нужно другое значение — поправить `size` в `nixos/disko.nix`
+> объёма RAM. Если нужно другое значение — поправить `size` в `nixos/modules/hosts/dell-xps-13-9320/disko.nix`
 > перед установкой.
 
 ---

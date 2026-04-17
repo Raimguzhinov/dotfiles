@@ -67,6 +67,8 @@
       username = "dias";
       version = "25.11";
 
+      lib = nixpkgs.lib;
+
       pkgs = import nixpkgs { inherit system; };
       pkgs-unstable = import nixpkgs-unstable {
         inherit system;
@@ -80,6 +82,8 @@
         inherit username;
         disko = inputs.disko;
       };
+
+      jbPkgs = (import ./modules/features/jetbrains.nix { inherit pkgs-unstable; }).packages;
     in
     {
       nixosConfigurations.${hostname} = nixpkgs.lib.nixosSystem {
@@ -98,9 +102,21 @@
         ];
       };
 
-      apps.${system}.install = {
-        type = "app";
-        program = "${installScript}/bin/install";
+      packages.${system} = jbPkgs;
+
+      apps.${system} = {
+        install = {
+          type = "app";
+          program = "${installScript}/bin/install";
+        };
+        goland = {
+          type = "app";
+          program = lib.getExe jbPkgs.goland;
+        };
+        pycharm = {
+          type = "app";
+          program = lib.getExe jbPkgs.pycharm;
+        };
       };
     };
 }
