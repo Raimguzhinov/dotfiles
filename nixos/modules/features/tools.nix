@@ -22,6 +22,7 @@
           pkgs.fd
           pkgs.fzf
           pkgs.ripgrep
+          pkgs.git
           pkgs.lazygit
           pkgs.pgcli
           pkgs.glow

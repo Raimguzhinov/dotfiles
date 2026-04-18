@@ -2,6 +2,10 @@
 let
   # Shared vim settings — used both in perSystem (nvf standalone) and homeModules (nvf HM)
   makeNvimSettings = pkgs: {
+    extraPackages = with pkgs; [
+      git
+      lazygit
+    ];
     viAlias = true;
     vimAlias = true;
     withNodeJs = false;
