@@ -54,10 +54,10 @@ ssh-keygen -t ed25519
 # Применить конфигурацию (sops-nix требует GPG-ключ)
 sudo nixos-rebuild switch --flake ~/dotfiles/nixos
 
-# Закоммитить hardware-configuration для нового железа
+# Закоммитить hardware.nix для нового железа
 cd ~/dotfiles
-git add nixos/modules/hosts/dell-xps-13-9320/hardware-configuration.nix
-git commit -m "nixos: add hardware-configuration"
+git add nixos/modules/hosts/dell-xps-13-9320/hardware.nix
+git commit -m "nixos: add hardware config for new machine"
 
 # Переключить remote на SSH
 git remote set-url origin git@github.com:Raimguzhinov/dotfiles.git
@@ -67,7 +67,7 @@ sudo fprintd-enroll dias
 ```
 
 > **Примечание:** swap-раздел 32G. Для гибернации он должен быть не меньше
-> объёма RAM. Если нужно другое значение — поправить `size` в `nixos/modules/hosts/dell-xps-13-9320/disko.nix`
+> объёма RAM. Если нужно другое значение — поправить `size` в `nixos/modules/hosts/dell-xps-13-9320/_disko.nix`
 > перед установкой.
 
 ---
@@ -78,10 +78,10 @@ sudo fprintd-enroll dias
 
 ```bash
 # Go 1.21 + gopls + delve + protobuf + libwebp + ...
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#go'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#go'
 
 # Python 3 + black + mypy + ruff + pytest + requests + ...
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/devshells#python'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
 ```
 
 На машине с установленной конфигурацией direnv подхватывает шеллы автоматически в `~/Work/` через `.envrc`.

@@ -22,83 +22,173 @@ nixfmt-rfc-style nixos/
 
 ## Архитектура конфигурации
 
-Точка входа — `nixos/flake.nix`. Определяет один хост `raimguzhinov`
-(x86_64-linux) и подключает все inputs.
+Точка входа — `nixos/flake.nix`. Использует flake-parts + import-tree: все `.nix`-файлы
+из `nixos/modules/` подхватываются автоматически (кроме путей, содержащих `/_`).
 
 **flake.nix:**
 
-- `outputs = { self, nixpkgs, ... }@inputs:` — минимальная деструктуризация,
-  остальное через `inputs.`
-- `specialArgs = { inherit inputs hostname username version; pkgs-unstable = ...; }`
-  — передаёт в модули
-- `version`, `hostname`, `username` — let-переменные, используются в
-  `system.stateVersion` и HM
-- `pkgs-unstable` — создаётся через
-  `import nixpkgs-unstable { config.allowUnfree = true; }` в specialArgs
-- Скрипт установки вынесен в `install.nix`
+```nix
+outputs = inputs:
+  inputs.flake-parts.lib.mkFlake { inherit inputs; }
+    (inputs.import-tree ./modules);
+```
+
+- `import-tree` рекурсивно импортирует все `.nix` из `modules/`, исключая пути с `/_`
+  (директории и файлы с префиксом `_`)
+- Каждый `.nix`-файл в `modules/` является flake-parts модулем
+- `flake.lock` содержит все inputs включая `flake-parts` и `import-tree`
+
+**modules/parts.nix** — корневая конфигурация flake-parts:
+
+- `systems` — список целевых архитектур (x86_64-linux, aarch64-linux, x86_64-darwin,
+  aarch64-darwin)
+- `config.perSystem._module.args.pkgs/pkgs-unstable` — делает `pkgs` и `pkgs-unstable`
+  доступными во всех `perSystem`-модулях (с `allowUnfree = true`)
+- `options.flake.homeModules` — кастомная опция типа `lazyAttrsOf unspecified` для
+  аккумуляции HM-модулей из всех feature-файлов; `nixosModules` объявлять не нужно —
+  оно встроено в flake-parts с типом `deferredModule`
 
 **Структура модулей:**
 
 ```
 nixos/
-  flake.nix
+  flake.nix             ← flake-parts + import-tree ./modules
   secrets.yaml / .sops.yaml
   modules/
+    parts.nix           ← systems + pkgs/_module.args + homeModules option
     hosts/
-      dell-xps-13-9320/       ← именование по nixos-hardware (см. раздел "Именование хостов")
-        default.nix           ← точка входа хоста (импортирует configuration.nix + overlays.nix)
-        configuration.nix     ← системный уровень: загрузчик, сервисы, сеть, пакеты, HM
-        hardware-configuration.nix
+      dell-xps-13-9320/          ← именование по nixos-hardware
+        default.nix              ← flake.nixosConfigurations.raimguzhinov
+        configuration.nix        ← flake.nixosModules.configDellXps (системный уровень)
+        hardware.nix             ← flake.nixosModules.hwDellXps9320 (hw-конфиг)
+        overlays.nix             ← flake.nixosModules.overlays
+        _disko.nix               ← standalone disko (префикс _ исключает из import-tree)
+        install.nix              ← perSystem.apps.install (скрипт установки)
         intel-int3472-gpio-type.patch
-        overlays.nix          ← оверлеи nixpkgs + nixpkgs.config.allowUnfree = true
-        disko.nix             ← разметка диска (только для этого хоста)
-        install.nix           ← скрипт установки на новое железо
-    features/                 ← общие HM-модули, переиспользуются между хостами
-      tools.nix, development.nix, neovim.nix, niri.nix, noctalia.nix,
+      lenovo-thinkpad-t495/      ← placeholder (код закомментирован)
+        default.nix
+        hardware.nix
+    features/           ← каждый файл = flake-parts модуль с perSystem + homeModules
+      tools.nix, development.nix, git.nix, neovim.nix, niri.nix, noctalia.nix,
       rofi.nix, chromium.nix, zen-browser.nix, jetbrains.nix, zed-editor.nix,
-      thunderbird.nix, claude.nix, sops.nix
-    _devshells/               ← автономный флейк (flake-parts) для ~/Work (префикс _ исключает из import-tree)
-      flake.nix               ← точка входа, imports = [./go.nix ./python.nix]
-      go.nix                  ← perSystem devShells.go (Go 1.21, protobuf, delve...)
-      python.nix              ← perSystem devShells.python
+      thunderbird.nix, claude.nix, sops.nix, gaming.nix
+      jetbrains-agent.b64
+    _devshells/         ← автономный сабфлейк для ~/Work (префикс _ исключает из import-tree)
+      flake.nix         ← точка входа, imports = [./go.nix ./python.nix]
+      go.nix            ← perSystem devShells.go (Go 1.21, protobuf, delve...)
+      python.nix        ← perSystem devShells.python
 ```
+
+**Паттерн feature-модуля** (пример — `rofi.nix`):
+
+```nix
+{ ... }:
+{
+  # Standalone-пакет для nix run/build
+  perSystem = { pkgs, ... }:
+  {
+    packages.rofi = pkgs.rofi;
+  };
+
+  # HM-модуль для подключения в configuration.nix
+  flake.homeModules.rofi =
+    { config, lib, pkgs, ... }:
+    {
+      programs.rofi = { enable = true; ... };
+    };
+}
+```
+
+Каждый feature-файл одновременно:
+- добавляет `perSystem.packages.NAME` — собираемый пакет (для `nix run`/`nix build`)
+- добавляет `flake.homeModules.NAME` — HM-модуль (подключается в `configuration.nix`)
+
+**Паттерны Linux-only перSystem-пакетов** (niri, noctalia, zen-browser):
+
+```nix
+perSystem = { inputs', lib, system, ... }:
+lib.optionalAttrs (builtins.elem system [ "x86_64-linux" "aarch64-linux" ]) {
+  packages.niri = inputs'.niri.packages.niri-unstable;
+};
+```
+
+Важно: НЕ использовать `pkgs.stdenv.isLinux` в `perSystem` — `pkgs` приходит через
+`_module.args` и его раннее использование вызывает бесконечную рекурсию. Использовать
+`system` + `builtins.elem`.
+
+**modules/hosts/dell-xps-13-9320/default.nix** — точка входа хоста:
+
+```nix
+{ inputs, config, ... }:
+{
+  flake.nixosConfigurations.raimguzhinov = inputs.nixpkgs.lib.nixosSystem {
+    specialArgs = {
+      homeModules = config.flake.homeModules;  # ← fixed-point flake-parts
+      pkgs-unstable = import inputs.nixpkgs-unstable { ... };
+      ...
+    };
+    modules = [
+      config.flake.nixosModules.hwDellXps9320   # ← hardware.nix
+      config.flake.nixosModules.configDellXps   # ← configuration.nix
+      config.flake.nixosModules.overlays
+      inputs.home-manager.nixosModules.home-manager
+      inputs.niri.nixosModules.niri
+    ];
+  };
+}
+```
+
+`config.flake.homeModules` и `config.flake.nixosModules` — fixed-point результат
+flake-parts: доступны сразу все модули из всех файлов.
+
+**modules/hosts/dell-xps-13-9320/install.nix** — flake-parts модуль:
+
+```nix
+{ inputs, ... }:
+{
+  perSystem = { pkgs, inputs', ... }:
+  {
+    apps.install = { type = "app"; program = "${installScript}/bin/install"; };
+  };
+}
+```
+
+Доступен как `nix run 'github:Raimguzhinov/dotfiles?dir=nixos#install'`.
 
 **Слои конфигурации:**
 
-- `modules/hosts/dell-xps-13-9320/configuration.nix` — системный уровень:
-  загрузчик, сервисы, сетевые настройки, системные пакеты, Home Manager для
-  пользователей `root` и `dias`
-- `modules/hosts/dell-xps-13-9320/overlays.nix` — оверлеи nixpkgs +
+- `hardware.nix` — завёрнут в `flake.nixosModules.hwDellXps9320`: hw-конфиг, ядро,
+  файловые системы, SoundWire/камера, swap/LUKS UUID
+- `configuration.nix` — завёрнут в `flake.nixosModules.configDellXps`: загрузчик,
+  сервисы, сетевые настройки, системные пакеты, Home Manager для `root` и `dias`
+- `overlays.nix` — завёрнут в `flake.nixosModules.overlays`: оверлеи nixpkgs +
   `nixpkgs.config.allowUnfree = true` для системного pkgs
-- `modules/hosts/dell-xps-13-9320/install.nix` — скрипт установки на новое
-  железо (импортируется в flake.nix)
 
 **Модули Home Manager пользователя `dias`** (все в `modules/features/`,
-импортируются в `configuration.nix`):
+подключаются через `homeModules.*` в `configuration.nix`):
 
-- `tools.nix` — zsh, git, delta, zoxide, atuin, zellij, yazi (`rr`), bat, eza,
-  starship, lazygit, pgcli, fd, fzf, ripgrep
+- `tools.nix` — zsh, zoxide, atuin, zellij, yazi (`rr`), bat, eza, starship,
+  lazygit, pgcli, fd, fzf, ripgrep
+- `git.nix` — git, git-lfs, delta; includes для gitlab_work/github identity
 - `development.nix` — direnv + nix-direnv, создаёт `~/Work/.envrc` с
   `use flake ~/dotfiles/nixos/modules/_devshells#{go,python}`, вспомогательные
   shell-скрипты (ssh-setup-dlv, ssh-run-debugger, tracktime и др.)
-- `neovim.nix` — nvf (Neovim framework), LSP для
-  Go/Nix/Python/Bash/YAML/Markdown
-- `niri.nix` — Wayland compositor niri: раскладки, биндинги клавиш, правила
-  окон, автозапуск
-- `noctalia.nix` — noctalia-shell (панель/уведомления); эталонная конфига
-  разработчиков: https://docs.noctalia.dev/getting-started/nixos/
-  - `general.lockOnSuspend = true` — автоблокировка при suspend (без отдельного
-    systemd-сервиса)
-  - `general.allowPasswordWithFprintd = false` — только отпечаток на lockscreen,
-    без поля пароля
-- `rofi.nix` — лаунчер приложений
+- `neovim.nix` — nvf (Neovim framework), LSP для Go/Nix/Python/Bash/YAML/Markdown;
+  `makeNvimSettings pkgs` — общая функция для perSystem (standalone) и HM
+- `niri.nix` — Wayland compositor niri: раскладки, биндинги клавиш, правила окон,
+  автозапуск; perSystem только для Linux
+- `noctalia.nix` — noctalia-shell (панель/уведомления); эталонная конфига:
+  https://docs.noctalia.dev/getting-started/nixos/
+  - `general.lockOnSuspend = true` — автоблокировка при suspend
+  - `general.allowPasswordWithFprintd = false` — только отпечаток на lockscreen
+- `rofi.nix` — лаунчер приложений (rofi с Wayland-поддержкой)
 - `chromium.nix`, `zen-browser.nix` — браузеры с расширениями + gopass-jsonapi
   native messaging
-- `jetbrains.nix` — JetBrains IDE (pkgs-unstable)
+- `jetbrains.nix` — JetBrains IDE (pkgs-unstable); `makeJetbrainsPkgs pkgs pkgs-unstable`
+  — общая функция; `idea-ultimate` переименован в `idea` в nixpkgs-unstable
 - `zed-editor.nix` — Zed editor
 - `thunderbird.nix` — Thunderbird: `mkEmailAccount`/`mkProviderAccount` хелперы,
-  провайдеры mail-ru/gmail/yandex, аккаунты с OAuth2 и normal-password auth,
-  ru-langpack через `home.file` XPI
+  провайдеры mail-ru/gmail/yandex, аккаунты с OAuth2, ru-langpack через `home.file` XPI
 - `claude.nix` — `claudeWrapperMCP` враппер: подхватывает MCP-конфиг
   (demo_mcp/youtrack) если доступен `mcp_sse_url`; `claude-protei` —
   корпоративная модель через внешний litellm;
@@ -106,11 +196,12 @@ nixos/
 - `sops.nix` — sops-nix секреты (GPG/YubiKey): github_token, youtrack/_,
   git/github, git/gitlab_work, product/services_root, pass_store/clone_cmd,
   work_ai/_
+- `gaming.nix` — stub-placeholder для будущей игровой конфигурации
+  (`flake.nixosModules.gaming`)
 
-**Модули Home Manager пользователя `root`**: `modules/features/neovim.nix`,
-`modules/features/tools.nix`
+**Модули Home Manager пользователя `root`**: `homeModules.neovim`, `homeModules.tools`
 
-**Devshells** (`modules/_devshells/`): автономный flake-parts флейк с двумя
+**Devshells** (`modules/_devshells/`): автономный flake-parts сабфлейк с двумя
 devShells для `~/Work/`. `go.nix` — Go 1.21 (pinned), gopls, delve 1.25.2,
 protobuf 23.2, protoc-gen-go, libwebp; используется `inputs'` алиас вместо
 ручного `import`. `python.nix` — python3 с black/mypy/ruff/pytest/requests.
@@ -182,9 +273,8 @@ nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
   `home.packages` как реальный бинарник для `sudo rr` (sudo не видит
   shell-функции)
 - `pkgs.replaceVars` вместо `pkgs.substituteAll` (убран в nixpkgs 25.11)
-- Активация dev-окружения (`~/Work/flake.nix`, `~/Work/.envrc`) пишет файлы
-  только при изменении содержимого (`diff -q`) — иначе nix-direnv инвалидирует
-  кэш
+- Активация dev-окружения (`~/Work/.envrc`) пишет файл только при изменении
+  содержимого (`diff -q`) — иначе nix-direnv инвалидирует кэш
 - Формат коммитов: `nixos: <сообщение>`
 - **Обновление CLAUDE.md**: после добавления новой фичи/изменения архитектуры —
   обновить `CLAUDE.md`. Перед обновлением проверить последние 3 коммита
@@ -192,19 +282,38 @@ nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
 - Стиль `inherit` в атрсетах: каждый аргумент на отдельной строке
   (`inherit foo;` / `inherit bar;`), НЕ группировать в одну строку
   (`inherit foo bar;`)
-- `pkgs-unstable` доступен в HM модулях через
-  `extraSpecialArgs = { inherit pkgs-unstable; }` в
-  `modules/hosts/dell-xps-13-9320/configuration.nix`
+- `pkgs-unstable` доступен в HM-модулях через
+  `extraSpecialArgs = { inherit pkgs-unstable; }` в `configuration.nix`
 - `alias sudo='sudo '` в shellAliases — позволяет sudo видеть shell-алиасы;
   `security.sudo.extraConfig` с `env_keep += "PATH"` — для бинарей в
   пользовательском PATH
+
+## Flake-parts: типичные ловушки
+
+- **`pkgs` в `perSystem` и бесконечная рекурсия**: `pkgs` приходит через
+  `_module.args`, его использование в качестве условия импорта вызывает цикл.
+  Для Linux-only пакетов использовать `builtins.elem system [...]`, не
+  `pkgs.stdenv.isLinux`
+- **`options` + `config` в одном модуле**: если модуль объявляет `options`,
+  конфигурационные атрибуты (`systems`, `perSystem`) нужно размещать внутри
+  `config = { ... }`, иначе flake-parts выдаёт ошибку об "unsupported attribute"
+- **`flake.nixosModules` не нужно объявлять**: оно встроено в flake-parts с типом
+  `deferredModule`; повторное объявление в `parts.nix` конфликтует и ломает merge
+- **`flake.homeModules` нужно объявлять**: в flake-parts нет встроенного
+  `homeModules`, поэтому кастомная опция в `parts.nix` обязательна
+- **Новые файлы должны быть в git**: import-tree работает с git-деревом; неиндексированные
+  (`git add`) файлы не видны при `nix flake check`. Всегда делать `git add` перед проверкой
+- **`nvf.lib.neovimConfiguration`** возвращает `{ neovim, config, options, pkgs }`;
+  standalone-пакет — `.neovim`, не `.finalPackage`
+- **`jetbrains.idea-ultimate`** переименован в `jetbrains.idea` в nixpkgs-unstable
+- **`rofi-wayland`** объединён в `rofi` в nixpkgs 25.11+
 
 ## Секреты (sops-nix)
 
 - `nixos/.sops.yaml` — GPG fingerprint YubiKey
   (`6E06AD1573F0D606704F4A32719B8382A9DBA991`), path_regex: `secrets\.yaml$`
 - `nixos/secrets.yaml` — зашифрованный файл секретов
-- `nixos/modules/features/sops.nix` — HM модуль: объявление секретов, git
+- `nixos/modules/features/sops.nix` — HM-модуль: объявление секретов, git
   identity includes, zsh env
 - `sops-nix.homeManagerModules.sops` подключён через
   `home-manager.sharedModules`
@@ -235,20 +344,20 @@ sudo nix --extra-experimental-features "nix-command flakes" \
   run 'github:Raimguzhinov/dotfiles?dir=nixos#install'
 ```
 
-Скрипт (`nixos/modules/hosts/dell-xps-13-9320/install.nix`, доступен как
+Скрипт (`modules/hosts/dell-xps-13-9320/install.nix`, доступен как
 `apps.x86_64-linux.install`) делает:
 
-1. Спрашивает диск, запускает `disko --mode destroy,format,mount` с `disko.nix`
+1. Спрашивает диск, запускает `disko --mode destroy,format,mount` с `_disko.nix`
    хоста
-2. Генерирует `hardware-configuration.nix`
-3. Клонирует репо в `/mnt/home/dias/dotfiles`, копирует hw-config в
+2. Генерирует `hardware.nix` (конфиг железа)
+3. Клонирует репо в `/mnt/home/dias/dotfiles`, кладёт hw-конфиг в
    `modules/hosts/dell-xps-13-9320/`
 4. Запускает `nixos-install --flake .../nixos#raimguzhinov --no-root-passwd`
 5. Через `nixos-enter` предлагает задать пароль `dias`
 
 ## Disko (разметка диска)
 
-`nixos/modules/hosts/dell-xps-13-9320/disko.nix` — standalone-конфиг (параметр
+`nixos/modules/hosts/dell-xps-13-9320/_disko.nix` — standalone-конфиг (параметр
 `disk ? "/dev/disk/by-diskseq/1"`):
 
 - GPT: ESP 512M (vfat, /boot) + swap 32G (resumeDevice=true) + LUKS2 остаток →
@@ -258,6 +367,7 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 - LUKS: интерактивный ввод пароля, allowDiscards=true
 - Параметр `disk` нужен только при форматировании (disko CLI), для работающей
   системы не важен
+- Файл имеет префикс `_` — исключён из import-tree (не является flake-parts модулем)
 
 ## Бинарные кэши
 
@@ -274,6 +384,8 @@ sudo nix --extra-experimental-features "nix-command flakes" \
 | ------------------- | ------------------------------------------------------ |
 | `nixpkgs`           | nixos-25.11                                            |
 | `nixpkgs-unstable`  | нестабильные пакеты (jetbrains, telegram, amnezia-vpn) |
+| `flake-parts`       | модульная система флейков                              |
+| `import-tree`       | авто-импорт .nix из директории (исключает `/_`)        |
 | `niri`              | Wayland compositor + оверлей                           |
 | `nvf`               | Neovim framework                                       |
 | `claude-code`       | Claude Code CLI                                        |
