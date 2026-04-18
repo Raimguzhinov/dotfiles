@@ -102,36 +102,31 @@ let
     in
     {
       # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
-      packages = {
-        inherit
-          goland
-          goland-x11
-          pycharm
-          pycharm-x11
-          idea
-          idea-x11
-          clion
-          clion-x11
-          datagrip
-          datagrip-x11
-          phpstorm
-          phpstorm-x11
-          rider
-          rider-x11
-          webstorm
-          webstorm-x11
-          ;
-      };
+      inherit
+        goland
+        goland-x11
+        pycharm
+        pycharm-x11
+        idea
+        idea-x11
+        clion
+        clion-x11
+        datagrip
+        datagrip-x11
+        phpstorm
+        phpstorm-x11
+        rider
+        rider-x11
+        webstorm
+        webstorm-x11
+        ;
     };
 in
 {
   perSystem =
     { pkgs, pkgs-unstable, ... }:
-    let
-      jbPkgs = makeJetbrainsPkgs pkgs pkgs-unstable;
-    in
     {
-      packages = jbPkgs.packages;
+      packages = makeJetbrainsPkgs pkgs pkgs-unstable;
     };
 
   flake.homeModules.jetbrains =
@@ -141,8 +136,8 @@ in
     in
     {
       home.packages = [
-        jbPkgs.packages.goland
-        jbPkgs.packages.pycharm
+        jbPkgs.goland
+        jbPkgs.pycharm
       ];
       home.file.".ideavimrc".text = # vim
         ''
