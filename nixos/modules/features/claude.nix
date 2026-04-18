@@ -1,12 +1,5 @@
 { inputs, ... }:
 {
-  perSystem =
-    { inputs', pkgs, ... }:
-    {
-      # Base claude-code package — the MCP wrapper with full config lives in homeModules.claude
-      packages.claude = inputs'.claude-code.packages.claude-code;
-    };
-
   flake.homeModules.claude =
     {
       config,

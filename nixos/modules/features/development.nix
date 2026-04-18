@@ -1,11 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.development = pkgs.direnv;
-    };
-
   flake.homeModules.development =
     { config, pkgs, ... }:
     {

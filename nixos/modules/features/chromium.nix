@@ -1,11 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.chromium = pkgs.chromium;
-    };
-
   flake.homeModules.chromium =
     { config, pkgs, ... }:
     {

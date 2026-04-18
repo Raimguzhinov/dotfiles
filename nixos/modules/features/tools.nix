@@ -1,37 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, pkgs-unstable, ... }:
-    {
-      packages.tools = pkgs.buildEnv {
-        name = "tools";
-        paths = [
-          pkgs.zsh
-          pkgs.zoxide
-          pkgs.atuin
-          pkgs.zellij
-          pkgs-unstable.yazi
-          pkgs.mc
-          pkgs.eza
-          pkgs.starship
-          pkgs.bat
-          pkgs.bat-extras.batgrep
-          pkgs.bat-extras.batman
-          pkgs.bat-extras.batpipe
-          pkgs.bat-extras.batwatch
-          pkgs.fd
-          pkgs.fzf
-          pkgs.ripgrep
-          pkgs.git
-          pkgs.lazygit
-          pkgs.pgcli
-          pkgs.glow
-          pkgs.xh
-          pkgs.gopass
-        ];
-      };
-    };
-
   flake.homeModules.tools =
     {
       config,

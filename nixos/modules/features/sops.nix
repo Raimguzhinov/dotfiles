@@ -1,11 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.sops = pkgs.sops;
-    };
-
   flake.homeModules.sops =
     { config, ... }:
     {

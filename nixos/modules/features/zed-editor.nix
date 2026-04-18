@@ -1,11 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.zed = pkgs.zed-editor;
-    };
-
   flake.homeModules.zed =
     { config, pkgs, ... }:
     {

@@ -1,18 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.git = pkgs.buildEnv {
-        name = "git";
-        paths = [
-          pkgs.git
-          pkgs.git-lfs
-          pkgs.delta
-        ];
-      };
-    };
-
   flake.homeModules.git =
     { pkgs, username, ... }:
     {

@@ -1,21 +1,5 @@
 { ... }:
 {
-  perSystem =
-    {
-      inputs',
-      lib,
-      system,
-      ...
-    }:
-    lib.optionalAttrs
-      (builtins.elem system [
-        "x86_64-linux"
-        "aarch64-linux"
-      ])
-      {
-        packages.zenBrowser = inputs'.zen-browser.packages.beta;
-      };
-
   flake.homeModules.zenBrowser =
     { config, pkgs, ... }:
     {

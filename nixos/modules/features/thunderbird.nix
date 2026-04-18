@@ -1,11 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.thunderbird = pkgs.thunderbird;
-    };
-
   flake.homeModules.thunderbird =
     {
       config,

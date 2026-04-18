@@ -1,11 +1,5 @@
 { ... }:
 {
-  perSystem =
-    { pkgs, ... }:
-    {
-      packages.rofi = pkgs.rofi;
-    };
-
   flake.homeModules.rofi =
     {
       config,
