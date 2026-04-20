@@ -73,11 +73,16 @@ nixos/
       rofi.nix, chromium.nix, zen-browser.nix, jetbrains.nix, zed-editor.nix,
       thunderbird.nix, claude.nix, sops.nix, gaming.nix
       jetbrains-agent.b64
-    _devshells/         ← автономный сабфлейк для ~/Work (префикс _ исключает из import-tree)
-      flake.nix         ← точка входа, imports = [./go.nix ./python.nix]
+    devshells/          ← flake-parts модули devShells (встроены в основной флейк)
       go.nix            ← perSystem devShells.go (Go 1.21, protobuf, delve...)
       python.nix        ← perSystem devShells.python
 ```
+
+**Паттерн perSystem-пакета**: все `perSystem.packages.*` — standalone-пакеты со всеми
+конфигами запечёнными внутрь (эталон — `modules/features/neovim.nix`). Общая функция
+(например `makeNvimSettings pkgs`) вызывается дважды: в `perSystem` (standalone для
+`nix run`) и в `flake.homeModules` (HM-интеграция). Голый `pkgs.somePackage` без конфига
+в perSystem бессмыслен — только настроенный standalone.
 
 **Паттерн feature-модуля** (пример — `rofi.nix`):
 
@@ -201,18 +206,17 @@ flake-parts: доступны сразу все модули из всех фа�
 
 **Модули Home Manager пользователя `root`**: `homeModules.neovim`, `homeModules.tools`
 
-**Devshells** (`modules/_devshells/`): автономный flake-parts сабфлейк с двумя
-devShells для `~/Work/`. `go.nix` — Go 1.21 (pinned), gopls, delve 1.25.2,
-protobuf 23.2, protoc-gen-go, libwebp; используется `inputs'` алиас вместо
-ручного `import`. `python.nix` — python3 с black/mypy/ruff/pytest/requests.
-`development.nix` записывает `.envrc` со ссылкой на живой путь в dotfiles —
+**Devshells** (`modules/devshells/`): flake-parts модули, встроенные в основной флейк.
+`go.nix` — Go 1.21 (pinned), gopls, delve 1.25.2, protobuf 23.2, protoc-gen-go, libwebp;
+пинированные nixpkgs (`nixpkgs-go21`, `nixpkgs-protobuf23` и др.) — inputs в основном
+`flake.nix`. `python.nix` — python3 с black/mypy/ruff/pytest/requests.
+`development.nix` записывает `.envrc` со ссылкой на `~/dotfiles/nixos` —
 изменения в devshells подхватываются direnv без rebuild системы.
-Директория `_devshells/` — префикс `_` исключает её из import-tree сканирования.
 
 Использовать без установки системы (напрямую с GitHub):
 ```bash
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#go'
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos#go'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos#python'
 ```
 
 ## Dell XPS 13 Plus 9320 — особенности железа
@@ -228,8 +232,9 @@ nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
   - `PGA5.0 5 Master Capture Switch` — системный capture enable; если `off,off`
     — микрофон молчит несмотря на то что WirePlumber видит источник
   - `powerManagement.resumeCommands` — после hibernate: PCI rebind
-    sof-audio-pci-intel-tgl + те же ALSA настройки (включая
-    `PGA5.0 5 Master Capture Switch`) + restart wireplumber для всех сессий
+    sof-audio-pci-intel-tgl + поллинг готовности карты (до 30с) + те же ALSA настройки
+    (включая `PGA5.0 5 Master Capture Switch`) + restart pipewire затем wireplumber
+    для всех сессий (pipewire первым — у него стейт устаревает после rebind)
 - **Камера (IPU6EP)**:
   - `hardware.ipu6.platform = "ipu6ep"` + `libcamera` — современный подход без
     icamerasrc

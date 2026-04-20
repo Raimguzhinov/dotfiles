@@ -12,7 +12,7 @@
 
       home.activation.createWorkDir =
         let
-          shellsDir = "${config.home.homeDirectory}/dotfiles/nixos/modules/_devshells";
+          shellsDir = "${config.home.homeDirectory}/dotfiles/nixos";
           workEnvrc = pkgs.writeText "work-envrc" ''
             count=$(find . -type s -name 'mgmt.sock' -printf . | wc -c)
             if [ "$count" -gt 0 ]; then

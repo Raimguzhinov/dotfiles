@@ -78,10 +78,10 @@ sudo fprintd-enroll dias
 
 ```bash
 # Go 1.21 + gopls + delve + protobuf + libwebp + ...
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#go'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos#go'
 
 # Python 3 + black + mypy + ruff + pytest + requests + ...
-nix develop 'github:Raimguzhinov/dotfiles?dir=nixos/modules/_devshells#python'
+nix develop 'github:Raimguzhinov/dotfiles?dir=nixos#python'
 ```
 
 На машине с установленной конфигурацией direnv подхватывает шеллы автоматически в `~/Work/` через `.envrc`.
