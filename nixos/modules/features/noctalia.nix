@@ -76,9 +76,10 @@
                   id = "Tray";
                   pinned = [
                     "AmneziaVPN"
-                    "Telegram Desktop"
                     "MAX"
                     "OBS Studio"
+                    "Telegram Desktop"
+                    "spotify-client"
                   ];
                 }
               ];
