@@ -749,6 +749,7 @@
           gcc
           gdu # du -> ncdu/dust -> gdu
           gh
+          gitlab-ci-local
           glab
           glow
           gnome-settings-daemon
