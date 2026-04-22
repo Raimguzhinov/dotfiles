@@ -215,8 +215,11 @@
         echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/unbind || true
         ${pkgs.coreutils}/bin/sleep 1
         echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/bind || true
-        # Wait for SOF firmware load + SoundWire rt714 re-enumeration (~5s)
-        ${pkgs.coreutils}/bin/sleep 5
+        # Poll until SOF firmware + SoundWire re-enumeration is complete (up to 30s)
+        for i in $(${pkgs.coreutils}/bin/seq 1 60); do
+          ${pkgs.alsa-utils}/bin/amixer -c 0 info &>/dev/null && break
+          ${pkgs.coreutils}/bin/sleep 0.5
+        done
         # Reapply rt714 ALSA routing (lost after SOF rebind)
         for dev in /sys/bus/soundwire/devices/*/power/control; do
           echo on > "$dev" || true
@@ -226,7 +229,10 @@
         ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
         ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
         ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
+        # Restart pipewire first (stale state after SOF rebind), then wireplumber
         ${pkgs.systemd}/bin/loginctl list-users --no-legend | ${pkgs.gawk}/bin/awk '{print $2}' | while read -r user; do
+          ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart pipewire.service 2>/dev/null || true
+          ${pkgs.coreutils}/bin/sleep 1
           ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart wireplumber.service 2>/dev/null || true
         done
       '';
