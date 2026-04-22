@@ -41,48 +41,57 @@ let
           --add-opens=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED
         '';
 
-      jaAgent = ''
-        -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
-        -Dawt.toolkit.name=auto
-      '';
+      jaAgent =
+        toolkit: # "auto", "WLToolkit", or "XToolkit"
+        ''
+          -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
+          -Dawt.toolkit.name=${toolkit}
+        '';
 
-      goland = pkgs-unstable.jetbrains.goland.override {
-        vmopts = commonVmopts "4096m" + jaAgent;
-      };
-      pycharm = pkgs-unstable.jetbrains.pycharm.override {
-        vmopts = commonVmopts "4096m" + jaAgent;
-      };
-      idea = pkgs-unstable.jetbrains.idea.override {
-        vmopts = commonVmopts "4096m" + jaAgent;
-      };
-      clion = pkgs-unstable.jetbrains.clion.override {
-        vmopts = commonVmopts "1024m" + jaAgent;
-      };
-      datagrip = pkgs-unstable.jetbrains.datagrip.override {
-        vmopts = commonVmopts "1024m" + jaAgent;
-      };
-      phpstorm = pkgs-unstable.jetbrains.phpstorm.override {
-        vmopts = commonVmopts "1024m" + jaAgent;
-      };
-      rider = pkgs-unstable.jetbrains.rider.override {
-        vmopts = commonVmopts "1024m" + jaAgent;
-      };
-      webstorm = pkgs-unstable.jetbrains.webstorm.override {
-        vmopts = commonVmopts "1024m" + jaAgent;
-      };
+      mkIde =
+        base: xmx:
+        let
+          auto = base.override { vmopts = commonVmopts xmx + jaAgent "auto"; };
+          wl = base.override { vmopts = commonVmopts xmx + jaAgent "WLToolkit"; };
+          x11 = base.override { vmopts = commonVmopts xmx + jaAgent "XToolkit"; };
+        in
+        { inherit auto wl x11; };
+
+      golandPkgs = mkIde pkgs-unstable.jetbrains.goland "4096m";
+      pycharmPkgs = mkIde pkgs-unstable.jetbrains.pycharm "4096m";
+      ideaPkgs = mkIde pkgs-unstable.jetbrains.idea "4096m";
+      clionPkgs = mkIde pkgs-unstable.jetbrains.clion "1024m";
+      datagrip = mkIde pkgs-unstable.jetbrains.datagrip "1024m";
+      phpstormPkgs = mkIde pkgs-unstable.jetbrains.phpstorm "1024m";
+      riderPkgs = mkIde pkgs-unstable.jetbrains.rider "1024m";
+      webstormPkgs = mkIde pkgs-unstable.jetbrains.webstorm "1024m";
     in
     {
       # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
-      inherit
-        goland
-        pycharm
-        idea
-        clion
-        datagrip
-        phpstorm
-        rider
-        webstorm
-        ;
+      goland = golandPkgs.auto;
+      goland-wl = golandPkgs.wl;
+      goland-x11 = golandPkgs.x11;
+      pycharm = pycharmPkgs.auto;
+      pycharm-wl = pycharmPkgs.wl;
+      pycharm-x11 = pycharmPkgs.x11;
+      idea = ideaPkgs.auto;
+      idea-wl = ideaPkgs.wl;
+      idea-x11 = ideaPkgs.x11;
+      clion = clionPkgs.auto;
+      clion-wl = clionPkgs.wl;
+      clion-x11 = clionPkgs.x11;
+      datagrip = datagrip.auto;
+      datagrip-wl = datagrip.wl;
+      datagrip-x11 = datagrip.x11;
+      phpstorm = phpstormPkgs.auto;
+      phpstorm-wl = phpstormPkgs.wl;
+      phpstorm-x11 = phpstormPkgs.x11;
+      rider = riderPkgs.auto;
+      rider-wl = riderPkgs.wl;
+      rider-x11 = riderPkgs.x11;
+      webstorm = webstormPkgs.auto;
+      webstorm-wl = webstormPkgs.wl;
+      webstorm-x11 = webstormPkgs.x11;
     };
 in
 {
@@ -99,8 +108,8 @@ in
     in
     {
       home.packages = [
-        jbPkgs.goland
-        jbPkgs.pycharm
+        jbPkgs.goland-wl
+        jbPkgs.pycharm-wl
       ];
       home.file.".ideavimrc".text = # vim
         ''
