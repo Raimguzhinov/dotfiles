@@ -58,13 +58,13 @@
           gcc
           go-mockery_2
           go-tools
-          golangci-lint
           gopls
           gotestsum
           libwebp
           nodejs_20
           pkg-config
           pkgs-go21.go_1_21
+          pkgs-go21.golangci-lint
           pkgs-protoc-gen-go-grpc.protoc-gen-go-grpc
           pkgs-protoc-gen-go.protoc-gen-go
           protobuf23
