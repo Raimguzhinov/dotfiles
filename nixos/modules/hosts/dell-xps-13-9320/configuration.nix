@@ -136,10 +136,10 @@
             home.packages =
               (with pkgs-unstable; [
                 telegram-desktop
+                amnezia-vpn
               ])
               ++ (with pkgs; [
                 alacritty
-                amnezia-vpn
                 cmatrix
                 keypunch
                 nautilus
@@ -482,7 +482,6 @@
       # For global user
       users.defaultUserShell = pkgs.zsh;
       programs = {
-        amnezia-vpn.enable = true;
         localsend.enable = true;
         nm-applet.enable = true;
         partition-manager.enable = true;
@@ -569,6 +568,12 @@
       programs.appimage = {
         enable = true;
         binfmt = true;
+      };
+
+      # Amnezia
+      programs.amnezia-vpn = {
+        enable = true;
+        package = pkgs-unstable.amnezia-vpn;
       };
 
       # Some programs need SUID wrappers, can be configured further or are
