@@ -138,7 +138,7 @@
           echo ""
           echo "=== Done! Reboot and then: ==="
           echo ""
-          sed -n '/^## После первой загрузки/,$p' "$README" | glow -
+          awk 'found && /^---/{exit} /^## После первой загрузки/{found=1} found' "$README" | glow -
         '';
       };
     in
