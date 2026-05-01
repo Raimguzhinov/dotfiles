@@ -24,7 +24,7 @@
       cfg = config.programs.opencode;
 
       opencodeConfigDir = "${config.xdg.configHome}/opencode";
-      toolkitRepoUrl = "https://git.protei.ru/qa-stuff/llm-toolkit.git";
+      toolkitRepoUrl = "ssh://git@git.protei.ru/qa-stuff/llm-toolkit.git";
 
       opencodeSettings = {
         provider = {
@@ -77,12 +77,22 @@
         };
       };
 
-      opencodeConfigJson = builtins.toJSON (
+      opencodeConfigRawJson = builtins.toJSON (
         {
           "$schema" = "https://opencode.ai/config.json";
         }
         // opencodeSettings
       );
+
+      opencodeConfigRawJsonFile = pkgs.writeText "opencode-config-raw.json" opencodeConfigRawJson;
+
+      opencodeConfigPrettyJsonFile =
+        pkgs.runCommand "opencode-config.json" { nativeBuildInputs = [ pkgs.jq ]; }
+          ''
+            ${pkgs.jq}/bin/jq -S . < ${opencodeConfigRawJsonFile} > $out
+          '';
+
+      opencodeConfigJson = builtins.readFile opencodeConfigPrettyJsonFile;
     in
     {
       # Home Manager module (pinned in this flake) already provides
@@ -153,6 +163,38 @@
 
           log "start: ensureOpencodeToolkit"
 
+          ssh_bin="${pkgs.openssh}/bin/ssh"
+          export GIT_SSH_COMMAND="$ssh_bin -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5"
+
+          fetch_origin() {
+            # Writes fetch output to log, returns git exit code
+            GIT_TERMINAL_PROMPT=0 "$timeout_bin" 20s "$git_bin" -C "$opencode_cfg_dir" fetch origin --depth=1 2>>"$log_file"
+          }
+
+          pull_origin() {
+            # Writes pull output to log, returns git exit code
+            GIT_TERMINAL_PROMPT=0 "$timeout_bin" 10s "$git_bin" -C "$opencode_cfg_dir" pull --rebase 2>>"$log_file"
+          }
+
+          ensure_origin() {
+            local desired_url="$1"
+            origin_url="$($git_bin -C "$opencode_cfg_dir" remote get-url origin 2>/dev/null || true)"
+
+            if [[ -z "$origin_url" ]]; then
+              log "set origin=$desired_url"
+              "$git_bin" -C "$opencode_cfg_dir" remote add origin "$desired_url" >/dev/null 2>&1 || true
+              return
+            fi
+
+            if [[ "$origin_url" != "$desired_url" ]]; then
+              log "rewrite origin: $origin_url -> $desired_url"
+              "$git_bin" -C "$opencode_cfg_dir" remote set-url origin "$desired_url" >/dev/null 2>&1 || true
+              return
+            fi
+
+            log "origin ok: $origin_url"
+          }
+
           # Ensure repo exists
           if [[ ! -d "$opencode_cfg_dir/.git" ]]; then
             echo "opencode: bootstrapping llm-toolkit in $opencode_cfg_dir" >&2
@@ -161,16 +203,7 @@
           fi
 
           if [[ -d "$opencode_cfg_dir/.git" ]]; then
-            origin_url="$($git_bin -C "$opencode_cfg_dir" remote get-url origin 2>/dev/null || true)"
-            if [[ -z "$origin_url" ]]; then
-              log "set origin=${toolkitRepoUrl}"
-              "$git_bin" -C "$opencode_cfg_dir" remote add origin "${toolkitRepoUrl}" >/dev/null 2>&1 || true
-            elif [[ "$origin_url" != "${toolkitRepoUrl}" ]]; then
-              log "rewrite origin: $origin_url -> ${toolkitRepoUrl}"
-              "$git_bin" -C "$opencode_cfg_dir" remote set-url origin "${toolkitRepoUrl}" >/dev/null 2>&1 || true
-            else
-              log "origin ok: $origin_url"
-            fi
+            ensure_origin "${toolkitRepoUrl}"
 
             get_remote_head() {
               head_ref="$($git_bin -C "$opencode_cfg_dir" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
@@ -192,7 +225,17 @@
             # If repo has no commits yet, fetch+checkout.
             if ! "$git_bin" -C "$opencode_cfg_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
               log "no HEAD: fetching"
-              if GIT_TERMINAL_PROMPT=0 "$timeout_bin" 20s "$git_bin" -C "$opencode_cfg_dir" fetch origin --depth=1 >/dev/null 2>&1; then
+
+              fetched="0"
+              if fetch_origin; then
+                log "fetch ok"
+                fetched="1"
+              else
+                echo "opencode: llm-toolkit fetch failed (no network/auth?)" >&2
+                log "fetch failed"
+              fi
+
+              if [[ "$fetched" == "1" ]]; then
                 remote_head="$(get_remote_head)"
                 if [[ -n "$remote_head" ]]; then
                   log "checkout main from $remote_head"
@@ -201,9 +244,6 @@
                   echo "opencode: llm-toolkit fetch succeeded but remote head not found" >&2
                   log "fetch ok, remote head not found"
                 fi
-              else
-                echo "opencode: llm-toolkit fetch failed (no network/auth?)" >&2
-                log "fetch failed"
               fi
             fi
 
@@ -226,11 +266,11 @@
               fi
 
               log "pull --rebase"
-              if ! GIT_TERMINAL_PROMPT=0 "$timeout_bin" 10s "$git_bin" -C "$opencode_cfg_dir" pull --rebase >/dev/null 2>&1; then
+              if pull_origin; then
+                log "pull ok"
+              else
                 echo "opencode: llm-toolkit pull failed (no network/auth?)" >&2
                 log "pull failed"
-              else
-                log "pull ok"
               fi
 
               if [[ "$stashed" == "1" ]]; then
@@ -264,10 +304,21 @@
           ensure_alias agents agent
           ensure_alias skills skill
           ensure_alias commands command
+
+          # Keep repo clean even if HM replaces opencode.json
+          if [[ -f "$opencode_cfg_dir/opencode.json" ]]; then
+            "$git_bin" -C "$opencode_cfg_dir" update-index --skip-worktree opencode.json >/dev/null 2>&1 || true
+          fi
         '';
 
         xdg.configFile = {
           "opencode/config.json".source = mkForce (
+            config.lib.file.mkOutOfStoreSymlink config.sops.templates."opencode-config.json".path
+          );
+
+          # llm-toolkit ships `opencode.json`; OpenCode prefers it.
+          # Point it to the same rendered config with secrets.
+          "opencode/opencode.json".source = mkForce (
             config.lib.file.mkOutOfStoreSymlink config.sops.templates."opencode-config.json".path
           );
         }
