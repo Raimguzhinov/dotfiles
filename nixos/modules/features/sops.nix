@@ -6,9 +6,14 @@
       systemd.user.services.sops-nix = {
         Unit.After = [ "gpg-agent.service" ];
         Unit.Wants = [ "gpg-agent.service" ];
-        Service.Restart = "on-failure";
-        Service.RestartSec = "3s";
-        Service.StartLimitBurst = 5;
+
+        # If decryption fails (e.g. missing YubiKey), do not keep retrying forever.
+        # The laptop must stay usable without a smartcard.
+        Service.Restart = "no";
+
+        # Still apply rate limiting if something external triggers restarts.
+        Service.StartLimitBurst = 2;
+        Service.StartLimitIntervalSec = "365d";
       };
 
       sops = {

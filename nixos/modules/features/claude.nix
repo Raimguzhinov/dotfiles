@@ -45,7 +45,7 @@
     {
       home.packages = [
         (pkgs.writeShellScriptBin "claude-protei" ''
-          export ANTHROPIC_MODEL="ПротеЯ-2-Thinking"
+          export ANTHROPIC_MODEL="Qwen/Qwen3.5-122B-A10B-FP8"
 
           if [[ -f ${config.sops.secrets."work_ai/litellm_url".path} && -f ${
             config.sops.secrets."work_ai/litellm_api_key".path

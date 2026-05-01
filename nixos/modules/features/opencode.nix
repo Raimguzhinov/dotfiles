@@ -48,13 +48,6 @@
 
         model = "protei/Qwen/Qwen3.5-122B-A10B-FP8";
         small_model = "protei/Qwen/Qwen3.5-122B-A10B-FP8";
-        enabled_providers = [
-          "protei"
-          "opencode"
-          "anthropic"
-          "openai"
-          "deepseek"
-        ];
 
         mcp = {
           youtrack = {

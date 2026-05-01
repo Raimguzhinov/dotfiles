@@ -23,8 +23,9 @@
       ];
       boot.initrd.kernelModules = [ ];
 
-      # Latest kernel required for ipu6ep camera and SoundWire mic on XPS 13 Plus 9320
-      boot.kernelPackages = pkgs.linuxPackages_latest;
+      # Kernel pinning: keeps updates predictable and avoids surprise jumps.
+      # Also helps Nix reuse binary caches (important for faster `nix flake update` cycles).
+      boot.kernelPackages = pkgs.linuxPackages_6_19;
 
       fileSystems."/" = {
         device = "/dev/mapper/cryptroot";
@@ -79,15 +80,9 @@
         pkgs.sof-firmware
       ];
 
-      # intel_int3472: add GPIO type 0x02 (strobe) for ov01a10 sensor (XPS 13 Plus 9320)
-      # Without this patch the kernel logs "GPIO type 0x02 unknown" and camera initialises
-      # with wrong colours (red tint) because the strobe GPIO is never configured.
-      boot.kernelPatches = [
-        {
-          name = "int3472-gpio-strobe";
-          patch = ./intel-int3472-gpio-type.patch;
-        }
-      ];
+      # NOTE: historically this machine needed an intel_int3472 patch (GPIO type 0x02).
+      # On modern kernels (incl. 6.19.x) this logic is already upstream, so we intentionally
+      # avoid kernel patching here to keep the kernel cacheable and updates fast.
 
       boot.kernelModules = [
         "kvm-intel"
@@ -203,9 +198,95 @@
         };
       };
 
+      # Post-resume: restart fprintd + polkit agent to reduce race conditions.
+      # This is especially helpful after hibernate/suspend where devices or D-Bus
+      # activations may behave inconsistently.
+      systemd.services.xps-auth-post-resume = {
+        description = "XPS 9320: restart auth agents after resume";
+        wantedBy = [ "post-resume.target" ];
+        after = [ "post-resume.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 30;
+        };
+        script = ''
+          set -eu
+
+          echo "[xps-auth-post-resume] restart fprintd"
+          ${pkgs.systemd}/bin/systemctl restart fprintd.service 2>/dev/null || true
+
+          echo "[xps-auth-post-resume] restart polkit-soteria for all users"
+          ${pkgs.systemd}/bin/loginctl list-users --no-legend | ${pkgs.gawk}/bin/awk '{print $2}' | while read -r user; do
+            ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart polkit-soteria.service 2>/dev/null || true
+          done
+        '';
+      };
+
+      # Camera recover experiment (post-resume): tries to disprove/confirm the hypothesis
+      # that the IPU6/IVSC camera stack cannot recover after S4. This is best-effort only.
+      # Enable/disable by commenting out this service if it causes issues.
+      systemd.services.xps-camera-recover = {
+        description = "XPS 9320: best-effort camera recover after resume";
+        wantedBy = [ "post-resume.target" ];
+        after = [
+          "post-resume.service"
+          "systemd-modules-load.service"
+        ];
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 60;
+        };
+        script = ''
+          set -eu
+
+          echo "[xps-camera-recover] starting"
+
+          # Stop legacy bridge if running to free /dev/video40.
+          ${pkgs.systemd}/bin/systemctl stop camera-bridge.service 2>/dev/null || true
+
+          echo "[xps-camera-recover] devices before:"
+          ${pkgs.coreutils}/bin/ls -la /dev/media* /dev/video* 2>/dev/null || true
+
+          echo "[xps-camera-recover] trying to reload camera-related kernel modules (best-effort)"
+          # Unload (order matters). Some modules may be busy; treat that as signal and continue.
+          ${pkgs.kmod}/bin/modprobe -r intel_ipu6_psys 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r intel_ipu6_isys 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r intel_ipu6 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r ivsc_csi 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r ivsc_ace 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r mei_vsc 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r mei_vsc_hw 2>/dev/null || true
+
+          ${pkgs.coreutils}/bin/sleep 1
+
+          # Load back.
+          ${pkgs.kmod}/bin/modprobe mei_vsc_hw 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe mei_vsc 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe ivsc_ace 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe ivsc_csi 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe intel_ipu6 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe intel_ipu6_isys 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe intel_ipu6_psys 2>/dev/null || true
+
+          ${pkgs.coreutils}/bin/sleep 2
+
+          # Recreate /dev/camera-active (if possible).
+          ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
+
+          echo "[xps-camera-recover] topology after (if available):"
+          ${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | ${pkgs.gnugrep}/bin/grep -E "ENABLED|entity|pad|link|device node name" || true
+
+          echo "[xps-camera-recover] devices after:"
+          ${pkgs.coreutils}/bin/ls -la /dev/media* /dev/video* 2>/dev/null || true
+
+          echo "[xps-camera-recover] done"
+        '';
+      };
+
       # Восстановление звука и микрофона (SoundWire rt714) после S4-гибернации.
       # Rebind перезагружает DSP firmware SOF и заново перечисляет кодек rt714.
-      # Камера (IVSC/ov01a10) после S4 не восстанавливается — аппаратное ограничение.
+      # Камера (IVSC/ov01a10) после S4 часто не восстанавливается по наблюдениям.
+      # Это гипотеза, а не 100% факт: см. xps-camera-recover для перепроверки.
       powerManagement.resumeCommands = ''
         echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/unbind || true
         ${pkgs.coreutils}/bin/sleep 1
@@ -251,23 +332,35 @@
           RemainAfterExit = true;
         };
         script = ''
+          # Workaround: ALSA can fail hard if /var/lib/alsa/card0.conf.d/ctl-remap.conf
+          # exists as a stale symlink into a GC'd /nix/store path.
+          mkdir -p /var/lib/alsa/card0.conf.d
+          if [ -L /var/lib/alsa/card0.conf.d/ctl-remap.conf ] && [ ! -e /var/lib/alsa/card0.conf.d/ctl-remap.conf ]; then
+            rm -f /var/lib/alsa/card0.conf.d/ctl-remap.conf
+          fi
+          if [ ! -e /var/lib/alsa/card0.conf.d/ctl-remap.conf ]; then
+            : > /var/lib/alsa/card0.conf.d/ctl-remap.conf
+          fi
+
           # Wait for card 0 to become available (SOF firmware load can take a few seconds)
           for i in $(seq 1 30); do
             ${pkgs.alsa-utils}/bin/amixer -c 0 info &>/dev/null && break
             ${pkgs.coreutils}/bin/sleep 0.5
           done
+
           # Disable SoundWire device power management
           for dev in /sys/bus/soundwire/devices/*/power/control; do
             echo on > "$dev" || true
           done
+
           # Route ADC 22 to DMIC1
-          ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1'
+          ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1' || true
           # Enable capture path (PGA5.0 + FU02, used by UCM)
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on'
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on'
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70'
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on' || true
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
           # Set boost
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0'
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
         '';
       };
     };

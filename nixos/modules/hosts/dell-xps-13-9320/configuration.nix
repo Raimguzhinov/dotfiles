@@ -87,6 +87,10 @@
             url = "https://web.max.ru/";
             default_launch_container = "window";
           }
+          {
+            url = "https://web.vk.me/";
+            default_launch_container = "window";
+          }
         ];
       };
 
@@ -455,8 +459,68 @@
 
       # Fingerprint reader (Goodix, XPS 13 Plus 9320)
       services.fprintd.enable = true;
-      security.pam.services.ly.fprintAuth = true;
-      security.pam.services.noctalia-shell.fprintAuth = true;
+
+      # fprintd is D-Bus activated by default and may start "late" on first use.
+      # Pre-start it to reduce races and make fingerprint prompts predictable.
+      systemd.services.fprintd = {
+        wantedBy = [ "multi-user.target" ];
+        after = [ "dbus.socket" ];
+        wants = [ "dbus.socket" ];
+      };
+      systemd.services.display-manager.wants = [ "fprintd.service" ];
+      systemd.services.display-manager.after = [ "fprintd.service" ];
+
+      # NOTE: `ly` shows only a password form, but PAM modules like pam_fprintd may
+      # still run and block. To allow both "password OR fingerprint" without long
+      # blocking, we override PAM stacks for ly and noctalia-shell with short
+      # pam_fprintd timeouts.
+      security.pam.services.ly.fprintAuth = false;
+      security.pam.services.ly.text = ''
+        # Account management.
+        account required ${pkgs.pam}/lib/security/pam_unix.so
+
+        # Authentication management.
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=3
+        auth optional ${pkgs.pam}/lib/security/pam_unix.so likeauth
+        auth optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so
+        auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
+        auth required ${pkgs.pam}/lib/security/pam_deny.so
+
+        # Password management.
+        password sufficient ${pkgs.pam}/lib/security/pam_unix.so nullok yescrypt
+        password optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so use_authtok
+
+        # Session management.
+        session required ${pkgs.pam}/lib/security/pam_env.so conffile=/etc/pam/environment readenv=0
+        session required ${pkgs.pam}/lib/security/pam_unix.so
+        session required ${pkgs.pam}/lib/security/pam_loginuid.so
+        session optional ${pkgs.systemd}/lib/security/pam_systemd.so
+        session required ${pkgs.pam}/lib/security/pam_limits.so
+        session optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so auto_start
+      '';
+
+      security.pam.services.noctalia-shell.fprintAuth = false;
+      security.pam.services.noctalia-shell.text = ''
+        # Account management.
+        account required ${pkgs.pam}/lib/security/pam_unix.so
+
+        # Authentication management.
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=3
+        auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
+        auth required ${pkgs.pam}/lib/security/pam_deny.so
+
+        # Password management.
+        password sufficient ${pkgs.pam}/lib/security/pam_unix.so nullok yescrypt
+
+        # Session management.
+        session required ${pkgs.pam}/lib/security/pam_env.so conffile=/etc/pam/environment readenv=0
+        session required ${pkgs.pam}/lib/security/pam_unix.so
+        session required ${pkgs.pam}/lib/security/pam_limits.so
+      '';
+
+      # Allow fingerprint for sudo + polkit prompts (via PAM).
+      security.pam.services.sudo.fprintAuth = true;
+      security.pam.services.polkit-1.fprintAuth = true;
 
       services.logind.settings.Login = {
         HandlePowerKey = "suspend-then-hibernate";
