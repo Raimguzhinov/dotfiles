@@ -59,6 +59,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.home-manager.follows = "home-manager";
     };
+    # Community plugins packaged for Home Manager `programs.obsidian`.
+    # Provides e.g. `remotely-save`, `obsidian-excalidraw-plugin`, etc.
+    obsidian-plugins = {
+      url = "github:cjavad/nixpille-obsidian-community-plugins";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);

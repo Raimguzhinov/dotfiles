@@ -116,6 +116,7 @@
           inputs.lmstudio.homeManagerModules.default
         ];
         extraSpecialArgs = {
+          inherit inputs;
           inherit pkgs-unstable;
           inherit username;
         };
@@ -151,7 +152,6 @@
                 keypunch
                 nautilus
                 networkmanagerapplet
-                obsidian
                 pfetch
                 pinta
                 spotify
@@ -375,6 +375,7 @@
               homeModules.zenBrowser
               homeModules.claude
               homeModules.opencode
+              homeModules.obsidian
               homeModules.thunderbird
             ];
           };
