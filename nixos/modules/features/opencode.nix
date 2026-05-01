@@ -23,8 +23,8 @@
 
       cfg = config.programs.opencode;
 
-      agentsDir = "${config.home.homeDirectory}/Work/llm-toolkit/agents";
-      skillsDir = "${config.home.homeDirectory}/Work/llm-toolkit/skills";
+      opencodeConfigDir = "${config.xdg.configHome}/opencode";
+      toolkitRepoUrl = "https://git.protei.ru/qa-stuff/llm-toolkit.git";
 
       opencodeSettings = {
         provider = {
@@ -97,7 +97,7 @@
           - Inline content as a string
           - A path to a file containing the skill content
 
-          Each skill is written to {file}`$XDG_CONFIG_HOME/opencode/skill/<name>/SKILL.md`.
+          Each skill is written to {file}`$XDG_CONFIG_HOME/opencode/skills/<name>/SKILL.md`.
         '';
       };
 
@@ -126,6 +126,10 @@
 
             When invoked, explain one Nix concept in one paragraph.
           '';
+
+          # How to override inline:
+          # - `agents.<name>` becomes `~/.config/opencode/agent/<name>.md`
+          # - `skills.<name>` becomes `~/.config/opencode/skills/<name>/SKILL.md`
         };
 
         sops.templates."opencode-config.json" = {
@@ -133,35 +137,51 @@
           mode = "0400";
         };
 
-        home.activation.linkLlmToolkitToOpencode = config.lib.dag.entryAfter [ "writeBoundary" ] ''
-          opencode_cfg_dir="${config.xdg.configHome}/opencode"
-          mkdir -p "$opencode_cfg_dir/agent" "$opencode_cfg_dir/skill"
+        home.activation.ensureOpencodeToolkit = config.lib.dag.entryBefore [ "writeBoundary" ] ''
+          opencode_cfg_dir="${opencodeConfigDir}"
+          git_bin="${pkgs.git}/bin/git"
 
-          if [[ -d "${agentsDir}" ]]; then
-            for f in "${agentsDir}"/*.md; do
-              [[ -e "$f" ]] || continue
-              base="$(basename "$f")"
-              target="$opencode_cfg_dir/agent/$base"
-              if [[ ! -e "$target" ]]; then
-                ln -s "$f" "$target"
+          mkdir -p "$opencode_cfg_dir"
+
+          if [[ ! -d "$opencode_cfg_dir/.git" ]]; then
+            echo "opencode: bootstrapping llm-toolkit in $opencode_cfg_dir" >&2
+
+            if [[ -z "$(ls -A "$opencode_cfg_dir" 2>/dev/null)" ]]; then
+              GIT_TERMINAL_PROMPT=0 "$git_bin" clone "${toolkitRepoUrl}" "$opencode_cfg_dir" || true
+            else
+              GIT_TERMINAL_PROMPT=0 "$git_bin" -C "$opencode_cfg_dir" init || true
+              if ! "$git_bin" -C "$opencode_cfg_dir" remote get-url origin >/dev/null 2>&1; then
+                "$git_bin" -C "$opencode_cfg_dir" remote add origin "${toolkitRepoUrl}" || true
               fi
-            done
-          else
-            echo "llm-toolkit agents dir missing: ${agentsDir}" >&2
+              GIT_TERMINAL_PROMPT=0 "$git_bin" -C "$opencode_cfg_dir" fetch origin --depth=1 || true
+              "$git_bin" -C "$opencode_cfg_dir" checkout -B llm-toolkit FETCH_HEAD || true
+            fi
           fi
 
-          if [[ -d "${skillsDir}" ]]; then
-            for f in "${skillsDir}"/*; do
-              [[ -e "$f" ]] || continue
-              base="$(basename "$f")"
-              target="$opencode_cfg_dir/skill/$base"
-              if [[ ! -e "$target" ]]; then
-                ln -s "$f" "$target"
-              fi
-            done
-          else
-            echo "llm-toolkit skills dir missing: ${skillsDir}" >&2
-          fi
+          ensure_alias() {
+            local preferred="$1"
+            local compat="$2"
+
+            if [[ -d "$opencode_cfg_dir/$preferred" && ! -e "$opencode_cfg_dir/$compat" ]]; then
+              ln -s "$preferred" "$opencode_cfg_dir/$compat"
+              return
+            fi
+
+            if [[ -d "$opencode_cfg_dir/$compat" && ! -e "$opencode_cfg_dir/$preferred" ]]; then
+              ln -s "$compat" "$opencode_cfg_dir/$preferred"
+              return
+            fi
+
+            if [[ ! -e "$opencode_cfg_dir/$preferred" && ! -e "$opencode_cfg_dir/$compat" ]]; then
+              mkdir -p "$opencode_cfg_dir/$preferred"
+              ln -s "$preferred" "$opencode_cfg_dir/$compat"
+              return
+            fi
+          }
+
+          ensure_alias agents agent
+          ensure_alias skills skill
+          ensure_alias commands command
         '';
 
         xdg.configFile = {
@@ -171,7 +191,7 @@
         }
         // (lib.mapAttrs' (
           name: content:
-          lib.nameValuePair "opencode/skill/${name}/SKILL.md" (
+          lib.nameValuePair "opencode/skills/${name}/SKILL.md" (
             if lib.isPath content then { source = content; } else { text = content; }
           )
         ) (cfg.skills or { }));
