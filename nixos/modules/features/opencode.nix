@@ -140,21 +140,103 @@
         home.activation.ensureOpencodeToolkit = config.lib.dag.entryBefore [ "writeBoundary" ] ''
           opencode_cfg_dir="${opencodeConfigDir}"
           git_bin="${pkgs.git}/bin/git"
+          timeout_bin="${pkgs.coreutils}/bin/timeout"
+          date_bin="${pkgs.coreutils}/bin/date"
+
+          log_file="$opencode_cfg_dir/.hm-opencode.log"
+          log() {
+            mkdir -p "$opencode_cfg_dir"
+            printf '[%s] %s\n' "$($date_bin -Is)" "$1" >>"$log_file" 2>/dev/null || true
+          }
 
           mkdir -p "$opencode_cfg_dir"
 
+          log "start: ensureOpencodeToolkit"
+
+          # Ensure repo exists
           if [[ ! -d "$opencode_cfg_dir/.git" ]]; then
             echo "opencode: bootstrapping llm-toolkit in $opencode_cfg_dir" >&2
+            log "init repo"
+            GIT_TERMINAL_PROMPT=0 "$git_bin" -C "$opencode_cfg_dir" init || true
+          fi
 
-            if [[ -z "$(ls -A "$opencode_cfg_dir" 2>/dev/null)" ]]; then
-              GIT_TERMINAL_PROMPT=0 "$git_bin" clone "${toolkitRepoUrl}" "$opencode_cfg_dir" || true
+          if [[ -d "$opencode_cfg_dir/.git" ]]; then
+            origin_url="$($git_bin -C "$opencode_cfg_dir" remote get-url origin 2>/dev/null || true)"
+            if [[ -z "$origin_url" ]]; then
+              log "set origin=${toolkitRepoUrl}"
+              "$git_bin" -C "$opencode_cfg_dir" remote add origin "${toolkitRepoUrl}" >/dev/null 2>&1 || true
+            elif [[ "$origin_url" != "${toolkitRepoUrl}" ]]; then
+              log "rewrite origin: $origin_url -> ${toolkitRepoUrl}"
+              "$git_bin" -C "$opencode_cfg_dir" remote set-url origin "${toolkitRepoUrl}" >/dev/null 2>&1 || true
             else
-              GIT_TERMINAL_PROMPT=0 "$git_bin" -C "$opencode_cfg_dir" init || true
-              if ! "$git_bin" -C "$opencode_cfg_dir" remote get-url origin >/dev/null 2>&1; then
-                "$git_bin" -C "$opencode_cfg_dir" remote add origin "${toolkitRepoUrl}" || true
+              log "origin ok: $origin_url"
+            fi
+
+            get_remote_head() {
+              head_ref="$($git_bin -C "$opencode_cfg_dir" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+              if [[ -n "$head_ref" ]]; then
+                echo "$head_ref"
+                return
               fi
-              GIT_TERMINAL_PROMPT=0 "$git_bin" -C "$opencode_cfg_dir" fetch origin --depth=1 || true
-              "$git_bin" -C "$opencode_cfg_dir" checkout -B llm-toolkit FETCH_HEAD || true
+              if "$git_bin" -C "$opencode_cfg_dir" show-ref --verify --quiet refs/remotes/origin/main; then
+                echo "origin/main"
+                return
+              fi
+              if "$git_bin" -C "$opencode_cfg_dir" show-ref --verify --quiet refs/remotes/origin/master; then
+                echo "origin/master"
+                return
+              fi
+              echo ""
+            }
+
+            # If repo has no commits yet, fetch+checkout.
+            if ! "$git_bin" -C "$opencode_cfg_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
+              log "no HEAD: fetching"
+              if GIT_TERMINAL_PROMPT=0 "$timeout_bin" 20s "$git_bin" -C "$opencode_cfg_dir" fetch origin --depth=1 >/dev/null 2>&1; then
+                remote_head="$(get_remote_head)"
+                if [[ -n "$remote_head" ]]; then
+                  log "checkout main from $remote_head"
+                  "$git_bin" -C "$opencode_cfg_dir" checkout -B main "$remote_head" >/dev/null 2>&1 || true
+                else
+                  echo "opencode: llm-toolkit fetch succeeded but remote head not found" >&2
+                  log "fetch ok, remote head not found"
+                fi
+              else
+                echo "opencode: llm-toolkit fetch failed (no network/auth?)" >&2
+                log "fetch failed"
+              fi
+            fi
+
+            # Auto-update toolkit on each rebuild, but keep local overrides
+            if "$git_bin" -C "$opencode_cfg_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
+              dirty="$($git_bin -C "$opencode_cfg_dir" status --porcelain 2>/dev/null || true)"
+              stashed="0"
+
+            if [[ -n "$dirty" ]]; then
+              log "stash push (dirty)"
+              "$git_bin" -C "$opencode_cfg_dir" stash push -u -m "hm-opencode-autostash" >/dev/null 2>&1 || true
+              stashed="1"
+            fi
+
+              remote_head="$(get_remote_head)"
+              if [[ -n "$remote_head" ]]; then
+                if ! "$git_bin" -C "$opencode_cfg_dir" rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
+                  "$git_bin" -C "$opencode_cfg_dir" branch --set-upstream-to="$remote_head" >/dev/null 2>&1 || true
+                fi
+              fi
+
+              log "pull --rebase"
+              if ! GIT_TERMINAL_PROMPT=0 "$timeout_bin" 10s "$git_bin" -C "$opencode_cfg_dir" pull --rebase >/dev/null 2>&1; then
+                echo "opencode: llm-toolkit pull failed (no network/auth?)" >&2
+                log "pull failed"
+              else
+                log "pull ok"
+              fi
+
+              if [[ "$stashed" == "1" ]]; then
+                log "stash pop"
+                "$git_bin" -C "$opencode_cfg_dir" stash pop >/dev/null 2>&1 || true
+              fi
             fi
           fi
 
