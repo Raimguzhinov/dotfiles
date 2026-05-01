@@ -25,7 +25,7 @@
 
       # Kernel pinning: keeps updates predictable and avoids surprise jumps.
       # Also helps Nix reuse binary caches (important for faster `nix flake update` cycles).
-      boot.kernelPackages = pkgs.linuxPackages_6_19;
+      boot.kernelPackages = pkgs.linuxPackages_latest;
 
       fileSystems."/" = {
         device = "/dev/mapper/cryptroot";

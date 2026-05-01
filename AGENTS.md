@@ -64,7 +64,7 @@ nixos/
 ### Глобальные overlays
 
 - `nixos/modules/overlays.nix` — общий nixos-модуль, который добавляет `nixpkgs.overlays` и `allowUnfree` для всех хостов.
-- `nixos/modules/hosts/dell-xps-13-9320/overlays.nix` оставлен как пустой файл (исторически), но оверлеи живут в глобальном модуле.
+- `nixos/modules/hosts/dell-xps-13-9320/overlays.nix` удалён (исторический файл); оверлеи живут в глобальном модуле.
 
 ### Паттерн feature-модуля
 
@@ -82,13 +82,15 @@ nixos/
 - Десктопные пакеты — в `home.packages` пользователя `dias`, не в `environment.systemPackages`.
 - Исключение для `environment.systemPackages`: то, что требует polkit на системном уровне.
 - Коммиты только по явной просьбе.
+- Коммиты должны быть подписаны (GPG signing включён): не использовать `--no-gpg-sign`/`--no-gpg-sign`.
+  Если подпись не проходит (нет YubiKey/PIN prompt), остановиться и попросить пользователя запустить коммит локально.
 - Стиль `inherit` в атрсетах: каждый аргумент на отдельной строке (`inherit foo;`).
 
 ## Dell XPS 13 Plus 9320 (dell-xps-13-9320)
 
 Ключевые особенности/хелперы живут в `nixos/modules/hosts/dell-xps-13-9320/hardware.nix`.
 
-- **Ядро**: закреплено через `boot.kernelPackages = pkgs.linuxPackages_6_19;` для предсказуемых обновлений и лучших шансов на бинарные кэши.
+- **Ядро**: используется `boot.kernelPackages = pkgs.linuxPackages_latest;` (актуальное ядро из nixpkgs).
 - **int3472 GPIO patch**: не применяется (фикс в современных ядрах уже upstream). Это уменьшает вероятность локальной пересборки ядра при `flake update`.
 
 ### Камера (IPU6EP)
