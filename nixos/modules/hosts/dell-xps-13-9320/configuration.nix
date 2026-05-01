@@ -107,7 +107,10 @@
         useGlobalPkgs = true;
         useUserPackages = true;
         backupFileExtension = "backup";
-        sharedModules = [ inputs.sops-nix.homeManagerModules.sops ];
+        sharedModules = [
+          inputs.sops-nix.homeManagerModules.sops
+          inputs.lmstudio.homeManagerModules.default
+        ];
         extraSpecialArgs = {
           inherit pkgs-unstable;
           inherit username;
@@ -340,6 +343,16 @@
               };
             };
 
+            programs.lmstudio = {
+              enable = true;
+              package = pkgs.lmstudio-beta;
+              server = {
+                enable = true;
+                port = 1234;
+                autostart = true;
+              };
+            };
+
             imports = [
               inputs.noctalia.homeModules.default
               inputs.nvf.homeManagerModules.default
@@ -357,6 +370,7 @@
               homeModules.zed
               homeModules.zenBrowser
               homeModules.claude
+              homeModules.opencode
               homeModules.thunderbird
             ];
           };
@@ -718,7 +732,6 @@
       # $ nix search wget
       environment.systemPackages =
         (with inputs; [
-          lmstudio.packages.${pkgs.stdenv.hostPlatform.system}.lmstudio
           niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
         ])
         ++ (with pkgs-unstable; [
@@ -796,12 +809,12 @@
           qrencode
           sops
           tessen
-          thinkfan
           tig
           tlrc
           transmission_4-gtk
           unzip
           v4l-utils
+          vulkan-loader
           wget
           wl-clipboard
           wl-color-picker

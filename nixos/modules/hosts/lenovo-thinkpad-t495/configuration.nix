@@ -136,25 +136,26 @@
       programs.zsh.enable = true;
 
       environment.systemPackages = with pkgs; [
+        bat
+        btop
+        chawan
         claude-code
         codex
-        jocalsend
-        zellij
-        yazi
-        ripgrep
+        curl
+        eza
         fd
         fzf
-        bat
-        eza
-        btop
-        glow
-        chawan
-        curl
         git
+        glow
         htop
+        jocalsend
+        ripgrep
         rsync
+        thinkfan
         vim
         wget
+        yazi
+        zellij
       ];
 
       services.postgresql = {
