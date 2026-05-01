@@ -19,6 +19,11 @@
                 sudo find . -type s -name 'mgmt.sock' -delete
                 echo "Cleaned up $count mgmt.sock files"
             fi
+
+            # nix-direnv sometimes hits SQLite locks in Nix eval-cache.
+            # Disable eval-cache only for this direnv invocation.
+            export NIX_CONFIG="eval-cache = false"
+
             use flake ${shellsDir}#go
             use flake ${shellsDir}#python
           '';

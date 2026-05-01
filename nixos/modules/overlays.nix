@@ -1,7 +1,8 @@
 { ... }:
 {
+  # Global overlays used by all NixOS configurations.
   flake.nixosModules.overlays =
-    { pkgs, inputs, ... }:
+    { inputs, ... }:
     {
       nixpkgs.config.allowUnfree = true;
       nixpkgs.overlays = [
@@ -9,11 +10,14 @@
         inputs.claude-code.overlays.default
         inputs.lmstudio.overlays.default
         inputs.niri.overlays.niri
-        (final: prev: {
-          niri = prev.niri.overrideAttrs (_: {
-            doCheck = false;
-          });
-        })
+        (
+          final: prev:
+          prev.lib.optionalAttrs (prev ? niri) {
+            niri = prev.niri.overrideAttrs (_: {
+              doCheck = false;
+            });
+          }
+        )
       ];
     };
 }

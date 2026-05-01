@@ -526,7 +526,7 @@
         account required ${pkgs.pam}/lib/security/pam_unix.so
 
         # Authentication management.
-        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=5
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=15
         auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
         auth required ${pkgs.pam}/lib/security/pam_deny.so
 
