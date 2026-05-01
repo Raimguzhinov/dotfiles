@@ -118,23 +118,42 @@
           enableMcpIntegration = true;
           settings = opencodeSettings;
 
-          # Personal inline examples (live in Nix, not in ~/Work)
+          # Личные inline-примеры (живут в Nix, не в репозитории llm-toolkit)
           agents."nix-code-reviewer" = lib.mkDefault ''
-            # Nix Code Reviewer
+            # Ревьюер Nix-конфигураций
 
-            Reviews Nix code quickly.
+            Специалист по ревью Nix/NixOS/Home Manager.
 
-            - Point out obvious mistakes
-            - Suggest simpler patterns
-            - Prefer small, surgical changes
+            ## Что делать
+
+            - Проверять корректность модульной структуры (flake-parts, опции, импорты)
+            - Искать типовые ошибки: рекурсия `pkgs`/`perSystem`, неверные пути, опечатки в опциях
+            - Упрощать выражения, избегать лишнего рефакторинга
+            - Подсказывать, где лучше использовать `mkIf/mkDefault/mkForce`
+
+            ## Формат ответа
+
+            - Сначала краткий вывод (1–3 пункта)
+            - Затем конкретные правки (с командами/фрагментами)
+            - Не предлагать изменения вне запроса
           '';
 
-          skills."nix-trivia" = lib.mkDefault ''
-            # Nix Trivia
+          skills."nix-review-checklist" = lib.mkDefault ''
+            # Чек‑лист ревью Nix
 
-            A tiny example skill.
+            Быстрый чек‑лист для самопроверки перед PR/rebuild.
 
-            When invoked, explain one Nix concept in one paragraph.
+            ## Шаги
+
+            1. Проверить, что новые `.nix` файлы добавлены в git (иначе `import-tree` их не увидит)
+            2. Проверить Linux-only условия: использовать `system` + `builtins.elem`, не `pkgs.stdenv.isLinux` в `perSystem`
+            3. Убедиться, что секреты не попали в nix store (только `sops.placeholder`/`sops.templates`)
+            4. Прогнать форматирование: `nixfmt-rfc-style nixos/` (или `nixfmt`)
+            5. Собрать без применения: `sudo nixos-rebuild build --flake ~/dotfiles/nixos`
+
+            ## Результат
+
+            Верни список найденных рисков и конкретные действия для исправления.
           '';
 
           # How to override inline:
