@@ -1,19 +1,28 @@
 { ... }:
 {
   flake.homeModules.sops =
-    { config, ... }:
+    {
+      config,
+      lib,
+      ...
+    }:
     {
       systemd.user.services.sops-nix = {
+        # Run after the graphical session is up.
+        # Default sops-nix hooks into `graphical-session-pre.target`, which can be too early
+        # for pinentry GUI prompts and also creates ordering cycles if we add extra wants.
+        Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
+
         Unit.After = [ "gpg-agent.service" ];
         Unit.Wants = [ "gpg-agent.service" ];
 
-        # If decryption fails (e.g. missing YubiKey), do not keep retrying forever.
-        # The laptop must stay usable without a smartcard.
-        Service.Restart = "no";
+        # We want PIN prompt when YubiKey is present, but we must not spam retries forever
+        # when the smartcard is missing.
+        Service.Restart = "on-failure";
+        Service.RestartSec = "5s";
 
-        # Still apply rate limiting if something external triggers restarts.
-        Service.StartLimitBurst = 2;
-        Service.StartLimitIntervalSec = "365d";
+        Unit.StartLimitBurst = 3;
+        Unit.StartLimitIntervalSec = "2min";
       };
 
       sops = {

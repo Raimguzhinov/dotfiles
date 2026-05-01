@@ -519,7 +519,26 @@
       '';
 
       # Allow fingerprint for sudo + polkit prompts (via PAM).
-      security.pam.services.sudo.fprintAuth = true;
+      # Use explicit PAM stacks to keep behavior consistent on cold start.
+      security.pam.services.sudo.fprintAuth = false;
+      security.pam.services.sudo.text = ''
+        # Account management.
+        account required ${pkgs.pam}/lib/security/pam_unix.so
+
+        # Authentication management.
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=5
+        auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
+        auth required ${pkgs.pam}/lib/security/pam_deny.so
+
+        # Password management.
+        password sufficient ${pkgs.pam}/lib/security/pam_unix.so nullok yescrypt
+
+        # Session management.
+        session required ${pkgs.pam}/lib/security/pam_env.so conffile=/etc/pam/environment readenv=0
+        session required ${pkgs.pam}/lib/security/pam_unix.so
+        session required ${pkgs.pam}/lib/security/pam_limits.so
+      '';
+
       security.pam.services.polkit-1.fprintAuth = true;
 
       services.logind.settings.Login = {
