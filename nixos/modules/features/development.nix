@@ -12,20 +12,9 @@
 
       home.activation.createWorkDir =
         let
-          shellsDir = "${config.home.homeDirectory}/dotfiles/nixos";
+          shellsDir = "${config.home.homeDirectory}/dotfiles/nixos/devshells";
           workEnvrc = pkgs.writeText "work-envrc" ''
-            count=$(find . -type s -name 'mgmt.sock' -printf . | wc -c)
-            if [ "$count" -gt 0 ]; then
-                sudo find . -type s -name 'mgmt.sock' -delete
-                echo "Cleaned up $count mgmt.sock files"
-            fi
-
-            # nix-direnv sometimes hits SQLite locks in Nix eval-cache.
-            # Disable eval-cache only for this direnv invocation.
-            export NIX_CONFIG="eval-cache = false"
-
-            use flake ${shellsDir}#go
-            use flake ${shellsDir}#python
+            use flake ${shellsDir}#work
           '';
         in
         config.lib.dag.entryAfter [ "writeBoundary" ] ''
