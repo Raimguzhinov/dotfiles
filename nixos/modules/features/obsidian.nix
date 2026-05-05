@@ -57,6 +57,56 @@
               communityPlugins = [
                 # <plugin-id> : https://github.com/obsidianmd/obsidian-releases/blob/master/community-plugins.json
                 {
+                  pkg = inputs.obsidian-plugins.packages.${system}.templater-obsidian;
+                  enable = true;
+                }
+                {
+                  pkg = inputs.obsidian-plugins.packages.${system}.omnisearch;
+                  enable = true;
+                }
+                {
+                  pkg = inputs.obsidian-plugins.packages.${system}.terminal;
+                  enable = true;
+                  settings = {
+                    addToCommand = true;
+                    addToContextMenu = true;
+                    createInstanceNearExistingOnes = true;
+                    errorNoticeTimeout = 0;
+                    exposeInternalModules = true;
+                    focusOnNewInstance = true;
+                    hideStatusBar = "focused";
+                    interceptLogging = true;
+                    language = "en";
+                    newInstanceBehavior = "newHorizontalSplit";
+                    noticeTimeout = 5;
+                    openChangelogOnUpdate = true;
+                    pinNewInstance = true;
+                    preferredRenderer = "webgl";
+                    profiles.default = {
+                      args = [ "--login" ];
+                      executable = "${pkgs.zsh}/bin/zsh";
+                      followTheme = true;
+                      name = "";
+                      platforms = {
+                        linux = true;
+                      };
+                      pythonExecutable = "${pkgs.python3}/bin/python3";
+                      restoreHistory = false;
+                      rightClickAction = "copyPaste";
+                      successExitCodes = [
+                        "0"
+                        "SIGINT"
+                        "SIGTERM"
+                      ];
+                      terminalOptions = {
+                        documentOverride = null;
+                      };
+                      type = "integrated";
+                      useWin32Conhost = false;
+                    };
+                  };
+                }
+                {
                   pkg = inputs.obsidian-plugins.packages.${system}.obsidian-excalidraw-plugin;
                   enable = true;
                   settings = {
