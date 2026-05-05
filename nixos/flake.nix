@@ -12,7 +12,6 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-utils.url = "github:numtide/flake-utils";
     import-tree.url = "github:vic/import-tree";
-    lmstudio.url = "github:Daaboulex/lmstudio-nix";
     claude-code = {
       url = "github:sadjow/claude-code-nix";
       inputs.nixpkgs.follows = "nixpkgs";

@@ -113,7 +113,6 @@
         backupFileExtension = "backup";
         sharedModules = [
           inputs.sops-nix.homeManagerModules.sops
-          inputs.lmstudio.homeManagerModules.default
         ];
         extraSpecialArgs = {
           inherit inputs;
@@ -347,16 +346,6 @@
               };
             };
 
-            programs.lmstudio = {
-              enable = true;
-              package = pkgs.lmstudio-beta;
-              server = {
-                enable = true;
-                port = 1234;
-                autostart = true;
-              };
-            };
-
             imports = [
               inputs.noctalia.homeModules.default
               inputs.nvf.homeManagerModules.default
@@ -375,6 +364,7 @@
               homeModules.zenBrowser
               homeModules.claude
               homeModules.opencode
+              homeModules.llamaCpp
               homeModules.obsidian
               homeModules.thunderbird
             ];
@@ -598,7 +588,7 @@
           # nix store prefetch-file --hash-type sha256 https://github.com/Raimguzhinov.keys
           (builtins.fetchurl {
             url = "https://github.com/Raimguzhinov.keys";
-            sha256 = "sha256-eWeyPsWYNQdiSrCZGGtTmpwhrSZztiHMDg6vgBZkGRs=";
+            sha256 = "sha256-E28I38AJMh0nynp6FCPf1WhOInZHHIe6D5GyBDyjMvA=";
           })
         ];
         extraGroups = [
