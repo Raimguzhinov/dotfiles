@@ -36,18 +36,28 @@
               apiKey = config.sops.placeholder."work_ai/litellm_api_key";
             };
             models = {
-              "Qwen/Qwen3.5-122B-A10B-FP8" = {
-                name = "Qwen3.5-122b";
-              };
-              "ПротеЯ-2.1" = {
+              "ПротеЯ-2" = {
                 name = "Protei2";
+              };
+            };
+          };
+          llamaCpp = {
+            npm = "@ai-sdk/openai-compatible";
+            name = "Local llama.cpp";
+            options = {
+              baseURL = "http://127.0.0.1:8085/v1";
+              apiKey = "local"; # OpenCode ожидает поле, но сам ключ не требуется
+            };
+            models = {
+              "qwen2.5-coder-1.5b-instruct" = {
+                name = "Qwen2.5 Coder 1.5B";
               };
             };
           };
         };
 
-        model = "protei/Qwen/Qwen3.5-122B-A10B-FP8";
-        small_model = "protei/Qwen/Qwen3.5-122B-A10B-FP8";
+        model = "protei/Protei2";
+        small_model = "opencode/big-pickle";
 
         mcp = {
           youtrack = {
