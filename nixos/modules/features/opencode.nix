@@ -36,8 +36,19 @@
               apiKey = config.sops.placeholder."work_ai/litellm_api_key";
             };
             models = {
+              "Qwen/Qwen3.5-122B-A10B-FP8" = {
+                name = "Qwen3.5-122b";
+                limit = {
+                  context = 262144;
+                  output = 8192;
+                };
+              };
               "ПротеЯ-2" = {
-                name = "Protei2";
+                name = "ПротеЯ-2";
+                limit = {
+                  context = 262144;
+                  output = 8192;
+                };
               };
             };
           };

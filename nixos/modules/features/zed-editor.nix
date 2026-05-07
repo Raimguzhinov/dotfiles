@@ -56,6 +56,7 @@
           };
           agent_servers = {
             OpenCode = {
+              type = "custom";
               command = "${pkgs.opencode}/bin/opencode";
               args = [ "acp" ];
             };
@@ -73,8 +74,8 @@
             context = "Workspace";
             bindings = {
               "ctrl-\\" = "terminal_panel::ToggleFocus";
-              cmd-b = "workspace::ToggleRightDock";
-              cmd-alt-o = [
+              ctrl-b = "workspace::ToggleRightDock";
+              ctrl-alt-o = [
                 "agent::NewExternalAgentThread"
                 {
                   agent = {
@@ -103,6 +104,12 @@
             context = "Editor && vim_mode == insert || vim_mode == visual && !menu";
             bindings = {
               "j k" = "vim::NormalBefore";
+            };
+          }
+          {
+            context = "Editor && vim_mode == insert || vim_mode == visual && !menu";
+            bindings = {
+              "о л" = null;
             };
           }
           {
