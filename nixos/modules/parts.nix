@@ -25,6 +25,10 @@
           inherit system;
           config.allowUnfree = true;
         };
+        _module.args.pkgs-jetbrains = import inputs.nixpkgs-jetbrains {
+          inherit system;
+          config.allowUnfree = true;
+        };
       };
   };
 }

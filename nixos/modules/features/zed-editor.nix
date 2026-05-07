@@ -54,6 +54,12 @@
               format_on_save = "off";
             };
           };
+          agent_servers = {
+            OpenCode = {
+              command = "${pkgs.opencode}/bin/opencode";
+              args = [ "acp" ];
+            };
+          };
           vim_mode = true;
           load_direnv = "shell_hook";
           ui_font_family = "Inter Nerd Font";
@@ -68,6 +74,20 @@
             bindings = {
               "ctrl-\\" = "terminal_panel::ToggleFocus";
               cmd-b = "workspace::ToggleRightDock";
+              cmd-alt-o = [
+                "agent::NewExternalAgentThread"
+                {
+                  agent = {
+                    custom = {
+                      name = "OpenCode";
+                      command = {
+                        command = "opencode";
+                        args = [ "acp" ];
+                      };
+                    };
+                  };
+                }
+              ];
             };
           }
           {

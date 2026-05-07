@@ -264,6 +264,7 @@
         recommendedProxySettings = true;
         recommendedTlsSettings = true;
         virtualHosts = {
+<<<<<<< Updated upstream
           # Router handles TLS/auth; nginx on the ThinkPad serves plain HTTP.
           # Configure the router to proxy https://matrix.nixos.netcraze.pro -> http://<thinkpad>:80
           "${serverName}" = {
@@ -286,6 +287,15 @@
               auth_basic "Matrix admin";
               auth_basic_user_file /var/lib/nginx/matrix.htpasswd;
               return 404;
+=======
+          "example.com" = {
+            # TODO
+            forceSSL = true;
+            enableACME = true;
+            locations."= /.well-known/matrix/server".extraConfig = ''
+              add_header Content-Type application/json;
+              return 200 '{"m.server":"matrix.example.com:443"}';
+>>>>>>> Stashed changes
             '';
 
             # Synapse admin UI should never be world-accessible.
@@ -293,7 +303,17 @@
               auth_basic "Synapse admin";
               auth_basic_user_file /var/lib/nginx/matrix.htpasswd;
             '';
+<<<<<<< Updated upstream
             locations."/_synapse/admin".proxyPass = "http://127.0.0.1:8008";
+=======
+          };
+          "matrix.example.com" = {
+            # TODO
+            forceSSL = true;
+            enableACME = true;
+            locations."/".proxyPass = "http://127.0.0.1:8008";
+            locations."/".extraConfig = "client_max_body_size 50M;";
+>>>>>>> Stashed changes
           };
         };
       };

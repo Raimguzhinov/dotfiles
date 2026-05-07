@@ -117,6 +117,10 @@
         extraSpecialArgs = {
           inherit inputs;
           inherit pkgs-unstable;
+          pkgs-jetbrains = import inputs.nixpkgs-jetbrains {
+            system = pkgs.stdenv.hostPlatform.system;
+            config.allowUnfree = true;
+          };
           inherit username;
         };
         users.root =
@@ -143,7 +147,6 @@
             home.packages =
               (with pkgs-unstable; [
                 telegram-desktop
-                amnezia-vpn
               ])
               ++ (with pkgs; [
                 alacritty
@@ -570,6 +573,7 @@
       # For global user
       users.defaultUserShell = pkgs.zsh;
       programs = {
+        amnezia-vpn.enable = true;
         localsend.enable = true;
         nm-applet.enable = true;
         partition-manager.enable = true;
@@ -656,12 +660,6 @@
       programs.appimage = {
         enable = true;
         binfmt = true;
-      };
-
-      # Amnezia
-      programs.amnezia-vpn = {
-        enable = true;
-        package = pkgs-unstable.amnezia-vpn;
       };
 
       # Some programs need SUID wrappers, can be configured further or are
@@ -835,6 +833,7 @@
           docker-compose
           docker-init
           dysk # df → dysk
+          fastfetch
           ffmpeg
           file-roller
           firefoxpwa

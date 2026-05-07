@@ -55,7 +55,9 @@ let
           wl = base.override { vmopts = commonVmopts xmx + jaAgent "WLToolkit"; };
           x11 = base.override { vmopts = commonVmopts xmx + jaAgent "XToolkit"; };
         in
-        { inherit auto wl x11; };
+        {
+          inherit auto wl x11;
+        };
 
       golandPkgs = mkIde pkgs-unstable.jetbrains.goland "4096m";
       pycharmPkgs = mkIde pkgs-unstable.jetbrains.pycharm "4096m";
@@ -96,15 +98,15 @@ let
 in
 {
   perSystem =
-    { pkgs, pkgs-unstable, ... }:
+    { pkgs, pkgs-jetbrains, ... }:
     {
-      packages = makeJetbrainsPkgs pkgs pkgs-unstable;
+      packages = makeJetbrainsPkgs pkgs pkgs-jetbrains;
     };
 
   flake.homeModules.jetbrains =
-    { pkgs, pkgs-unstable, ... }:
+    { pkgs, pkgs-jetbrains, ... }:
     let
-      jbPkgs = makeJetbrainsPkgs pkgs pkgs-unstable;
+      jbPkgs = makeJetbrainsPkgs pkgs pkgs-jetbrains;
     in
     {
       home.packages = [

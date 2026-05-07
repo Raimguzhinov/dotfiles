@@ -56,7 +56,7 @@
           };
         };
 
-        model = "protei/Protei2";
+        model = "opencode-go/deepseek-v4-pro";
         small_model = "opencode/big-pickle";
 
         mcp = {
@@ -67,6 +67,16 @@
             headers = {
               youtrack_token = config.sops.placeholder."youtrack/token";
             };
+          };
+          context7 = {
+            type = "remote";
+            url = "https://mcp.context7.com/mcp";
+            enabled = true;
+          };
+          gh_grep = {
+            type = "remote";
+            url = "https://mcp.grep.app";
+            enabled = true;
           };
         };
 

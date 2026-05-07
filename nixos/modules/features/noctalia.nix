@@ -32,6 +32,30 @@
                 {
                   id = "Bluetooth";
                 }
+                {
+                  id = "plugin:zed-provider";
+                }
+                {
+                  id = "plugin:model-usage";
+                  defaultSettings = {
+                    barCycleIntervalSec = 15;
+                    barDisplayMode = "active";
+                    barMetric = "prompts";
+                    providers = {
+                      claude = {
+                        enabled = true;
+                        statsPath = "~/.claude/stats-cache.json";
+                        credentialsPath = "~/.claude/.credentials.json";
+                      };
+                      codex.enabled = true;
+                      zen = {
+                        apiKey = "";
+                        enabled = false;
+                      };
+                    };
+                    refreshIntervalSec = 30;
+                  };
+                }
               ];
               center = [
                 {
@@ -63,9 +87,9 @@
                   showNoctaliaPerformance = true;
                 }
                 {
+                  id = "Clock";
                   formatHorizontal = "HH:mm";
                   formatVertical = "HH mm";
-                  id = "Clock";
                   useCustomFont = true;
                   customFont = "Inter Nerd Font Display Black";
                 }
@@ -81,6 +105,18 @@
                     "Telegram Desktop"
                     "spotify-client"
                   ];
+                }
+                {
+                  id = "plugin:usb-drive-manager";
+                  defaultSettings = {
+                    autoMount = true;
+                    fileBrowser = "${pkgs.yazi}/bin/yazi";
+                    hideWhenEmpty = true;
+                    iconColor = "none";
+                    showBadge = false;
+                    showNotifications = true;
+                    terminalCommand = "${pkgs.alacritty}/bin/alacritty";
+                  };
                 }
               ];
             };
@@ -119,6 +155,46 @@
           };
           dock = {
             enabled = false;
+          };
+          controlCenter = {
+            position = "close_to_bar_button";
+            diskPath = "/";
+            shortcuts = {
+              left = [
+                {
+                  id = "Network";
+                }
+                {
+                  id = "Bluetooth";
+                }
+                {
+                  id = "WallpaperSelector";
+                }
+                {
+                  id = "NoctaliaPerformance";
+                }
+                {
+                  id = "AirplaneMode";
+                }
+              ];
+              right = [
+                {
+                  id = "Notifications";
+                }
+                {
+                  id = "PowerProfile";
+                }
+                {
+                  id = "KeepAwake";
+                }
+                {
+                  id = "NightLight";
+                }
+                {
+                  id = "DarkMode";
+                }
+              ];
+            };
           };
           appLauncher = {
             enableClipboardHistory = true;
@@ -160,11 +236,19 @@
                 enabled = true;
                 sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
               };
+              model-usage = {
+                enabled = true;
+                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+              };
               sticky-notes = {
                 enabled = true;
                 sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
               };
               screen-recorder = {
+                enabled = true;
+                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+              };
+              usb-drive-manager = {
                 enabled = true;
                 sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
               };
