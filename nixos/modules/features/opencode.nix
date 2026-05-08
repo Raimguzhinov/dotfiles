@@ -69,6 +69,7 @@
 
         model = "opencode-go/deepseek-v4-pro";
         small_model = "opencode/big-pickle";
+        log_level = "ERROR";
 
         mcp = {
           youtrack = {
