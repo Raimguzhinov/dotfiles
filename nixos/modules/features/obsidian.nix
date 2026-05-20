@@ -51,7 +51,9 @@
             settings = {
               app = {
                 alwaysUpdateLinks = true;
-                newFileLocation = "current";
+                showUnsupportedFiles = true;
+                newFileLocation = "folder";
+                newFileFolderPath = "raw";
                 attachmentFolderPath = "raw/assets";
               };
               communityPlugins = [
@@ -61,8 +63,46 @@
                   enable = true;
                 }
                 {
+                  pkg = inputs.obsidian-plugins.packages.${system}.table-editor-obsidian;
+                  enable = true;
+                }
+                {
+                  pkg = inputs.obsidian-plugins.packages.${system}.dataview;
+                  enable = true;
+                }
+                {
                   pkg = inputs.obsidian-plugins.packages.${system}.omnisearch;
                   enable = true;
+                }
+                {
+                  pkg = inputs.obsidian-plugins.packages.${system}.obsidian-git;
+                  enable = true;
+                }
+                {
+                  pkg = inputs.obsidian-plugins.packages.${system}.obsidian-plantuml;
+                  enable = true;
+                }
+                {
+                  pkg = inputs.obsidian-plugins.packages.${system}.typst;
+                  enable = true;
+                  settings = {
+                    format = "image";
+                    noFill = true;
+                    fill = "#ffffff";
+                    pixel_per_pt = 3;
+                    search_system = false;
+                    override_math = false;
+                    font_families = [ ];
+                    preamable = {
+                      shared = "#set text(fill: white, size: SIZE)
+#set page(width: WIDTH, height: HEIGHT)";
+                      math = "#set page(margin: 0pt)
+#set align(horizon)";
+                      code = "#set page(margin: (y: 1em, x: 0pt))";
+                    };
+                    plugin_version = "0.10.0";
+                    autoDownloadPackages = true;
+                  };
                 }
                 {
                   pkg = inputs.obsidian-plugins.packages.${system}.terminal;

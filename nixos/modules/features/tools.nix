@@ -24,6 +24,21 @@
             awk 'found && /^---/{exit} /^## После первой загрузки/{found=1} found' ~/dotfiles/README.md | glow -
           fi
 
+          drestart() {
+            docker restart "$@"
+          }
+
+          _drestart() {
+            words=(docker restart "''
+        + "$"
+        + ''
+          {words[@]:1}")
+                      CURRENT=$((CURRENT + 1))
+                      _docker
+                    }
+
+                    compdef _drestart drestart
+
         '';
         oh-my-zsh = {
           enable = true;

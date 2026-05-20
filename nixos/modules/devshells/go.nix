@@ -61,6 +61,7 @@
           gopls
           gotestsum
           libwebp
+          libxml2
           nodejs_20
           pkg-config
           pkgs-go21.go_1_21

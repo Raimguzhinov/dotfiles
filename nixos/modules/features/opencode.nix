@@ -1,9 +1,9 @@
 { ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs-unstable, ... }:
     {
-      packages.opencode = pkgs.opencode;
+      packages.opencode = pkgs-unstable.opencode;
     };
 
   flake.homeModules.opencode =
@@ -11,6 +11,7 @@
       config,
       lib,
       pkgs,
+      pkgs-unstable,
       ...
     }:
 
@@ -43,7 +44,7 @@
                   output = 8192;
                 };
               };
-              "ПротеЯ-2" = {
+              "agent_proteya" = {
                 name = "ПротеЯ-2";
                 limit = {
                   context = 262144;
@@ -56,7 +57,7 @@
             npm = "@ai-sdk/openai-compatible";
             name = "Local llama.cpp";
             options = {
-              baseURL = "http://127.0.0.1:8085/v1";
+              baseURL = "http://localhost:8085/v1";
               apiKey = "local"; # OpenCode ожидает поле, но сам ключ не требуется
             };
             models = {
@@ -69,7 +70,6 @@
 
         model = "opencode-go/deepseek-v4-pro";
         small_model = "opencode/big-pickle";
-        log_level = "ERROR";
 
         mcp = {
           youtrack = {
@@ -90,6 +90,22 @@
             url = "https://mcp.grep.app";
             enabled = true;
           };
+          rag = {
+            type = "local";
+            command = [
+              "uv"
+              "run"
+              "--directory"
+              "${config.home.homeDirectory}/Work/lightrag-mcp"
+              "lightrag-mcp"
+            ];
+            enabled = true;
+            environment = {
+              LIGHTRAG_BASE_URL = "http://localhost:9621";
+              LIGHTRAG_TIMEOUT = "60";
+              LIGHTRAG_VERIFY_SSL = "False";
+            };
+          };
         };
 
         permission = {
@@ -105,6 +121,8 @@
       opencodeConfigRawJson = builtins.toJSON (
         {
           "$schema" = "https://opencode.ai/config.json";
+          share = "disabled";
+          plugin = [ config.services.meridian.opencode.pluginPath ];
         }
         // opencodeSettings
       );
@@ -137,9 +155,24 @@
       };
 
       config = {
+        services.meridian = {
+          enable = true;
+          settings = {
+            port = 3456;
+            host = "127.0.0.1";
+            # passthrough = true;
+            # defaultAgent = "opencode";
+            # sonnetModel = "sonnet";
+          };
+          # Extra env vars not covered by settings
+          # environment = {
+          #   MERIDIAN_MAX_CONCURRENT = "20";
+          # };
+        };
+
         programs.opencode = {
           enable = true;
-          package = pkgs.opencode;
+          package = pkgs-unstable.opencode;
           enableMcpIntegration = true;
           settings = opencodeSettings;
 

@@ -455,15 +455,11 @@
             # Search addons:
             # nix run github:osipog/nix-firefox-addons#search-addon ublock
             extensions.packages = with pkgs.firefoxAddons; [
-              cookies-txt
-              duckduckgo-for-firefox
               gopass-bridge
-              gsconnect
               nighttab
               privacy-badger17
               sponsorblock
               tampermonkey
-              traduzir-paginas-web
               ublock-origin
               vimium-ff
               web-clipper-obsidian

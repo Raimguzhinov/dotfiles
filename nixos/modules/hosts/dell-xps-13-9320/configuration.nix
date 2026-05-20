@@ -353,6 +353,7 @@
               inputs.noctalia.homeModules.default
               inputs.nvf.homeManagerModules.default
               inputs.zen-browser.homeModules.beta
+              inputs.meridian.homeManagerModules.default
               homeModules.chromium
               homeModules.sops
               homeModules.development
@@ -867,6 +868,7 @@
           loupe # image viewer
           lsof
           nettools
+          nix-ld
           nixfmt-rfc-style
           nurl # nix fetcher
           nwg-drawer
@@ -886,6 +888,7 @@
           tlrc
           transmission_4-gtk
           unzip
+          uv
           v4l-utils
           vulkan-loader
           wget
