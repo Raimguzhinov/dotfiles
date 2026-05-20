@@ -68,6 +68,85 @@
       hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
       hardware.enableAllFirmware = true;
 
+      # Persist ALSA mixer state.
+      # XPS 9320 SoundWire (rt714) often comes back from S4 with reset controls;
+      # restoring the saved ALSA state is a safer fix than PCI unbind/bind.
+      hardware.alsa.enablePersistence = true;
+
+      # NixOS' alsa-store fails hard if the state file doesn't exist yet.
+      # Create it once at boot to allow subsequent restore/store cycles.
+      systemd.services.xps-alsa-bootstrap-state = {
+        description = "XPS 9320: bootstrap /var/lib/alsa/asound.state";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "sound.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 20;
+        };
+        script = ''
+          set -eu
+          mkdir -p /var/lib/alsa
+          if [ ! -e /var/lib/alsa/asound.state ]; then
+            : > /var/lib/alsa/asound.state
+          fi
+          # Best-effort: capture current defaults so alsa-store restore has something real.
+          ${pkgs.alsa-utils}/bin/alsactl store -gU 2>/dev/null || true
+        '';
+      };
+
+      # XPS 9320: rt714 capture routing sometimes comes up wrong (e.g. MIC1 + PGA off),
+      # which results in silence/white-noise in all apps. Force the known-good route.
+      # This is intentionally minimal: no PCI unbind/bind and no PipeWire restarts.
+      systemd.services.xps-mic-route = {
+        description = "XPS 9320: force rt714 mic routing";
+        wantedBy = [
+          "multi-user.target"
+          "post-resume.target"
+        ];
+        after = [
+          "sound.target"
+          "post-resume.service"
+        ];
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 30;
+        };
+        script = ''
+          set -eu
+
+          # Workaround: ALSA can fail hard if /var/lib/alsa/card0.conf.d/ctl-remap.conf
+          # exists as a stale symlink into a GC'd /nix/store path.
+          mkdir -p /var/lib/alsa/card0.conf.d
+          if [ -L /var/lib/alsa/card0.conf.d/ctl-remap.conf ] && [ ! -e /var/lib/alsa/card0.conf.d/ctl-remap.conf ]; then
+            rm -f /var/lib/alsa/card0.conf.d/ctl-remap.conf
+          fi
+          if [ ! -e /var/lib/alsa/card0.conf.d/ctl-remap.conf ]; then
+            : > /var/lib/alsa/card0.conf.d/ctl-remap.conf
+          fi
+
+          # Wait for card 0 to become available (SOF firmware load can take a few seconds)
+          for i in $(${pkgs.coreutils}/bin/seq 1 30); do
+            ${pkgs.alsa-utils}/bin/amixer -c 0 info &>/dev/null && break
+            ${pkgs.coreutils}/bin/sleep 0.5
+          done
+
+          # Disable SoundWire device power management
+          for dev in /sys/bus/soundwire/devices/*/power/control; do
+            echo on > "$dev" || true
+          done
+
+          # Route ADC 22 to DMIC1 and enable capture path.
+          ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1' || true
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on' || true
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
+          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
+
+          # Persist so the next boot/resume starts closer to a good state.
+          ${pkgs.alsa-utils}/bin/alsactl store -gU 2>/dev/null || true
+        '';
+      };
+
       # IPU6EP webcam — modern approach: hardware.ipu6 + libcamera, no icamerasrc
       hardware.ipu6 = {
         enable = true;
@@ -87,7 +166,6 @@
       boot.kernelModules = [
         "kvm-intel"
         "dell-privacy"
-        "v4l2loopback"
       ];
       boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback ];
       # Legacy support: loopback device for apps that can't use PipeWire portal (OBS, ffplay, etc.)
@@ -167,6 +245,10 @@
           KillMode = "control-group";
           TimeoutStopSec = 5;
           ExecStartPre = pkgs.writeShellScript "camera-bridge-pre" ''
+            # Ensure the loopback node exists (this module is not auto-loaded).
+            # `video_nr=40` is configured via `boot.extraModprobeConfig` above.
+            ${pkgs.kmod}/bin/modprobe v4l2loopback 2>/dev/null || true
+
             attempt=0
             while [ $attempt -lt 30 ]; do
               if [ -L /dev/camera-active ] && [ -e /dev/camera-active ]; then
@@ -222,10 +304,10 @@
         '';
       };
 
-      # Camera recover experiment (post-resume): tries to disprove/confirm the hypothesis
-      # that the IPU6/IVSC camera stack cannot recover after S4. This is best-effort only.
-      # Enable/disable by commenting out this service if it causes issues.
+      # Camera recover experiment (post-resume): unloading/reloading camera modules on resume
+      # is risky and can destabilize the kernel after S4. Keep it off by default.
       systemd.services.xps-camera-recover = {
+        enable = lib.mkDefault false;
         description = "XPS 9320: best-effort camera recover after resume";
         wantedBy = [ "post-resume.target" ];
         after = [
@@ -283,85 +365,23 @@
         '';
       };
 
-      # Восстановление звука и микрофона (SoundWire rt714) после S4-гибернации.
-      # Rebind перезагружает DSP firmware SOF и заново перечисляет кодек rt714.
-      # Камера (IVSC/ov01a10) после S4 часто не восстанавливается по наблюдениям.
-      # Это гипотеза, а не 100% факт: см. xps-camera-recover для перепроверки.
-      powerManagement.resumeCommands = ''
-        echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/unbind || true
-        ${pkgs.coreutils}/bin/sleep 1
-        echo "0000:00:1f.3" > /sys/bus/pci/drivers/sof-audio-pci-intel-tgl/bind || true
-        # amixer -c 0 info готов раньше PCM-устройств SoundWire — ждём именно их,
-        # иначе wireplumber стартует до появления hw:sofsoundwire,Np и не видит динамик.
-        for i in $(${pkgs.coreutils}/bin/seq 1 120); do
-          ${pkgs.alsa-utils}/bin/aplay -l 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "sofsoundwire" && break
-          ${pkgs.coreutils}/bin/sleep 0.5
-        done
-        # Восстанавливаем маршрутизацию rt714 — сбрасывается при rebind.
-        for dev in /sys/bus/soundwire/devices/*/power/control; do
-          echo on > "$dev" || true
-        done
-        ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1' || true
-        ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on' || true
-        ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
-        ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
-        ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
-        # pipewire НЕ перезапускаем: его рестарт рвёт PulseAudio-сессию Chromium,
-        # audio service не переподключается и теряет звук до перезапуска браузера.
-        # wireplumber перерегистрирует ALSA-узлы в PipeWire-графе после rebind.
-        # Ждём появления sink, затем перезапускаем pipewire-pulse — это закрывает
-        # стухшую PA-сессию и Chromium переподключается к живому сокету.
-        ${pkgs.systemd}/bin/loginctl list-users --no-legend | ${pkgs.gawk}/bin/awk '{print $2}' | while read -r user; do
-          uid=$(${pkgs.coreutils}/bin/id -u "$user" 2>/dev/null) || continue
-          ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart wireplumber.service 2>/dev/null || true
-          for i in $(${pkgs.coreutils}/bin/seq 1 60); do
-            XDG_RUNTIME_DIR=/run/user/$uid \
-              ${pkgs.pulseaudio}/bin/pactl list sinks short 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q . && break
-            ${pkgs.coreutils}/bin/sleep 0.5
-          done
-          ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart pipewire-pulse.service 2>/dev/null || true
-        done
-      '';
-
-      # SoundWire microphone fix — CyberT3C approach (rt714 codec, XPS 13 Plus 9320)
-      systemd.services.xps-mic-fix = {
-        after = [ "sound.target" ];
-        wantedBy = [ "multi-user.target" ];
+      # Post-resume: restore ALSA state after S4.
+      # This fixes the common case where SoundWire capture controls reset on resume.
+      systemd.services.xps-alsa-restore-post-resume = {
+        description = "XPS 9320: restore ALSA state after resume";
+        wantedBy = [ "post-resume.target" ];
+        after = [ "post-resume.service" ];
         serviceConfig = {
           Type = "oneshot";
-          RemainAfterExit = true;
+          TimeoutStartSec = 20;
         };
         script = ''
-          # Workaround: ALSA can fail hard if /var/lib/alsa/card0.conf.d/ctl-remap.conf
-          # exists as a stale symlink into a GC'd /nix/store path.
-          mkdir -p /var/lib/alsa/card0.conf.d
-          if [ -L /var/lib/alsa/card0.conf.d/ctl-remap.conf ] && [ ! -e /var/lib/alsa/card0.conf.d/ctl-remap.conf ]; then
-            rm -f /var/lib/alsa/card0.conf.d/ctl-remap.conf
-          fi
-          if [ ! -e /var/lib/alsa/card0.conf.d/ctl-remap.conf ]; then
-            : > /var/lib/alsa/card0.conf.d/ctl-remap.conf
-          fi
-
-          # Wait for card 0 to become available (SOF firmware load can take a few seconds)
-          for i in $(seq 1 30); do
-            ${pkgs.alsa-utils}/bin/amixer -c 0 info &>/dev/null && break
-            ${pkgs.coreutils}/bin/sleep 0.5
-          done
-
-          # Disable SoundWire device power management
-          for dev in /sys/bus/soundwire/devices/*/power/control; do
-            echo on > "$dev" || true
-          done
-
-          # Route ADC 22 to DMIC1
-          ${pkgs.alsa-utils}/bin/amixer -c 0 set 'rt714 ADC 22 Mux' 'DMIC1' || true
-          # Enable capture path (PGA5.0 + FU02, used by UCM)
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='PGA5.0 5 Master Capture Switch' 'on,on' || true
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Switch' 'on' || true
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU02 Capture Volume' '70' || true
-          # Set boost
-          ${pkgs.alsa-utils}/bin/amixer -c 0 cset name='rt714 FU0C Boost' '0' || true
+          set -eu
+          ${pkgs.alsa-utils}/bin/alsactl restore -gU || true
         '';
       };
+
+      # Old approach: force-routing with amixer at boot.
+      # Keeping it removed in favor of alsactl restore (persistence + post-resume restore).
     };
 }

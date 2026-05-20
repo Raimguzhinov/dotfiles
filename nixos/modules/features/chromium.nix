@@ -8,7 +8,8 @@
         package = pkgs.chromium;
         commandLineArgs = [
           # Use PipeWire camera portal (xdg-desktop-portal) instead of V4L2
-          "--enable-features=WebRtcPipeWireCapturer"
+          # Keep spelling consistent with upstream/nixpkgs usage.
+          "--enable-features=WebRTCPipeWireCapturer"
         ];
         extensions = [
           { id = "lmeddoobegbaiopohmpmmobpnpjifpii"; } # Open in Firefox™ Browser
