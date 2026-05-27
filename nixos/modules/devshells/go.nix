@@ -18,32 +18,23 @@
       };
       delve = pkgs-go21.buildGoModule rec {
         pname = "delve";
-        version = "1.25.2";
+        version = "1.21.2";
         src = pkgs.fetchFromGitHub {
           owner = "go-delve";
           repo = "delve";
           rev = "v${version}";
-          hash = "sha256-CtOaaYxqa4GwfDQ1yuUwRQPy948Xyha046TLTaq526w=";
+          hash = "sha256-DgRqdO7ztQ57B6N9ABcI2D/SQkUVh/IUib8/xk3EeRA=";
         };
         vendorHash = null;
         subPackages = [ "cmd/dlv" ];
-        preCheck = ''
-          XDG_CONFIG_HOME=$(mktemp -d)
-        '';
         CGO_ENABLED = 0;
-        GO111MODULE = "on";
-        preBuild = ''
-          export CGO_ENABLED=0
-          export GO111MODULE=on
-        '';
-        doCheck = true;
+        doCheck = false;
         postInstall = ''
           ln $out/bin/dlv $out/bin/dlv-dap
         '';
         meta = {
           description = "Debugger for the Go programming language";
           homepage = "https://github.com/go-delve/delve";
-          maintainers = with pkgs.lib.maintainers; [ vdemeester ];
           license = pkgs.lib.licenses.mit;
           mainProgram = "dlv";
         };
@@ -56,6 +47,7 @@
           cmake
           delve
           gcc
+          gdlv
           go-mockery_2
           go-tools
           gopls

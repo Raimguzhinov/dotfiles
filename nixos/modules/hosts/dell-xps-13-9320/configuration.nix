@@ -844,6 +844,7 @@
           gitlab-ci-local
           glab
           glow
+          gdlv
           gnome-settings-daemon
           gnumake
           gnupg

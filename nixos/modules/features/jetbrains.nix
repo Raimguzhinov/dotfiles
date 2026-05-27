@@ -1,7 +1,7 @@
 { ... }:
 let
   makeJetbrainsPkgs =
-    pkgs: pkgs-unstable:
+    pkgs: pkgs-unstable: jdk:
 
     let
       # tar c -C nixos/modules/features jetbrains-agent/ | xz -9 | base64 -w76 > nixos/modules/features/jetbrains-agent.b64
@@ -51,9 +51,9 @@ let
       mkIde =
         base: xmx:
         let
-          auto = base.override { vmopts = commonVmopts xmx + jaAgent "auto"; };
-          wl = base.override { vmopts = commonVmopts xmx + jaAgent "WLToolkit"; };
-          x11 = base.override { vmopts = commonVmopts xmx + jaAgent "XToolkit"; };
+          auto = base.override { vmopts = commonVmopts xmx + jaAgent "auto"; inherit jdk; };
+          wl = base.override { vmopts = commonVmopts xmx + jaAgent "WLToolkit"; inherit jdk; };
+          x11 = base.override { vmopts = commonVmopts xmx + jaAgent "XToolkit"; inherit jdk; };
         in
         {
           inherit auto wl x11;
@@ -98,15 +98,15 @@ let
 in
 {
   perSystem =
-    { pkgs, pkgs-jetbrains, ... }:
+    { pkgs, pkgs-jetbrains, pkgs-unstable, ... }:
     {
-      packages = makeJetbrainsPkgs pkgs pkgs-jetbrains;
+      packages = makeJetbrainsPkgs pkgs pkgs-jetbrains pkgs-unstable.jetbrains.jdk-21;
     };
 
   flake.homeModules.jetbrains =
-    { pkgs, pkgs-jetbrains, ... }:
+    { pkgs, pkgs-jetbrains, pkgs-unstable, ... }:
     let
-      jbPkgs = makeJetbrainsPkgs pkgs pkgs-jetbrains;
+      jbPkgs = makeJetbrainsPkgs pkgs pkgs-jetbrains pkgs-unstable.jetbrains.jdk-21;
     in
     {
       home.packages = [

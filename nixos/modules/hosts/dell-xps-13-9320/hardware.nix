@@ -280,6 +280,45 @@
         };
       };
 
+      # Post-resume: rebind the IPU6 PCI device so the kernel driver re-probes
+      # and rebuilds the media/V4L2 graph.  Same pattern as the SOF audio rebind
+      # fix above (powerManagement.resumeCommands), which works reliably for S4.
+      # After rebind, restart camera-setup to recreate /dev/camera-active and
+      # camera-bridge so libcamerasrc gets a fresh pipeline.
+      systemd.services.xps-camera-post-resume = {
+        description = "XPS 9320: rebind IPU6 + restart camera after resume";
+        wantedBy = [ "post-resume.target" ];
+        after = [ "post-resume.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 30;
+        };
+        script = ''
+          set -eu
+
+          # Stop the bridge so nothing is holding /dev/video* nodes.
+          ${pkgs.systemd}/bin/systemctl stop camera-bridge.service 2>/dev/null || true
+
+          # Find the IPU6 PCI device and rebind its driver.
+          for addr in /sys/bus/pci/devices/0000:00:05.0; do
+            [ -d "$addr" ] || continue
+            drv=$(readlink -f "$addr/driver" 2>/dev/null || true)
+            drvname=''${drv##*/}
+            [ -n "$drvname" ] || continue
+            echo "Rebinding PCI device ''${addr##*/} from driver $drvname"
+            echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/unbind || true
+            sleep 1
+            echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/bind || true
+          done
+
+          sleep 2
+
+          # Recreate /dev/camera-active and restart the bridge.
+          ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
+          ${pkgs.systemd}/bin/systemctl restart camera-bridge.service 2>/dev/null || true
+        '';
+      };
+
       # Post-resume: restart fprintd + polkit agent to reduce race conditions.
       # This is especially helpful after hibernate/suspend where devices or D-Bus
       # activations may behave inconsistently.

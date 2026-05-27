@@ -9,6 +9,7 @@
   flake.homeModules.opencode =
     {
       config,
+      inputs ? null,
       lib,
       pkgs,
       pkgs-unstable,
@@ -24,11 +25,22 @@
 
       cfg = config.programs.opencode;
 
+      # Use the real Claude Code binary for auth status checks.
+      # NOTE: the HM-generated `claude` wrapper injects `--mcp-config` and (today)
+      # breaks `claude auth status` because it doesn't separate flags from args.
+      claudeForMeridian = "${pkgs.claude-code}/bin/claude";
+
       opencodeConfigDir = "${config.xdg.configHome}/opencode";
       toolkitRepoUrl = "ssh://git@git.protei.ru/qa-stuff/llm-toolkit.git";
 
       opencodeSettings = {
         provider = {
+          anthropic = {
+            options = {
+              baseURL = "http://127.0.0.1:3456/v1";
+              apiKey = "x";
+            };
+          };
           protei = {
             npm = "@ai-sdk/openai-compatible";
             name = "Protei";
@@ -136,6 +148,38 @@
           '';
 
       opencodeConfigJson = builtins.readFile opencodeConfigPrettyJsonFile;
+
+      # meridian 1.42.1 ships a dist file with a duplicate ESM export
+      # ("stopBackgroundRefresh"), which crashes Node during module parsing.
+      #
+      # If you touch this file, consider re-checking the upstream meridian version
+      # via `gh_grep` (repo: rynfar/meridian). If upstream is > 1.42.1, propose
+      # updating first: the issue may already be fixed there.
+      meridianPkgPatched =
+        if inputs != null && inputs ? meridian then
+          inputs.meridian.packages.${pkgs.system}.meridian.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
+
+            postInstall = (old.postInstall or "") + ''
+              for f in "$out"/lib/meridian/dist/tokenRefresh-*.js; do
+                if [ -f "$f" ]; then
+                  substituteInPlace "$f" \
+                    --replace-fail \
+                    'export { withClaudeLogContext, claudeLog, createPlatformCredentialStore, refreshOAuthToken, ensureFreshToken, startBackgroundRefresh, stopBackgroundRefresh };' \
+                    'export { withClaudeLogContext, claudeLog };'
+                fi
+              done
+
+            '';
+
+            postFixup = (old.postFixup or "") + ''
+              # Ensure `meridian` works when launched from a shell too.
+              wrapProgram "$out/bin/meridian" \
+                --set MERIDIAN_CLAUDE_PATH "${claudeForMeridian}"
+            '';
+          })
+        else
+          null;
     in
     {
       # Home Manager module (pinned in this flake) already provides
@@ -157,6 +201,17 @@
       config = {
         services.meridian = {
           enable = true;
+
+          # HOW IT WORKS
+          #
+          # +---------------------------+     +---------------------------+     +------------------------------+     +---------------------------+
+          # | (1) Your tools            |     | (2) Meridian              |     | (3) Claude Code SDK          |     | (4) Claude                |
+          # | OpenCode, Cline, ...      | --> | localhost:3456            | --> | @anthropic-ai/claude-code    | --> | api.anthropic.com         |
+          # | Anthropic API format      | <-- | Local proxy server        | <-- | Handles auth + sessions      | <-- | stream                    |
+          # +---------------------------+     +---------------------------+     +------------------------------+     +---------------------------+
+          #
+          # Note: No API keys needed. Auth uses your existing Claude Code login / Max subscription.
+
           settings = {
             port = 3456;
             host = "127.0.0.1";
@@ -165,9 +220,14 @@
             # sonnetModel = "sonnet";
           };
           # Extra env vars not covered by settings
-          # environment = {
-          #   MERIDIAN_MAX_CONCURRENT = "20";
-          # };
+          environment = {
+            # Meridian does not search PATH for `claude`; point it explicitly.
+            MERIDIAN_CLAUDE_PATH = claudeForMeridian;
+            # MERIDIAN_MAX_CONCURRENT = "20";
+          };
+        }
+        // lib.optionalAttrs (meridianPkgPatched != null) {
+          package = meridianPkgPatched;
         };
 
         programs.opencode = {
