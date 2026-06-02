@@ -41,7 +41,15 @@
           "flakes"
         ];
         auto-optimise-store = true;
+        # При недоступности кэша — сборка из исходников
+        fallback = true;
+        # Таймауты для проблемного интернета
+        connect-timeout = 10;
+        stalled-download-timeout = 60;
+        download-attempts = 3;
         substituters = [
+          "https://mirror.yandex.ru/nixos"
+          "https://mirrors.ustc.edu.cn/nix-channels/store"
           "https://cache.nixos.org"
           "https://niri.cachix.org"
           "https://notashelf.cachix.org"
@@ -95,7 +103,7 @@
       };
 
       # Niri
-      niri-flake.cache.enable = true;
+      niri-flake.cache.enable = false;
       programs.niri.enable = true;
       hardware.graphics = {
         enable = true;
@@ -279,46 +287,41 @@
               '';
             };
 
-            programs.foot = {
+            programs.kitty = {
               enable = true;
-              server.enable = true;
+              package = pkgs-unstable.kitty;
+              font = {
+                name = "JetBrainsMono Nerd Font";
+                size = 10.5;
+              };
               settings = {
-                main = {
-                  term = "foot";
-                  shell = "${pkgs.zsh}/bin/zsh";
-                  login-shell = "no";
-                  app-id = "foot";
-                  title = "Terminal";
-                  locked-title = "no";
-                  font = "JetBrainsMono Nerd Font:size=10.5";
-                  dpi-aware = "no";
-                  bold-text-in-bright = "yes";
-                  selection-target = "primary";
-                };
-                csd.preferred = "none";
-                scrollback.lines = 10000;
-                key-bindings.clipboard-copy = "Control+c XF86Copy";
-                colors = {
-                  alpha = 1.0;
-                  foreground = "ffffff";
-                  background = "181818";
-                  regular0 = "181818";
-                  regular1 = "f62b5a";
-                  regular2 = "47b413";
-                  regular3 = "e3c401";
-                  regular4 = "24acd4";
-                  regular5 = "f2affd";
-                  regular6 = "13c299";
-                  regular7 = "e6e6e6";
-                  bright0 = "616161";
-                  bright1 = "ff4d51";
-                  bright2 = "35d450";
-                  bright3 = "e9e836";
-                  bright4 = "5dc5f8";
-                  bright5 = "feabf2";
-                  bright6 = "24dfc4";
-                  bright7 = "ffffff";
-                };
+                enable_audio_bell = "no";
+                visual_bell_duration = "0.0";
+                window_alert_on_bell = "no";
+                shell = "${pkgs.zsh}/bin/zsh";
+                scrollback_lines = 10000;
+                bold_is_bright = "yes";
+                background = "#181818";
+                foreground = "#ffffff";
+                color0 = "#181818";
+                color1 = "#f62b5a";
+                color2 = "#47b413";
+                color3 = "#e3c401";
+                color4 = "#24acd4";
+                color5 = "#f2affd";
+                color6 = "#13c299";
+                color7 = "#e6e6e6";
+                color8 = "#616161";
+                color9 = "#ff4d51";
+                color10 = "#35d450";
+                color11 = "#e9e836";
+                color12 = "#5dc5f8";
+                color13 = "#feabf2";
+                color14 = "#24dfc4";
+                color15 = "#ffffff";
+              };
+              keybindings = {
+                "ctrl+c" = "copy_or_interrupt";
               };
             };
 
@@ -703,7 +706,7 @@
       services.gnome.sushi.enable = true;
       programs.nautilus-open-any-terminal = {
         enable = true;
-        terminal = "foot";
+        terminal = "kitty";
       };
 
       # Wireshark

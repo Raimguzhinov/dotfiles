@@ -224,8 +224,8 @@
                   "Mod+Shift+Slash".action = show-hotkey-overlay;
                   "Mod+W".action = toggle-overview;
                   "Mod+Return" = {
-                    action = spawn "${pkgs.foot}/bin/foot";
-                    hotkey-overlay.title = "Open a Terminal: foot";
+                    action = spawn "${pkgs.kitty}/bin/kitty";
+                    hotkey-overlay.title = "Open a Terminal: kitty";
                   };
                   "Mod+A" = {
                     action.spawn = noctalia "launcher toggle"; # "rofi" "-show" "drun";
@@ -236,7 +236,7 @@
                     hotkey-overlay.title = "Open The Launcher";
                   };
                   "Mod+E" = {
-                    action = spawn "${pkgs.foot}/bin/foot" "--app-id=yazi" "yazi";
+                    action = spawn "${pkgs.kitty}/bin/kitty" "--class=yazi" "yazi";
                     hotkey-overlay.title = "File manager: yazi";
                   };
                   "Mod+Shift+E" = {

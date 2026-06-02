@@ -73,8 +73,8 @@
               apiKey = "local"; # OpenCode ожидает поле, но сам ключ не требуется
             };
             models = {
-              "qwen2.5-coder-1.5b-instruct" = {
-                name = "Qwen2.5 Coder 1.5B";
+              "qwen3.5-4b-mtp" = {
+                name = "Qwen3.5-4B MTP";
               };
             };
           };

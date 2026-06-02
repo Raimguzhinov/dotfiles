@@ -11,8 +11,24 @@ let
       openclSupport = false;
     }).overrideAttrs
       (oldAttrs: {
+        version = "9482";
+        src = pkgs.fetchFromGitHub {
+          owner = "ggml-org";
+          repo = "llama.cpp";
+          tag = "b9482";
+          hash = "sha256-hS9t1n4Gj+QVCAQ7J7m/O5mH9aPg8UPNxm2PmDnrZTA=";
+          leaveDotGit = true;
+          postFetch = ''
+            git -C "$out" rev-parse --short HEAD > $out/COMMIT
+            find "$out" -name .git -print0 | xargs -0 rm -rf
+          '';
+        };
+        nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+          pkgs.spirv-headers
+        ];
         cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [
-          "-DGGML_NATIVE=ON"
+          "-DBUILD_SHARED_LIBS=OFF"
+          "-DGGML_CUDA=OFF"
         ];
         preConfigure = ''
           export NIX_ENFORCE_NO_NATIVE=0
@@ -54,14 +70,14 @@ let
 in
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, pkgs-unstable, ... }:
     let
-      llamaCppOptimized = mkLlamaCppOptimized pkgs;
+      llamaCppOptimized = mkLlamaCppOptimized pkgs-unstable;
     in
     {
       packages = {
         llama-cpp = llamaCppOptimized;
-        llama-swap = pkgs.llama-swap;
+        llama-swap = pkgs-unstable.llama-swap;
       };
     };
 
@@ -70,6 +86,7 @@ in
       config,
       lib,
       pkgs,
+      pkgs-unstable,
       ...
     }:
 
@@ -112,8 +129,6 @@ in
         else
           "${cacheBaseDir}/${sanitizeRepo lib model.hf.repo}/${model.hf.file}";
 
-      hfCli = pkgs.python3.withPackages (ps: [ ps.huggingface-hub ]);
-
       fetchModelsScript =
         let
           hfModels = lib.filterAttrs (_: m: m.hf != null) enabledModels;
@@ -123,21 +138,21 @@ in
               let
                 repo = model.hf.repo;
                 file = model.hf.file;
-                revision = model.hf.revision;
+                revision = if model.hf.revision != null then model.hf.revision else "main";
                 outDir = "${cacheBaseDir}/${sanitizeRepo lib repo}";
                 outFile = "${outDir}/${file}";
-                revArg = lib.optionalString (revision != null) "--revision ${lib.escapeShellArg revision}";
+                url = "https://huggingface.co/${repo}/resolve/${revision}/${file}";
               in
               ''
                 mkdir -p ${lib.escapeShellArg outDir}
                 if [[ ! -f ${lib.escapeShellArg outFile} ]]; then
                   echo "[llama-swap] downloading ${repo}/${file}"
-                  ${hfCli}/bin/huggingface-cli download \
-                    ${lib.escapeShellArg repo} \
-                    ${lib.escapeShellArg file} \
-                    ${revArg} \
-                    --local-dir ${lib.escapeShellArg outDir} \
-                    --local-dir-use-symlinks False
+                  ${pkgs.wget}/bin/wget \
+                    --progress=dot:giga \
+                    -c \
+                    -O ${lib.escapeShellArg outFile}.part \
+                    ${lib.escapeShellArg url} \
+                    && mv ${lib.escapeShellArg outFile}.part ${lib.escapeShellArg outFile}
                 fi
               ''
             ) hfModels
@@ -180,7 +195,7 @@ in
       systemctlUser = "${pkgs.systemd}/bin/systemctl --user";
 
       startScript = pkgs.writeShellScriptBin "llama-swap-start" ''
-        exec ${systemctlUser} start llama-swap.service
+        exec ${systemctlUser} start --no-block llama-swap.service
       '';
       stopScript = pkgs.writeShellScriptBin "llama-swap-stop" ''
         exec ${systemctlUser} stop llama-swap.service
@@ -295,28 +310,27 @@ in
           enable = mkDefault true;
           listen = mkDefault "127.0.0.1:8085";
 
-          # Модели (dell-xps-13-9320, Intel Iris Xe, 32GB RAM):
-          # - Чтобы модель (веса) помещалась в iGPU память (UMA), выбирай небольшие GGUF:
-          #   ориентир: 1–4B, квант Q4_K_M / Q5_K_M. Текущая 1.5B Q4 (~1GB) подходит отлично.
-          # - Контекст (`ctxSize`) сильно влияет на память KV-кэша: чем больше контекст,
-          #   тем больше расход RAM/UMA. Для повседневного — 4096/8192.
-          # - Для работы с кодом/большими репами в OpenCode имеет смысл поднять до 8192–16384,
-          #   но если начнутся OOM/тормоза — откатывайся или бери меньшую модель/квант.
-          # - Vulkan offload на Iris Xe может "ломать" качество при полном offload:
-          #   оставляем умеренный `--n-gpu-layers` (подбирается эмпирически).
-          models."qwen2.5-coder-1.5b-instruct" = {
+          models."qwen3.5-4b-mtp" = {
             enable = mkDefault true;
             hf = {
-              repo = mkDefault "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF";
-              file = mkDefault "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf";
+              repo = mkDefault "unsloth/Qwen3.5-4B-MTP-GGUF";
+              file = mkDefault "Qwen3.5-4B-UD-Q4_K_XL.gguf";
             };
-
-            ctxSize = mkDefault 32768;
+            ctxSize = mkDefault 16384;
             threads = mkDefault 8;
             threadsBatch = mkDefault 8;
             extraArgs = mkDefault [
-              "--n-gpu-layers 4"
               "--jinja" # OpenAI tool calls требуют jinja chat templates.
+              "--temp 0.6"
+              "--top-p 0.95"
+              "--top-k 20"
+              "--presence-penalty 0.0"
+              "--repeat-penalty 1.0"
+              "--batch-size 512"
+              "--ubatch-size 256"
+              "--flash-attn on"
+              "--parallel 1"
+              "--spec-draft-n-max 6"
             ];
           };
         };
@@ -333,6 +347,7 @@ in
 
           Service = {
             Type = "simple";
+            TimeoutStartSec = "5h";
             ExecStartPre = "${fetchModelsScript}/bin/llama-swap-fetch-models";
             ExecStart = "${pkgs.llama-swap}/bin/llama-swap -config %h/.config/llama-swap/config.yaml -listen ${cfg.listen} -watch-config";
             Restart = "always";
