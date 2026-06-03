@@ -78,8 +78,8 @@ let
       markdown = {
         enable = true;
         treesitter = {
-          markdownPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown;
-          markdownInlinePackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown_inline;
+          mdPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown;
+          mdInlinePackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown_inline;
         };
       };
       typst = {

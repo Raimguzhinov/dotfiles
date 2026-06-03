@@ -11,17 +11,12 @@ let
       openclSupport = false;
     }).overrideAttrs
       (oldAttrs: {
-        version = "9482";
-        src = pkgs.fetchFromGitHub {
-          owner = "ggml-org";
-          repo = "llama.cpp";
-          tag = "b9482";
-          hash = "sha256-hS9t1n4Gj+QVCAQ7J7m/O5mH9aPg8UPNxm2PmDnrZTA=";
+        version = "fff0e0e";
+        src = pkgs.fetchgit {
+          url = "https://github.com/ggml-org/llama.cpp.git";
+          rev = "fff0e0eafe817eef429ecb64f892ab7bdae31846";
+          sha256 = "sha256-788HYLEiNGnwWVD5zBlmrZ28D/LnysXBd7B2A/9beAc=";
           leaveDotGit = true;
-          postFetch = ''
-            git -C "$out" rev-parse --short HEAD > $out/COMMIT
-            find "$out" -name .git -print0 | xargs -0 rm -rf
-          '';
         };
         nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
           pkgs.spirv-headers
