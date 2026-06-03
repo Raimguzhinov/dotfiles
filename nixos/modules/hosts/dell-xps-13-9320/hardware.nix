@@ -67,12 +67,14 @@
       # Zswap: compressed RAM cache in front of disk swap.
       # Pages are compressed in RAM first; cold pages spill to disk swap.
       # Better than zram for systems with physical swap (preserves hibernate).
-      boot.zswap = {
-        enable = true;
-        compressor = "lz4";
-        maxPoolPercent = 20;
-        shrinkerEnabled = true;
-      };
+      # Note: boot.zswap module is not merged in nixpkgs yet (PR #470366),
+      # so we use kernel parameters directly.
+      boot.kernelParams = [
+        "zswap.enabled=1"
+        "zswap.compressor=lz4"
+        "zswap.max_pool_percent=20"
+        "zswap.shrinker_enabled=1"
+      ];
 
       # Low swappiness: prefer keeping processes in RAM, use swap only under pressure.
       boot.kernel.sysctl."vm.swappiness" = 10;

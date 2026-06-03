@@ -45,18 +45,51 @@ let
       enableExtraDiagnostics = true;
       enableFormat = true;
       enableTreesitter = true;
-      go.enable = true;
-      go.dap.enable = true;
-      go.extensions.gopher-nvim.enable = true;
-      nix.enable = true;
-      nix.format.enable = true;
-      nix.format.type = [ "nixfmt" ];
-      bash.enable = true;
-      python.enable = true;
-      yaml.enable = true;
-      markdown.enable = true;
-      typst.enable = true;
-      sql.enable = true;
+      go = {
+        enable = true;
+        dap.enable = true;
+        extensions.gopher-nvim.enable = true;
+        treesitter = {
+          goPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.go;
+          gomodPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.gomod;
+          gosumPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.gosum;
+          goworkPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.gowork;
+          gotmpl.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.gotmpl;
+        };
+      };
+      nix = {
+        enable = true;
+        format.enable = true;
+        format.type = [ "nixfmt" ];
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.nix;
+      };
+      bash = {
+        enable = true;
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.bash;
+      };
+      python = {
+        enable = true;
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.python;
+      };
+      yaml = {
+        enable = true;
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.yaml;
+      };
+      markdown = {
+        enable = true;
+        treesitter = {
+          markdownPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown;
+          markdownInlinePackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown_inline;
+        };
+      };
+      typst = {
+        enable = true;
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.typst;
+      };
+      sql = {
+        enable = true;
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.sql;
+      };
     };
     theme = {
       enable = true;
