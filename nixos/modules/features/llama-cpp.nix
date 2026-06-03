@@ -9,19 +9,32 @@ let
       rocmSupport = false;
       metalSupport = false;
       openclSupport = false;
-    }).overrideAttrs (oldAttrs: {
-      nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
-        pkgs.spirv-headers
-      ];
-      cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [
-        "-DBUILD_SHARED_LIBS=OFF"
-        "-DGGML_CUDA=OFF"
-      ];
-      preConfigure = ''
-        export NIX_ENFORCE_NO_NATIVE=0
-        ${oldAttrs.preConfigure or ""}
-      '';
-    });
+    }).overrideAttrs
+      (oldAttrs: {
+        version = "9482";
+        src = pkgs.fetchFromGitHub {
+          owner = "ggml-org";
+          repo = "llama.cpp";
+          tag = "b9482";
+          hash = "sha256-hS9t1n4Gj+QVCAQ7J7m/O5mH9aPg8UPNxm2PmDnrZTA=";
+          leaveDotGit = true;
+          postFetch = ''
+            git -C "$out" rev-parse --short HEAD > $out/COMMIT
+            find "$out" -name .git -print0 | xargs -0 rm -rf
+          '';
+        };
+        nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+          pkgs.spirv-headers
+        ];
+        cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [
+          "-DBUILD_SHARED_LIBS=OFF"
+          "-DGGML_CUDA=OFF"
+        ];
+        preConfigure = ''
+          export NIX_ENFORCE_NO_NATIVE=0
+          ${oldAttrs.preConfigure or ""}
+        '';
+      });
 
   mkThreadedWrapper =
     {

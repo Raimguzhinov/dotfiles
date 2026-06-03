@@ -1,7 +1,7 @@
 { inputs, ... }:
 let
   # Shared vim settings — used both in perSystem (nvf standalone) and homeModules (nvf HM)
-  makeNvimSettings = pkgs: {
+  makeNvimSettings = pkgs: lib: {
     extraPackages = with pkgs; [
       git
       lazygit
@@ -23,9 +23,12 @@ let
       number = true;
       relativenumber = true;
       tabstop = 4;
+      shiftwidth = 4;
+      softtabstop = 4;
       autoindent = true;
-      shiftwidth = 0;
-      softtabstop = 2;
+      breakindent = true;
+      indentkeys = "0";
+
       wrap = true;
       termguicolors = true;
     };
@@ -35,6 +38,17 @@ let
       inlayHints.enable = true;
       lightbulb.enable = true;
     };
+    autocmds = [
+      {
+        event = ["LspAttach"];
+        callback = lib.generators.mkLuaInline ''
+          function(event)
+            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+          end
+        '';
+      }
+    ];
+
     treesitter = {
       enable = true;
       highlight.enable = true;
@@ -128,6 +142,24 @@ let
     statusline.lualine.enable = true;
     telescope.enable = true;
     autocomplete.nvim-cmp.enable = true;
+    lazy.plugins.nvim-cmp = {
+      after = # lua
+        ''
+          vim.schedule(function()
+            local cmp = require("cmp")
+            local config = cmp.get_config()
+            if config and config.mapping then
+              config.mapping["<Tab>"] = cmp.mapping(function(fallback)
+                if cmp.visible() then
+                  cmp.confirm({ select = false })
+                else
+                  fallback()
+                end
+              end)
+            end
+          end)
+        '';
+    };
     autopairs.nvim-autopairs.enable = true;
     comments.comment-nvim = {
       enable = true;
@@ -233,6 +265,136 @@ let
         silent = true;
         action = "V";
       }
+      {
+        key = "<Up>";
+        mode = "i";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              local cmp = require("cmp")
+              if cmp.visible() then
+                cmp.select_prev_item()
+              else
+                vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Up>", true, true, true), "n", true)
+              end
+            end
+          '';
+      }
+      {
+        key = "<Down>";
+        mode = "i";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              local cmp = require("cmp")
+              if cmp.visible() then
+                cmp.select_next_item()
+              else
+                vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Down>", true, true, true), "n", true)
+              end
+            end
+          '';
+      }
+      {
+        key = "gd";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.definition()
+            end
+          '';
+      }
+      {
+        key = "gi";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.implementation()
+            end
+          '';
+      }
+      {
+        key = "gI";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.declaration()
+            end
+          '';
+      }
+      {
+        key = "gD";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.type_definition()
+            end
+          '';
+      }
+      {
+        key = "<C-s>";
+        mode = ["n" "i"];
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.signature_help()
+            end
+          '';
+      }
+      {
+        key = "<leader>K";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.hover()
+            end
+          '';
+      }
+      {
+        key = "<leader>la";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.code_action()
+            end
+          '';
+      }
+      {
+        key = "<leader>ra";
+        mode = "n";
+        lua = true;
+        action = # lua
+          ''
+            function()
+              vim.lsp.buf.rename()
+            end
+          '';
+      }
+      {
+        key = "<C-o>";
+        mode = "n";
+        action = "<cmd>bprevious<CR>";
+      }
+      {
+        key = "<C-i>";
+        mode = "n";
+        action = "<cmd>bnext<CR>";
+      }
     ];
     lazy.plugins = {
       vim-dadbod-ui = {
@@ -285,7 +447,7 @@ in
       neovimPkg =
         (inputs.nvf.lib.neovimConfiguration {
           inherit pkgs;
-          modules = [ { config.vim = makeNvimSettings pkgs; } ];
+          modules = [ { config.vim = makeNvimSettings pkgs inputs.nvf.lib; } ];
         }).neovim;
     in
     {
@@ -298,7 +460,7 @@ in
       programs.nvf = {
         enable = true;
         defaultEditor = true;
-        settings.vim = makeNvimSettings pkgs;
+        settings.vim = makeNvimSettings pkgs pkgs.lib;
       };
     };
 }
