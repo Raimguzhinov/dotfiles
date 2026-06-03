@@ -46,6 +46,7 @@
           path = "${config.home.homeDirectory}/.config/git/identities/gitlab_work_url";
           mode = "0644";
         };
+        secrets."git/gitlab_mcp_token" = { };
         secrets."product/services_root" = { };
         secrets."pass_store/clone_cmd" = { };
         secrets."work_ai/litellm_url" = { };

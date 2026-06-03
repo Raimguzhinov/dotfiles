@@ -49,18 +49,53 @@
               apiKey = config.sops.placeholder."work_ai/litellm_api_key";
             };
             models = {
-              "Qwen/Qwen3.5-122B-A10B-FP8" = {
-                name = "Qwen3.5-122b";
+              Qwen-Instruct = {
+                name = "Qwen-Instruct";
+                id = "Qwen/Qwen3.5-122B-A10B-FP8";
+                description = "Строгие параметры. Модель следует инструкциям. 'presence penalty' равный 1.5 помогает избегать повторений";
                 limit = {
                   context = 262144;
-                  output = 8192;
+                  output = 16384;
+                };
+                options = {
+                  temperature = 0.7;
+                  topP = 0.8;
+                  topK = 20;
+                  minP = 0.0;
+                  presencePenalty = 1.5;
+                  repetitionPenalty = 1.0;
                 };
               };
-              "agent_proteya" = {
+              Qwen-Coding = {
+                name = "Qwen-Coding";
+                id = "Qwen/Qwen3.5-122B-A10B-FP8";
+                description = "Хорошо подходит для задач программирования";
+                limit = {
+                  context = 262144;
+                  output = 16384;
+                };
+                options = {
+                  temperature = 0.6;
+                  topP = 0.95;
+                  topK = 20;
+                  minP = 0.0;
+                  presencePenalty = 0.0;
+                  repetitionPenalty = 1.0;
+                };
+              };
+              agent_proteya = {
                 name = "ПротеЯ-2";
                 limit = {
                   context = 262144;
                   output = 8192;
+                };
+                options = {
+                  temperature = 0.6;
+                  topP = 0.95;
+                  topK = 20;
+                  minP = 0.0;
+                  presencePenalty = 0.0;
+                  repetitionPenalty = 1.0;
                 };
               };
             };
@@ -80,8 +115,8 @@
           };
         };
 
-        model = "opencode-go/deepseek-v4-pro";
-        small_model = "opencode/big-pickle";
+        model = "protei/Qwen-Coding";
+        small_model = "protei/Qwen-Coding";
 
         mcp = {
           youtrack = {
@@ -105,17 +140,45 @@
           rag = {
             type = "local";
             command = [
-              "uv"
-              "run"
-              "--directory"
-              "${config.home.homeDirectory}/Work/lightrag-mcp"
+              "uvx"
+              "--from"
+              "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/lightrag-mcp.git"
               "lightrag-mcp"
             ];
             enabled = true;
             environment = {
-              LIGHTRAG_BASE_URL = "http://localhost:9621";
+              LIGHTRAG_BASE_URL = "http://localhost:9621"; # URL LightRag узнать
               LIGHTRAG_TIMEOUT = "60";
               LIGHTRAG_VERIFY_SSL = "False";
+            };
+          };
+          gitlab = {
+            type = "local";
+            command = [
+              "uvx"
+              "--from"
+              "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/gitlab.git"
+              "gitlab-mcp-server"
+            ];
+            enabled = true;
+            environment = {
+              GITLAB_URL = "https://git.protei.ru";
+              GITLAB_TOKEN = config.sops.placeholder."git/gitlab_mcp_token";
+            };
+          };
+          logzone = {
+            type = "local";
+            command = [
+              "uvx"
+              "--from"
+              "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/sftp-mcp-server.git[archives]"
+              "sftp-mcp-server"
+            ];
+            enabled = true;
+            environment = {
+              MCP_SFTP_HOST = "logzone.protei.ru";
+              MCP_SFTP_USERNAME = "{{SFTP_USERNAME}}";
+              MCP_SFTP_PASSWORD = "{{SFTP_PASSWORD}}";
             };
           };
         };
@@ -134,7 +197,10 @@
         {
           "$schema" = "https://opencode.ai/config.json";
           share = "disabled";
-          plugin = [ config.services.meridian.opencode.pluginPath ];
+          plugin = [
+            config.services.meridian.opencode.pluginPath
+            "opencode-auto-resume"
+          ];
         }
         // opencodeSettings
       );

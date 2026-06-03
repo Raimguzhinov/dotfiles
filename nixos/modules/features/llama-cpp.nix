@@ -314,9 +314,9 @@ in
             enable = mkDefault true;
             hf = {
               repo = mkDefault "unsloth/Qwen3.5-4B-MTP-GGUF";
-              file = mkDefault "Qwen3.5-4B-UD-Q4_K_XL.gguf";
+              file = mkDefault "Qwen3.5-4B-UD-IQ3_XXS.gguf";
             };
-            ctxSize = mkDefault 16384;
+            ctxSize = mkDefault 81920;
             threads = mkDefault 8;
             threadsBatch = mkDefault 8;
             extraArgs = mkDefault [
@@ -330,7 +330,7 @@ in
               "--ubatch-size 256"
               "--flash-attn on"
               "--parallel 1"
-              "--spec-draft-n-max 6"
+              "--spec-draft-n-max 2"
             ];
           };
         };
