@@ -44,6 +44,15 @@ let
         callback = lib.generators.mkLuaInline ''
           function(event)
             vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+            vim.bo.indentkeys = "0"
+          end
+        '';
+      }
+      {
+        event = ["FileType"];
+        callback = lib.generators.mkLuaInline ''
+          function()
+            vim.bo.indentkeys = "0"
           end
         '';
       }
