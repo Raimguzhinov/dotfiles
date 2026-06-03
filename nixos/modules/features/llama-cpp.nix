@@ -9,27 +9,19 @@ let
       rocmSupport = false;
       metalSupport = false;
       openclSupport = false;
-    }).overrideAttrs
-      (oldAttrs: {
-        version = "fff0e0e";
-        src = pkgs.fetchgit {
-          url = "https://github.com/ggml-org/llama.cpp.git";
-          rev = "fff0e0eafe817eef429ecb64f892ab7bdae31846";
-          sha256 = "sha256-788HYLEiNGnwWVD5zBlmrZ28D/LnysXBd7B2A/9beAc=";
-          leaveDotGit = true;
-        };
-        nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
-          pkgs.spirv-headers
-        ];
-        cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [
-          "-DBUILD_SHARED_LIBS=OFF"
-          "-DGGML_CUDA=OFF"
-        ];
-        preConfigure = ''
-          export NIX_ENFORCE_NO_NATIVE=0
-          ${oldAttrs.preConfigure or ""}
-        '';
-      });
+    }).overrideAttrs (oldAttrs: {
+      nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ [
+        pkgs.spirv-headers
+      ];
+      cmakeFlags = (oldAttrs.cmakeFlags or [ ]) ++ [
+        "-DBUILD_SHARED_LIBS=OFF"
+        "-DGGML_CUDA=OFF"
+      ];
+      preConfigure = ''
+        export NIX_ENFORCE_NO_NATIVE=0
+        ${oldAttrs.preConfigure or ""}
+      '';
+    });
 
   mkThreadedWrapper =
     {
