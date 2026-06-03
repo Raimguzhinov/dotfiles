@@ -314,9 +314,9 @@ in
             enable = mkDefault true;
             hf = {
               repo = mkDefault "unsloth/Qwen3.5-4B-MTP-GGUF";
-              file = mkDefault "Qwen3.5-4B-UD-IQ3_XXS.gguf";
+              file = mkDefault "Qwen3.5-4B-Q4_K_M.gguf";
             };
-            ctxSize = mkDefault 81920;
+            ctxSize = mkDefault 16384;
             threads = mkDefault 8;
             threadsBatch = mkDefault 8;
             extraArgs = mkDefault [

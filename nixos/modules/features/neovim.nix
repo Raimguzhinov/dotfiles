@@ -35,6 +35,11 @@ let
       inlayHints.enable = true;
       lightbulb.enable = true;
     };
+    treesitter = {
+      enable = true;
+      highlight.enable = true;
+      indent.enable = true;
+    };
     languages = {
       enableDAP = true;
       enableExtraDiagnostics = true;
@@ -42,6 +47,7 @@ let
       enableTreesitter = true;
       go.enable = true;
       go.dap.enable = true;
+      go.extensions.gopher-nvim.enable = true;
       nix.enable = true;
       nix.format.enable = true;
       nix.format.type = [ "nixfmt" ];

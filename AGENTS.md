@@ -127,6 +127,32 @@ nixos/
   - не уходить в бесконечные ретраи при отсутствии YubiKey,
   - но при наличии YubiKey иметь шанс показать PIN prompt (через `Restart=on-failure` + rate-limit).
 
+### nixos-rebuild switch workflow
+
+`sudo nixos-rebuild switch` требует аутентификации через терминал (fprintd/polkit-soteria).
+AI-агент не может запустить команду напрямую из-за отсутствия TTY.
+
+**Процедура:**
+1. AI отправляет `notify-send "nixos-rebuild switch" "Зайди в сессию и приложи палец к сканеру отпечатка..."`
+2. AI ждёт `sleep 3` (пользователь заходит в сессию)
+3. Пользователь запускает команду вручную: `sudo nixos-rebuild switch --flake ~/dotfiles/nixos#raimguzhinov`
+
+**Примечание:** `sudo -A` / `pkexec` не работают reliably — fprintd требует активного TTY.
+Если AI пытается запустить `sudo nixos-rebuild switch` и получает "требуется пароль" —
+попроси пользователя запустить команду вручную.
+
+**Важно:** палец прикладывается к сканеру отпечатка пальца (fingerprint reader), НЕ к YubiKey.
+YubiKey используется только для sops-дешифровки и GPG-подписи коммитов.
+
+## NVF (Neovim)
+
+- nvf работает как standalone решение через flake-parts: конфигурация генерируется в `/nix/store` и подключается через `$NVIM_APPNAME="nvf"` (runtimepath указывает на `/nix/store/...-mnw-configDir`).
+- Конфиг не lives в `~/.config/nvf/` — это архитектурное решение.
+- Проверка: `nvf-print-config` показывает сгенерированный Lua-конфиг.
+- LSP маппинги привязываются через `LspAttach` autocmd (nvf 0.9+).
+- Дефолтные маппинги: `<leader>lgd` — go to definition, `<leader>lh` — hover, `<leader>lS` — document symbols.
+- nvim-cmp `<Tab>` по умолчанию: select_next + auto-complete. Для confirm без select: переопределить через `setupOpts.mapping`.
+
 ## Polkit
 
 - Используется `soteria` как polkit authentication agent (это не замена gnome-keyring и не замена PAM).

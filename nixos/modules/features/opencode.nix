@@ -110,6 +110,19 @@
             models = {
               "qwen3.5-4b-mtp" = {
                 name = "Qwen3.5-4B MTP";
+                description = "Локальная модель для offline-кодинга";
+                limit = {
+                  context = 16384;
+                  output = 8192;
+                };
+                options = {
+                  temperature = 0.6;
+                  topP = 0.95;
+                  topK = 20;
+                  minP = 0.0;
+                  presencePenalty = 0.0;
+                  repetitionPenalty = 1.0;
+                };
               };
             };
           };

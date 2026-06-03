@@ -64,6 +64,19 @@
       # Resume from hibernate: must match swap device UUID above
       boot.resumeDevice = "/dev/disk/by-uuid/67de0ed7-3439-4495-a77b-124b27ab717a";
 
+      # Zswap: compressed RAM cache in front of disk swap.
+      # Pages are compressed in RAM first; cold pages spill to disk swap.
+      # Better than zram for systems with physical swap (preserves hibernate).
+      boot.zswap = {
+        enable = true;
+        compressor = "lz4";
+        maxPoolPercent = 20;
+        shrinkerEnabled = true;
+      };
+
+      # Low swappiness: prefer keeping processes in RAM, use swap only under pressure.
+      boot.kernel.sysctl."vm.swappiness" = 10;
+
       nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
       hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
       hardware.enableAllFirmware = true;
