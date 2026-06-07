@@ -18,22 +18,70 @@
 
     let
       inherit (lib)
-        mkForce
+        mkAfter
         mkOption
         types
         ;
 
       cfg = config.programs.opencode;
+      opencodeConfigDir = "${config.xdg.configHome}/opencode";
+      toolkitRepoUrl = "https://git.protei.ru/qa-stuff/llm/llm-toolkit.git";
+      toolkitDir = "${config.home.homeDirectory}/Work/llm-toolkit";
 
-      # Use the real Claude Code binary for auth status checks.
-      # NOTE: the HM-generated `claude` wrapper injects `--mcp-config` and (today)
-      # breaks `claude auth status` because it doesn't separate flags from args.
       claudeForMeridian = "${pkgs.claude-code}/bin/claude";
 
-      opencodeConfigDir = "${config.xdg.configHome}/opencode";
-      toolkitRepoUrl = "ssh://git@git.protei.ru/qa-stuff/llm-toolkit.git";
+      # --- Meridian patch (duplicate ESM export in 1.42.1) ---
+      meridianPkgPatched =
+        if inputs != null && inputs ? meridian then
+          inputs.meridian.packages.${pkgs.system}.meridian.overrideAttrs (old: {
+            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
 
-      opencodeSettings = {
+            postInstall = (old.postInstall or "") + ''
+              for f in "$out"/lib/meridian/dist/tokenRefresh-*.js; do
+                if [ -f "$f" ]; then
+                  substituteInPlace "$f" \
+                    --replace-fail \
+                    'export { withClaudeLogContext, claudeLog, createPlatformCredentialStore, refreshOAuthToken, ensureFreshToken, startBackgroundRefresh, stopBackgroundRefresh };' \
+                    'export { withClaudeLogContext, claudeLog };'
+                fi
+              done
+            '';
+
+            postFixup = (old.postFixup or "") + ''
+              wrapProgram "$out/bin/meridian" \
+                --set MERIDIAN_CLAUDE_PATH "${claudeForMeridian}"
+            '';
+          })
+        else
+          null;
+
+      # --- Wrapper: sets UV env + PATH so install.sh's `uv run` works on NixOS ---
+      # Per nixpkgs uv docs: UV_PYTHON + UV_PYTHON_DOWNLOADS=never + LD_LIBRARY_PATH
+      installWrapper = pkgs.writeShellScriptBin "run-install" ''
+        export PATH="${pkgs.uv}/bin:${pkgs.bash}/bin:${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.diffutils}/bin:${pkgs.gzip}/bin:${pkgs.gawk}/bin:${pkgs.openssh}/bin:$PATH"
+        export UV_PYTHON=${pkgs.python3}/bin/python3
+        export UV_PYTHON_DOWNLOADS=never
+        export UV_NO_SYNC=1
+        export UV_NO_CONFIG=1
+        export UV_HTTP_TIMEOUT=5
+        export LD_LIBRARY_PATH="${
+          pkgs.lib.makeLibraryPath [
+            pkgs.openssl
+            pkgs.zlib
+            pkgs.curl
+            pkgs.stdenv.cc.cc
+          ]
+        }"
+        export GIT_SSH_COMMAND="${pkgs.openssh}/bin/ssh -o ConnectTimeout=3 -o BatchMode=yes"
+        exec bash "$@"
+      '';
+
+      # --- Pre-seed: only Nix-specific overrides on top of repo config ---
+      # merge_config.py does deep_merge(repo_template, existing) where existing wins.
+      nixPreseedConfig = {
+        "$schema" = "https://opencode.ai/config.json";
+        share = "disabled";
+
         provider = {
           anthropic = {
             options = {
@@ -41,71 +89,13 @@
               apiKey = "x";
             };
           };
-          protei = {
-            npm = "@ai-sdk/openai-compatible";
-            name = "Protei";
-            options = {
-              baseURL = "${config.sops.placeholder."work_ai/litellm_url"}/api";
-              apiKey = config.sops.placeholder."work_ai/litellm_api_key";
-            };
-            models = {
-              Qwen-Instruct = {
-                name = "Qwen-Instruct";
-                id = "Qwen/Qwen3.5-122B-A10B-FP8";
-                description = "Строгие параметры. Модель следует инструкциям. 'presence penalty' равный 1.5 помогает избегать повторений";
-                limit = {
-                  context = 262144;
-                  output = 16384;
-                };
-                options = {
-                  temperature = 0.7;
-                  topP = 0.8;
-                  topK = 20;
-                  minP = 0.0;
-                  presencePenalty = 1.5;
-                  repetitionPenalty = 1.0;
-                };
-              };
-              Qwen-Coding = {
-                name = "Qwen-Coding";
-                id = "Qwen/Qwen3.5-122B-A10B-FP8";
-                description = "Хорошо подходит для задач программирования";
-                limit = {
-                  context = 262144;
-                  output = 16384;
-                };
-                options = {
-                  temperature = 0.6;
-                  topP = 0.95;
-                  topK = 20;
-                  minP = 0.0;
-                  presencePenalty = 0.0;
-                  repetitionPenalty = 1.0;
-                };
-              };
-              agent_proteya = {
-                name = "ПротеЯ-2";
-                limit = {
-                  context = 262144;
-                  output = 8192;
-                };
-                options = {
-                  temperature = 0.6;
-                  topP = 0.95;
-                  topK = 20;
-                  minP = 0.0;
-                  presencePenalty = 0.0;
-                  repetitionPenalty = 1.0;
-                };
-              };
-            };
-          };
+
           llamaCpp = {
             npm = "@ai-sdk/openai-compatible";
             name = "Local llama.cpp";
             options = {
               baseURL = "http://localhost:8085/v1";
-              apiKey = "local"; # OpenCode ожидает поле, но сам ключ не требуется
+              apiKey = "local";
             };
             models = {
               "qwen3.5-4b-mtp" = {
@@ -128,18 +118,7 @@
           };
         };
 
-        model = "protei/Qwen-Coding";
-        small_model = "protei/Qwen-Coding";
-
         mcp = {
-          youtrack = {
-            type = "remote";
-            url = config.sops.placeholder."work_ai/mcp_sse_url";
-            enabled = true;
-            headers = {
-              youtrack_token = config.sops.placeholder."youtrack/token";
-            };
-          };
           context7 = {
             type = "remote";
             url = "https://mcp.context7.com/mcp";
@@ -150,159 +129,101 @@
             url = "https://mcp.grep.app";
             enabled = true;
           };
-          rag = {
-            type = "local";
-            command = [
-              "uvx"
-              "--from"
-              "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/lightrag-mcp.git"
-              "lightrag-mcp"
-            ];
-            enabled = true;
-            environment = {
-              LIGHTRAG_BASE_URL = "http://localhost:9621"; # URL LightRag узнать
-              LIGHTRAG_TIMEOUT = "60";
-              LIGHTRAG_VERIFY_SSL = "False";
-            };
-          };
-          gitlab = {
-            type = "local";
-            command = [
-              "uvx"
-              "--from"
-              "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/gitlab.git"
-              "gitlab-mcp-server"
-            ];
-            enabled = true;
-            environment = {
-              GITLAB_URL = "https://git.protei.ru";
-              GITLAB_TOKEN = config.sops.placeholder."git/gitlab_mcp_token";
-            };
-          };
-          logzone = {
-            type = "local";
-            command = [
-              "uvx"
-              "--from"
-              "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/sftp-mcp-server.git[archives]"
-              "sftp-mcp-server"
-            ];
-            enabled = true;
-            environment = {
-              MCP_SFTP_HOST = "logzone.protei.ru";
-              MCP_SFTP_USERNAME = "{{SFTP_USERNAME}}";
-              MCP_SFTP_PASSWORD = "{{SFTP_PASSWORD}}";
-            };
-          };
         };
 
-        permission = {
-          read = {
-            "~/.config/opencode/*" = "allow";
-          };
-          external_directory = {
-            "~/.config/opencode/*" = "allow";
-          };
-        };
+        # plugin is LIST_UNION_KEY: repo ["opencode-auto-resume"] + ours = union
+        plugin = [
+          config.services.meridian.opencode.pluginPath
+        ];
       };
 
-      opencodeConfigRawJson = builtins.toJSON (
-        {
-          "$schema" = "https://opencode.ai/config.json";
-          share = "disabled";
-          plugin = [
-            config.services.meridian.opencode.pluginPath
-            "opencode-auto-resume"
-          ];
-        }
-        // opencodeSettings
-      );
+      nixPreseedJsonFile = pkgs.writeText "opencode-preseed.json" (builtins.toJSON nixPreseedConfig);
 
-      opencodeConfigRawJsonFile = pkgs.writeText "opencode-config-raw.json" opencodeConfigRawJson;
+      # --- .env template for llm-toolkit (rendered by sops-nix at activation) ---
+      # sops.templates substitutes config.sops.placeholder."key" with actual secret values.
+      # Result is available as config.sops.templates."llm-toolkit-env".path
 
-      opencodeConfigPrettyJsonFile =
-        pkgs.runCommand "opencode-config.json" { nativeBuildInputs = [ pkgs.jq ]; }
+      # --- Custom agent content ---
+      nixCodeReviewerAgent = ''
+        # Ревьюер Nix-конфигураций
+
+        Специалист по ревью Nix/NixOS/Home Manager.
+
+        ## Что делать
+
+        - Проверять корректность модульной структуры (flake-parts, опции, импорты)
+        - Искать типовые ошибки: рекурсия `pkgs`/`perSystem`, неверные пути, опечатки в опциях
+        - Упрощать выражения, избегать лишнего рефакторинга
+        - Подсказывать, где лучше использовать `mkIf/mkDefault/mkForce`
+
+        ## Формат ответа
+
+        - Сначала краткий вывод (1\u20133 пункта)
+        - Затем конкретные правки (с командами/фрагментами)
+        - Не предлагать изменения вне запроса
+      '';
+
+      nixReviewChecklistSkill = ''
+        # Чек\u2011лист ревью Nix
+
+        Быстрый чек\u2011лист для самопроверки перед PR/rebuild.
+
+        ## Шаги
+
+        1. Проверить, что новые `.nix` файлы добавлены в git (иначе `import-tree` их не увидит)
+        2. Проверить Linux-only условия: использовать `system` + `builtins.elem`, не `pkgs.stdenv.isLinux` в `perSystem`
+        3. Убедиться, что секреты не попали в nix store (только `sops.placeholder`/`sops.templates`)
+        4. Прогнать форматирование: `nixfmt-rfc-style nixos/` (или `nixfmt`)
+        5. Собрать без применения: `sudo nixos-rebuild build --flake ~/dotfiles/nixos`
+
+        ## Результат
+
+        Верни список найденных рисков и конкретные действия для исправления.
+      '';
+
+      # Pre-generate user skills shell snippet (avoids nested '' in activation)
+      userSkillsActivationSnippet = lib.concatMapStrings (
+        name:
+        let
+          val = builtins.getAttr name (cfg.skills or { });
+          text =
+            if lib.isPath val then
+              builtins.readFile val
+            else if lib.isString val then
+              val
+            else
+              null;
+        in
+        if text != null then
           ''
-            ${pkgs.jq}/bin/jq -S . < ${opencodeConfigRawJsonFile} > $out
-          '';
-
-      opencodeConfigJson = builtins.readFile opencodeConfigPrettyJsonFile;
-
-      # meridian 1.42.1 ships a dist file with a duplicate ESM export
-      # ("stopBackgroundRefresh"), which crashes Node during module parsing.
-      #
-      # If you touch this file, consider re-checking the upstream meridian version
-      # via `gh_grep` (repo: rynfar/meridian). If upstream is > 1.42.1, propose
-      # updating first: the issue may already be fixed there.
-      meridianPkgPatched =
-        if inputs != null && inputs ? meridian then
-          inputs.meridian.packages.${pkgs.system}.meridian.overrideAttrs (old: {
-            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
-
-            postInstall = (old.postInstall or "") + ''
-              for f in "$out"/lib/meridian/dist/tokenRefresh-*.js; do
-                if [ -f "$f" ]; then
-                  substituteInPlace "$f" \
-                    --replace-fail \
-                    'export { withClaudeLogContext, claudeLog, createPlatformCredentialStore, refreshOAuthToken, ensureFreshToken, startBackgroundRefresh, stopBackgroundRefresh };' \
-                    'export { withClaudeLogContext, claudeLog };'
-                fi
-              done
-
-            '';
-
-            postFixup = (old.postFixup or "") + ''
-              # Ensure `meridian` works when launched from a shell too.
-              wrapProgram "$out/bin/meridian" \
-                --set MERIDIAN_CLAUDE_PATH "${claudeForMeridian}"
-            '';
-          })
+                        mkdir -p "$opencode_dir/skills/${name}"
+                        cat > "$opencode_dir/skills/${name}/SKILL.md" << 'EOF'
+            ${text}
+            EOF
+          ''
         else
-          null;
+          ""
+      ) (lib.attrNames (cfg.skills or { }));
     in
     {
-      # Home Manager module (pinned in this flake) already provides
-      # `programs.opencode.agents`, but does not provide `programs.opencode.skills`.
       options.programs.opencode.skills = mkOption {
         type = types.attrsOf (types.either types.lines types.path);
         default = { };
         description = ''
-          Custom skills for opencode.
-
-          The attribute name becomes the skill directory name, and the value is either:
-          - Inline content as a string
-          - A path to a file containing the skill content
-
-          Each skill is written to {file}`$XDG_CONFIG_HOME/opencode/skills/<name>/SKILL.md`.
+          Custom skills for opencode (inline content or path).
+          Written to $XDG_CONFIG_HOME/opencode/skills/<name>/SKILL.md.
         '';
       };
 
       config = {
         services.meridian = {
           enable = true;
-
-          # HOW IT WORKS
-          #
-          # +---------------------------+     +---------------------------+     +------------------------------+     +---------------------------+
-          # | (1) Your tools            |     | (2) Meridian              |     | (3) Claude Code SDK          |     | (4) Claude                |
-          # | OpenCode, Cline, ...      | --> | localhost:3456            | --> | @anthropic-ai/claude-code    | --> | api.anthropic.com         |
-          # | Anthropic API format      | <-- | Local proxy server        | <-- | Handles auth + sessions      | <-- | stream                    |
-          # +---------------------------+     +---------------------------+     +------------------------------+     +---------------------------+
-          #
-          # Note: No API keys needed. Auth uses your existing Claude Code login / Max subscription.
-
           settings = {
             port = 3456;
             host = "127.0.0.1";
-            # passthrough = true;
-            # defaultAgent = "opencode";
-            # sonnetModel = "sonnet";
           };
-          # Extra env vars not covered by settings
           environment = {
-            # Meridian does not search PATH for `claude`; point it explicitly.
             MERIDIAN_CLAUDE_PATH = claudeForMeridian;
-            # MERIDIAN_MAX_CONCURRENT = "20";
           };
         }
         // lib.optionalAttrs (meridianPkgPatched != null) {
@@ -312,238 +233,122 @@
         programs.opencode = {
           enable = true;
           package = pkgs-unstable.opencode;
-          enableMcpIntegration = true;
-          settings = opencodeSettings;
-
-          # Личные inline-примеры (живут в Nix, не в репозитории llm-toolkit)
-          agents."nix-code-reviewer" = lib.mkDefault ''
-            # Ревьюер Nix-конфигураций
-
-            Специалист по ревью Nix/NixOS/Home Manager.
-
-            ## Что делать
-
-            - Проверять корректность модульной структуры (flake-parts, опции, импорты)
-            - Искать типовые ошибки: рекурсия `pkgs`/`perSystem`, неверные пути, опечатки в опциях
-            - Упрощать выражения, избегать лишнего рефакторинга
-            - Подсказывать, где лучше использовать `mkIf/mkDefault/mkForce`
-
-            ## Формат ответа
-
-            - Сначала краткий вывод (1–3 пункта)
-            - Затем конкретные правки (с командами/фрагментами)
-            - Не предлагать изменения вне запроса
-          '';
-
-          skills."nix-review-checklist" = lib.mkDefault ''
-            # Чек‑лист ревью Nix
-
-            Быстрый чек‑лист для самопроверки перед PR/rebuild.
-
-            ## Шаги
-
-            1. Проверить, что новые `.nix` файлы добавлены в git (иначе `import-tree` их не увидит)
-            2. Проверить Linux-only условия: использовать `system` + `builtins.elem`, не `pkgs.stdenv.isLinux` в `perSystem`
-            3. Убедиться, что секреты не попали в nix store (только `sops.placeholder`/`sops.templates`)
-            4. Прогнать форматирование: `nixfmt-rfc-style nixos/` (или `nixfmt`)
-            5. Собрать без применения: `sudo nixos-rebuild build --flake ~/dotfiles/nixos`
-
-            ## Результат
-
-            Верни список найденных рисков и конкретные действия для исправления.
-          '';
-
-          # How to override inline:
-          # - `agents.<name>` becomes `~/.config/opencode/agent/<name>.md`
-          # - `skills.<name>` becomes `~/.config/opencode/skills/<name>/SKILL.md`
         };
 
-        sops.templates."opencode-config.json" = {
-          content = opencodeConfigJson;
-          mode = "0400";
+        # Sops template: renders .env with secret values substituted at activation
+        sops.templates."llm-toolkit-env" = {
+          content = ''
+            # Agent token from chat.protei.ru
+            PROTEI_AGENT_TOKEN=${config.sops.placeholder."work_ai/litellm_api_key"}
+
+            # YouTrack token for MCP
+            YOUTRACK_TOKEN=${config.sops.placeholder."youtrack/token"}
+
+            # LightRAG MCP settings
+            LIGHTRAG_BASE_URL=http://localhost:9621
+
+            # GitLab MCP token
+            GITLAB_TOKEN=${config.sops.placeholder."git/gitlab_mcp_token"}
+
+            # SFTP MCP (Logzone) credentials
+            SFTP_USERNAME=
+            SFTP_PASSWORD=
+          '';
         };
 
-        home.activation.ensureOpencodeToolkit = config.lib.dag.entryBefore [ "writeBoundary" ] ''
-          opencode_cfg_dir="${opencodeConfigDir}"
-          git_bin="${pkgs.git}/bin/git"
-          timeout_bin="${pkgs.coreutils}/bin/timeout"
-          date_bin="${pkgs.coreutils}/bin/date"
+        home.activation.setupOpencodeToolkit = mkAfter ''
+          set -euo pipefail
 
-          log_file="$opencode_cfg_dir/.hm-opencode.log"
-          log() {
-            mkdir -p "$opencode_cfg_dir"
-            printf '[%s] %s\n' "$($date_bin -Is)" "$1" >>"$log_file" 2>/dev/null || true
-          }
+          toolkit_dir="${toolkitDir}"
+          opencode_dir="${opencodeConfigDir}"
 
-          mkdir -p "$opencode_cfg_dir"
+          log() { printf '[opencode] %s\n' "$*" >&2; }
 
-          log "start: ensureOpencodeToolkit"
+          # Clone / pull llm-toolkit (skip on network failure)
+          export GIT_SSH_COMMAND="${pkgs.openssh}/bin/ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5"
+          export GIT_TERMINAL_PROMPT=0
 
-          ssh_bin="${pkgs.openssh}/bin/ssh"
-          export GIT_SSH_COMMAND="$ssh_bin -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5"
+          toolkit_available="0"
 
-          fetch_origin() {
-            # Writes fetch output to log, returns git exit code
-            GIT_TERMINAL_PROMPT=0 "$timeout_bin" 20s "$git_bin" -C "$opencode_cfg_dir" fetch origin --depth=1 2>>"$log_file"
-          }
-
-          pull_origin() {
-            # Writes pull output to log, returns git exit code
-            GIT_TERMINAL_PROMPT=0 "$timeout_bin" 10s "$git_bin" -C "$opencode_cfg_dir" pull --rebase 2>>"$log_file"
-          }
-
-          ensure_origin() {
-            local desired_url="$1"
-            origin_url="$($git_bin -C "$opencode_cfg_dir" remote get-url origin 2>/dev/null || true)"
-
-            if [[ -z "$origin_url" ]]; then
-              log "set origin=$desired_url"
-              "$git_bin" -C "$opencode_cfg_dir" remote add origin "$desired_url" >/dev/null 2>&1 || true
-              return
+          if [[ ! -d "$toolkit_dir/.git" ]]; then
+            log "Cloning llm-toolkit to $toolkit_dir"
+            if "${pkgs.coreutils}/bin/timeout" 30s "${pkgs.git}/bin/git" clone "${toolkitRepoUrl}" "$toolkit_dir" 2>/dev/null; then
+              toolkit_available="1"
+            else
+              log "WARNING: git clone failed (no network/auth?). Skipping toolkit update."
             fi
-
-            if [[ "$origin_url" != "$desired_url" ]]; then
-              log "rewrite origin: $origin_url -> $desired_url"
-              "$git_bin" -C "$opencode_cfg_dir" remote set-url origin "$desired_url" >/dev/null 2>&1 || true
-              return
-            fi
-
-            log "origin ok: $origin_url"
-          }
-
-          # Ensure repo exists
-          if [[ ! -d "$opencode_cfg_dir/.git" ]]; then
-            echo "opencode: bootstrapping llm-toolkit in $opencode_cfg_dir" >&2
-            log "init repo"
-            GIT_TERMINAL_PROMPT=0 "$git_bin" -C "$opencode_cfg_dir" init || true
-          fi
-
-          if [[ -d "$opencode_cfg_dir/.git" ]]; then
-            ensure_origin "${toolkitRepoUrl}"
-
-            get_remote_head() {
-              head_ref="$($git_bin -C "$opencode_cfg_dir" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)"
-              if [[ -n "$head_ref" ]]; then
-                echo "$head_ref"
-                return
-              fi
-              if "$git_bin" -C "$opencode_cfg_dir" show-ref --verify --quiet refs/remotes/origin/main; then
-                echo "origin/main"
-                return
-              fi
-              if "$git_bin" -C "$opencode_cfg_dir" show-ref --verify --quiet refs/remotes/origin/master; then
-                echo "origin/master"
-                return
-              fi
-              echo ""
-            }
-
-            # If repo has no commits yet, fetch+checkout.
-            if ! "$git_bin" -C "$opencode_cfg_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
-              log "no HEAD: fetching"
-
-              fetched="0"
-              if fetch_origin; then
-                log "fetch ok"
-                fetched="1"
-              else
-                echo "opencode: llm-toolkit fetch failed (no network/auth?)" >&2
-                log "fetch failed"
-              fi
-
-              if [[ "$fetched" == "1" ]]; then
-                remote_head="$(get_remote_head)"
-                if [[ -n "$remote_head" ]]; then
-                  log "checkout main from $remote_head"
-                  "$git_bin" -C "$opencode_cfg_dir" checkout -B main "$remote_head" >/dev/null 2>&1 || true
-                else
-                  echo "opencode: llm-toolkit fetch succeeded but remote head not found" >&2
-                  log "fetch ok, remote head not found"
-                fi
-              fi
-            fi
-
-            # Auto-update toolkit on each rebuild, but keep local overrides
-            if "$git_bin" -C "$opencode_cfg_dir" rev-parse --verify HEAD >/dev/null 2>&1; then
-              dirty="$($git_bin -C "$opencode_cfg_dir" status --porcelain 2>/dev/null || true)"
-              stashed="0"
-
-            if [[ -n "$dirty" ]]; then
-              log "stash push (dirty)"
-              "$git_bin" -C "$opencode_cfg_dir" stash push -u -m "hm-opencode-autostash" >/dev/null 2>&1 || true
-              stashed="1"
-            fi
-
-              remote_head="$(get_remote_head)"
-              if [[ -n "$remote_head" ]]; then
-                if ! "$git_bin" -C "$opencode_cfg_dir" rev-parse --abbrev-ref --symbolic-full-name @{u} >/dev/null 2>&1; then
-                  "$git_bin" -C "$opencode_cfg_dir" branch --set-upstream-to="$remote_head" >/dev/null 2>&1 || true
-                fi
-              fi
-
-              log "pull --rebase"
-              if pull_origin; then
-                log "pull ok"
-              else
-                echo "opencode: llm-toolkit pull failed (no network/auth?)" >&2
-                log "pull failed"
-              fi
-
-              if [[ "$stashed" == "1" ]]; then
-                log "stash pop"
-                "$git_bin" -C "$opencode_cfg_dir" stash pop >/dev/null 2>&1 || true
-              fi
+          else
+            log "Updating llm-toolkit"
+            if "${pkgs.coreutils}/bin/timeout" 20s "${pkgs.git}/bin/git" -C "$toolkit_dir" pull --rebase 2>/dev/null; then
+              toolkit_available="1"
+            else
+              log "WARNING: git pull failed. Using existing checkout."
+              toolkit_available="1"
             fi
           fi
 
-          ensure_alias() {
-            local preferred="$1"
-            local compat="$2"
-
-            if [[ -d "$opencode_cfg_dir/$preferred" && ! -e "$opencode_cfg_dir/$compat" ]]; then
-              ln -s "$preferred" "$opencode_cfg_dir/$compat"
-              return
-            fi
-
-            if [[ -d "$opencode_cfg_dir/$compat" && ! -e "$opencode_cfg_dir/$preferred" ]]; then
-              ln -s "$compat" "$opencode_cfg_dir/$preferred"
-              return
-            fi
-
-            if [[ ! -e "$opencode_cfg_dir/$preferred" && ! -e "$opencode_cfg_dir/$compat" ]]; then
-              mkdir -p "$opencode_cfg_dir/$preferred"
-              ln -s "$preferred" "$opencode_cfg_dir/$compat"
-              return
-            fi
-          }
-
-          ensure_alias agents agent
-          ensure_alias skills skill
-          ensure_alias commands command
-
-          # Keep repo clean even if HM replaces opencode.json
-          if [[ -f "$opencode_cfg_dir/opencode.json" ]]; then
-            "$git_bin" -C "$opencode_cfg_dir" update-index --skip-worktree opencode.json >/dev/null 2>&1 || true
+          # Copy sops-rendered .env (sops-nix already substituted placeholders)
+          if [[ "$toolkit_available" == "1" ]]; then
+            cp --reflink=never "${config.sops.templates."llm-toolkit-env".path}" "$toolkit_dir/.env"
+            chmod 600 "$toolkit_dir/.env"
+            log ".env deployed (sops-rendered)"
           fi
+
+          # Ensure config directory exists
+          mkdir -p "$opencode_dir"
+
+          # Pre-seed opencode.json with Nix custom overrides
+          # merge_config.py will deep_merge(repo_template, this) where this wins
+          # --reflink=never avoids btrfs reflink to ro nix store which blocks writes
+          cp --reflink=never "${nixPreseedJsonFile}" "$opencode_dir/opencode.json"
+          log "Pre-seeded opencode.json with Nix overrides"
+
+          # Run install.sh via wrapper (UV env + PATH baked into nix store binary)
+          if [[ "$toolkit_available" == "1" ]]; then
+            log "Running install.sh"
+            rm -rf "$toolkit_dir/.venv"
+            "${pkgs.uv}/bin/uv" venv --python "${pkgs.python3}/bin/python3" "$toolkit_dir/.venv"
+            install_log="$toolkit_dir/.install.log"
+            if "${installWrapper}/bin/run-install" "$toolkit_dir/scripts/install.sh" >"$install_log" 2>&1; then
+              log "install.sh succeeded"
+            else
+              log "WARNING: install.sh failed (exit $?), see $install_log"
+              while IFS= read -r line; do log "  $line"; done < "$install_log"
+            fi
+          else
+            log "Skipping install (no toolkit available)"
+          fi
+
+          # Post-process: remove enabled_providers (repo restricts to ["protei"])
+          if [[ -f "$opencode_dir/opencode.json" ]]; then
+            "${pkgs.jq}/bin/jq" 'del(.enabled_providers)' "$opencode_dir/opencode.json" \
+              > "$opencode_dir/opencode.json.tmp" && \
+              mv "$opencode_dir/opencode.json.tmp" "$opencode_dir/opencode.json"
+            log "Removed enabled_providers restriction"
+          fi
+
+          # Mirror opencode.json -> config.json (OpenCode reads both)
+          if [[ -f "$opencode_dir/opencode.json" ]]; then
+            cp --reflink=never "$opencode_dir/opencode.json" "$opencode_dir/config.json"
+          fi
+
+          # Write custom Nix-specific agent
+          mkdir -p "$opencode_dir/agents"
+          cat > "$opencode_dir/agents/nix-code-reviewer.md" << 'EOF'
+          ${nixCodeReviewerAgent}
+          EOF
+
+          # Write custom Nix-specific skill
+          mkdir -p "$opencode_dir/skills/nix-review-checklist"
+          cat > "$opencode_dir/skills/nix-review-checklist/SKILL.md" << 'EOF'
+          ${nixReviewChecklistSkill}
+          EOF
+
+          # Write additional user-defined skills from Nix module
+          ${userSkillsActivationSnippet}
+
+          log "opencode setup complete"
         '';
-
-        xdg.configFile = {
-          "opencode/config.json".source = mkForce (
-            config.lib.file.mkOutOfStoreSymlink config.sops.templates."opencode-config.json".path
-          );
-
-          # llm-toolkit ships `opencode.json`; OpenCode prefers it.
-          # Point it to the same rendered config with secrets.
-          "opencode/opencode.json".source = mkForce (
-            config.lib.file.mkOutOfStoreSymlink config.sops.templates."opencode-config.json".path
-          );
-        }
-        // (lib.mapAttrs' (
-          name: content:
-          lib.nameValuePair "opencode/skills/${name}/SKILL.md" (
-            if lib.isPath content then { source = content; } else { text = content; }
-          )
-        ) (cfg.skills or { }));
       };
     };
 }
