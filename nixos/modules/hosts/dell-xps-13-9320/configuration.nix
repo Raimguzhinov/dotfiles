@@ -414,10 +414,6 @@
       networking.networkmanager = {
         enable = true;
         wifi.powersave = true;
-        plugins = with pkgs; [
-          networkmanager-openvpn
-          networkmanager-sstp
-        ];
       };
 
       # Set your time zone.
@@ -577,7 +573,6 @@
       # For global user
       users.defaultUserShell = pkgs.zsh;
       programs = {
-        amnezia-vpn.enable = true;
         localsend.enable = true;
         nm-applet.enable = true;
         partition-manager.enable = true;
@@ -677,6 +672,16 @@
       hardware.bluetooth.enable = true; # enables support for Bluetooth
       hardware.bluetooth.powerOnBoot = true; # powers up the default Bluetooth controller on boot
       services.blueman.enable = true;
+
+      # VPN
+      programs.amnezia-vpn = {
+        enable = true;
+        package = pkgs-unstable.amnezia-vpn;
+      };
+      networking.networkmanager.plugins = with pkgs; [
+        networkmanager-openvpn
+        networkmanager-sstp
+      ];
 
       # Power
       services.tuned.enable = true;

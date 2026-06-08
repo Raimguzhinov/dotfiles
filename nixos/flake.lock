@@ -394,22 +394,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-amnezia": {
-      "locked": {
-        "lastModified": 1757051428,
-        "narHash": "sha256-sZWMTbZVWG8Wp0Vpt1Q8GC3LHqXS+OqWEo4xfLWg8lA=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1ebf2de9af636a5752c15b4f40e504183f0b2ec8",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1ebf2de9af636a5752c15b4f40e504183f0b2ec8",
-        "type": "github"
-      }
-    },
     "nixpkgs-go21": {
       "locked": {
         "lastModified": 1725980463,
@@ -641,7 +625,6 @@
         "niri-float-sticky": "niri-float-sticky",
         "nix-firefox-addons": "nix-firefox-addons",
         "nixpkgs": "nixpkgs",
-        "nixpkgs-amnezia": "nixpkgs-amnezia",
         "nixpkgs-go21": "nixpkgs-go21",
         "nixpkgs-jetbrains": "nixpkgs-jetbrains",
         "nixpkgs-protobuf23": "nixpkgs-protobuf23",
