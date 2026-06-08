@@ -1,9 +1,9 @@
 { ... }:
 {
   perSystem =
-    { pkgs-unstable, ... }:
+    { pkgs, ... }:
     {
-      packages.opencode = pkgs-unstable.opencode;
+      packages.opencode = pkgs.opencode;
     };
 
   flake.homeModules.opencode =
@@ -12,18 +12,14 @@
       inputs ? null,
       lib,
       pkgs,
-      pkgs-unstable,
       ...
     }:
 
     let
       inherit (lib)
         mkAfter
-        mkOption
-        types
         ;
 
-      cfg = config.programs.opencode;
       opencodeConfigDir = "${config.xdg.configHome}/opencode";
       toolkitRepoUrl = "https://git.protei.ru/qa-stuff/llm/llm-toolkit.git";
       toolkitDir = "${config.home.homeDirectory}/Work/llm-toolkit";
@@ -142,80 +138,72 @@
       # --- .env template for llm-toolkit (rendered by sops-nix at activation) ---
       # sops.templates substitutes config.sops.placeholder."key" with actual secret values.
       # Result is available as config.sops.templates."llm-toolkit-env".path
-
-      # --- Custom agent content ---
-      nixCodeReviewerAgent = ''
-        # Ревьюер Nix-конфигураций
-
-        Специалист по ревью Nix/NixOS/Home Manager.
-
-        ## Что делать
-
-        - Проверять корректность модульной структуры (flake-parts, опции, импорты)
-        - Искать типовые ошибки: рекурсия `pkgs`/`perSystem`, неверные пути, опечатки в опциях
-        - Упрощать выражения, избегать лишнего рефакторинга
-        - Подсказывать, где лучше использовать `mkIf/mkDefault/mkForce`
-
-        ## Формат ответа
-
-        - Сначала краткий вывод (1\u20133 пункта)
-        - Затем конкретные правки (с командами/фрагментами)
-        - Не предлагать изменения вне запроса
-      '';
-
-      nixReviewChecklistSkill = ''
-        # Чек\u2011лист ревью Nix
-
-        Быстрый чек\u2011лист для самопроверки перед PR/rebuild.
-
-        ## Шаги
-
-        1. Проверить, что новые `.nix` файлы добавлены в git (иначе `import-tree` их не увидит)
-        2. Проверить Linux-only условия: использовать `system` + `builtins.elem`, не `pkgs.stdenv.isLinux` в `perSystem`
-        3. Убедиться, что секреты не попали в nix store (только `sops.placeholder`/`sops.templates`)
-        4. Прогнать форматирование: `nixfmt-rfc-style nixos/` (или `nixfmt`)
-        5. Собрать без применения: `sudo nixos-rebuild build --flake ~/dotfiles/nixos`
-
-        ## Результат
-
-        Верни список найденных рисков и конкретные действия для исправления.
-      '';
-
-      # Pre-generate user skills shell snippet (avoids nested '' in activation)
-      userSkillsActivationSnippet = lib.concatMapStrings (
-        name:
-        let
-          val = builtins.getAttr name (cfg.skills or { });
-          text =
-            if lib.isPath val then
-              builtins.readFile val
-            else if lib.isString val then
-              val
-            else
-              null;
-        in
-        if text != null then
-          ''
-                        mkdir -p "$opencode_dir/skills/${name}"
-                        cat > "$opencode_dir/skills/${name}/SKILL.md" << 'EOF'
-            ${text}
-            EOF
-          ''
-        else
-          ""
-      ) (lib.attrNames (cfg.skills or { }));
     in
     {
-      options.programs.opencode.skills = mkOption {
-        type = types.attrsOf (types.either types.lines types.path);
-        default = { };
-        description = ''
-          Custom skills for opencode (inline content or path).
-          Written to $XDG_CONFIG_HOME/opencode/skills/<name>/SKILL.md.
-        '';
-      };
-
       config = {
+        programs.opencode = {
+          # Skills и agents через нативный HM-модуль (xdg.configFile).
+          # Порядок применения:
+          #   1) Pre-seed — opencode.json из Nix (nixPreseedConfig)
+          #   2) HM xdg.configFile → декларативные skills/agents из Nix
+          #   3) home.activation (mkAfter) → install.sh из llm-toolkit (перезаписывает)
+          #   4) Ручное создание файлов в ~/.config/opencode/skills/ или agents/
+          #
+          # Конфликты: если skill/agent с тем же именем существует в нескольких
+          # источниках, приоритет — от последнего к первому (ручной > toolkit > Nix).
+          #
+          # Вариации декларативных skills:
+          #   # Inline текст → opencode/skills/<name>/SKILL.md
+          #   nix-review-checklist = "# Чек-лист...";
+          #
+          #   # Путь к файлу → opencode/skills/<name>/SKILL.md
+          #   some-skill = ./path/to/SKILL.md;
+          #
+          #   # Путь к директории → opencode/skills/<name>/ (рекурсивно, все файлы)
+          #   data-analysis = ./skills/data-analysis;
+          #
+          #   # Store path (строка) → работает аналогично
+          #   beads = "${pkgs.beads.src}/claude-plugin/skills/beads";
+          skills = {
+            nix-review-checklist = ''
+              # Чек\u2011лист ревью Nix
+
+              Быстрый чек\u2011лист для самопроверки перед PR/rebuild.
+
+              ## Шаги
+
+              1. Проверить, что новые `.nix` файлы добавлены в git (иначе `import-tree` их не увидит)
+              2. Проверить Linux-only условия: использовать `system` + `builtins.elem`, не `pkgs.stdenv.isLinux` в `perSystem`
+              3. Убедиться, что секреты не попали в nix store (только `sops.placeholder`/`sops.templates`)
+              4. Прогнать форматирование: `nixfmt-rfc-style nixos/` (или `nixfmt`)
+              5. Собрать без применения: `sudo nixos-rebuild build --flake ~/dotfiles/nixos`
+
+              ## Результат
+
+              Верни список найденных рисков и конкретные действия для исправления.
+            '';
+          };
+          agents = {
+            nix-code-reviewer = ''
+              # Ревьюер Nix-конфигураций
+
+              Специалист по ревью Nix/NixOS/Home Manager.
+
+              ## Что делать
+
+              - Проверять корректность модульной структуры (flake-parts, опции, импорты)
+              - Искать типовые ошибки: рекурсия `pkgs`/`perSystem`, неверные пути, опечатки в опциях
+              - Упрощать выражения, избегать лишнего рефакторинга
+              - Подсказывать, где лучше использовать `mkIf/mkDefault/mkForce`
+
+              ## Формат ответа
+
+              - Сначала краткий вывод (1\u20133 пункта)
+              - Затем конкретные правки (с командами/фрагментами)
+              - Не предлагать изменения вне запроса
+            '';
+          };
+        };
         services.meridian = {
           enable = true;
           settings = {
@@ -230,10 +218,7 @@
           package = meridianPkgPatched;
         };
 
-        programs.opencode = {
-          enable = true;
-          package = pkgs-unstable.opencode;
-        };
+        programs.opencode.enable = true;
 
         # Sops template: renders .env with secret values substituted at activation
         sops.templates."llm-toolkit-env" = {
@@ -331,21 +316,6 @@
           if [[ -f "$opencode_dir/opencode.json" ]]; then
             cp --reflink=never "$opencode_dir/opencode.json" "$opencode_dir/config.json"
           fi
-
-          # Write custom Nix-specific agent
-          mkdir -p "$opencode_dir/agents"
-          cat > "$opencode_dir/agents/nix-code-reviewer.md" << 'EOF'
-          ${nixCodeReviewerAgent}
-          EOF
-
-          # Write custom Nix-specific skill
-          mkdir -p "$opencode_dir/skills/nix-review-checklist"
-          cat > "$opencode_dir/skills/nix-review-checklist/SKILL.md" << 'EOF'
-          ${nixReviewChecklistSkill}
-          EOF
-
-          # Write additional user-defined skills from Nix module
-          ${userSkillsActivationSnippet}
 
           log "opencode setup complete"
         '';

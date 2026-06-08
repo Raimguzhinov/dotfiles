@@ -3,268 +3,193 @@
   flake.homeModules.noctalia =
     { config, pkgs, ... }:
     {
-
-      programs.noctalia-shell = {
+      programs.noctalia = {
         enable = true;
         settings = {
+          # --- Shell ---
+          shell = {
+            font_family = "Inter Nerd Font Display";
+            ui_scale = 1.0;
+            corner_radius_scale = 0.2;
+            time_format = "{:%H:%M}";
+            date_format = "%A, %x";
+            offline_mode = false;
+            telemetry_enabled = false;
+            show_location = true;
+            clipboard_enabled = true;
+            clipboard_auto_paste = "auto";
+            clipboard_history_max_entries = 50;
+            avatar_path = "${config.home.homeDirectory}/.face";
+            lang = "ru";
+            polkit_agent = false;
+            settings_show_advanced = false;
+          };
+
+          shell.animation = {
+            enabled = true;
+            speed = 1.5;
+          };
+
+          # --- Bar: right, compact ---
           bar = {
-            density = "compact";
+            order = [ "main" ];
+          };
+
+          bar.main = {
             position = "right";
-            showCapsule = false;
-            widgets = {
-              left = [
-                {
-                  id = "ControlCenter";
-                  useDistroLogo = true;
-                }
-                {
-                  id = "Launcher";
-                }
-                {
-                  id = "Volume";
-                }
-                {
-                  id = "VPN";
-                }
-                {
-                  id = "WiFi";
-                }
-                {
-                  id = "Bluetooth";
-                }
-                {
-                  id = "plugin:zed-provider";
-                }
-                {
-                  id = "plugin:model-usage";
-                  defaultSettings = {
-                    barCycleIntervalSec = 15;
-                    barDisplayMode = "active";
-                    barMetric = "prompts";
-                    providers = {
-                      claude = {
-                        enabled = true;
-                        statsPath = "~/.claude/stats-cache.json";
-                        credentialsPath = "~/.claude/.credentials.json";
-                      };
-                      codex.enabled = true;
-                      zen = {
-                        apiKey = "";
-                        enabled = false;
-                      };
-                    };
-                    refreshIntervalSec = 30;
-                  };
-                }
-              ];
-              center = [
-                {
-                  hideUnoccupied = false;
-                  id = "Workspace";
-                  labelMode = "none";
-                }
-                {
-                  id = "ActiveWindow";
-                  showIcon = false;
-                }
-              ];
-              right = [
-                {
-                  id = "plugin:screen-recorder";
-                }
-                {
-                  id = "plugin:sticky-notes";
-                }
-                {
-                  id = "KeyboardLayout";
-                  displayMode = "forceOpen";
-                }
-                {
-                  id = "Battery";
-                  displayMode = "alwaysShow";
-                  warningThreshold = 30;
-                  showPowerProfiles = true;
-                  showNoctaliaPerformance = true;
-                }
-                {
-                  id = "Clock";
-                  formatHorizontal = "HH:mm";
-                  formatVertical = "HH mm";
-                  useCustomFont = true;
-                  customFont = "Inter Nerd Font Display Black";
-                }
-                {
-                  id = "plugin:timer";
-                }
-                {
-                  id = "Tray";
-                  pinned = [
-                    "AmneziaVPN"
-                    "MAX"
-                    "OBS Studio"
-                    "Telegram Desktop"
-                    "spotify-client"
-                  ];
-                }
-                {
-                  id = "plugin:usb-drive-manager";
-                  defaultSettings = {
-                    autoMount = true;
-                    fileBrowser = "${pkgs.yazi}/bin/yazi";
-                    hideWhenEmpty = true;
-                    iconColor = "none";
-                    showBadge = false;
-                    showNotifications = true;
-                    terminalCommand = "${pkgs.alacritty}/bin/alacritty";
-                  };
-                }
-              ];
-            };
+            thickness = 28;
+            background_opacity = 1.0;
+            border_width = 0.0;
+            shadow = true;
+            panel_overlap = 1;
+            radius = 12;
+            margin_edge = 10;
+            padding = 10;
+            widget_spacing = 4;
+            scale = 0.9;
+            font_weight = "regular";
+            capsule = false;
+            reserve_space = true;
+
+            start = [ "launcher" "wallpaper" "workspaces" ];
+            center = [ "clock" ];
+            end = [
+              "media"
+              "tray"
+              "notifications"
+              "clipboard"
+              "network"
+              "bluetooth"
+              "volume"
+              "brightness"
+              "battery"
+              "control-center"
+              "session"
+            ];
           };
-          ui = {
-            fontDefault = "Inter Nerd Font Display";
+
+          # --- Widgets ---
+          widget.clock = {
+            format = "{:%H:%M}";
+            vertical_format = "{:%H\n%M}";
+            font_weight = 700;
+            scale = 1.0;
           };
-          colorSchemes.predefinedScheme = "Rose Pine";
-          general = {
-            avatarImage = "${config.home.homeDirectory}/.face";
-            radiusRatio = 0.2;
-            passwordChars = true;
-            lockOnSuspend = true;
-            autoStartAuth = true;
-            compactLockScreen = true;
-            lockScreenAnimations = true;
-            allowPasswordWithFprintd = true;
+
+          widget.workspaces = {
+            display = "id";
+            minimal = false;
+            max_label_chars = 1;
+            focused_color = "primary";
+            occupied_color = "secondary";
+            empty_color = "secondary";
           };
-          location = {
-            monthBeforeDay = true;
-            name = "Novosibirsk, Russia";
+
+          widget.tray = {
+            pinned = [
+              "AmneziaVPN"
+              "MAX"
+              "OBS Studio"
+              "Telegram Desktop"
+              "spotify-client"
+            ];
           };
+
+          widget.volume = {
+            device = "output";
+            scroll_step = 5;
+            show_label = true;
+          };
+
+          # --- Control Center ---
+          control_center = {
+            sidebar = "compact";
+          };
+
+          control_center.shortcuts = [
+            { type = "wifi"; }
+            { type = "bluetooth"; }
+            { type = "wallpaper"; }
+            { type = "nightlight"; }
+            { type = "notification"; }
+            { type = "dark_mode"; }
+            { type = "power_profile"; }
+            { type = "caffeine"; }
+            { type = "screen_recorder"; }
+          ];
+
+          # --- Theme / ColorSchemes ---
+          theme = {
+            mode = "dark";
+            source = "builtin";
+            builtin = "Rosé Pine";
+          };
+
+          # --- Wallpaper ---
           wallpaper = {
-            enable = true;
-            overviewEnabled = true;
+            enabled = true;
             directory = "${config.home.homeDirectory}/dotfiles/wallpapers";
+            fill_mode = "crop";
           };
+
+          wallpaper.automation = {
+            enabled = false;
+          };
+
+          # --- Notifications ---
+          notification = {
+            enable_daemon = true;
+            position = "top_right";
+            show_app_name = true;
+            show_actions = true;
+          };
+
+          # --- Audio ---
           audio = {
-            volumeOverdrive = true;
+            enable_overdrive = true;
+            enable_sounds = false;
           };
-          notifications = {
-            enableKeyboardLayoutToast = false;
-            lowUrgencyDuration = 2;
-            normalUrgencyDuration = 5;
-            criticalUrgencyDuration = 15;
-          };
+
+          # --- Dock ---
           dock = {
             enabled = false;
           };
-          controlCenter = {
-            position = "close_to_bar_button";
-            diskPath = "/";
-            shortcuts = {
-              left = [
-                {
-                  id = "Network";
-                }
-                {
-                  id = "Bluetooth";
-                }
-                {
-                  id = "WallpaperSelector";
-                }
-                {
-                  id = "NoctaliaPerformance";
-                }
-                {
-                  id = "AirplaneMode";
-                }
-              ];
-              right = [
-                {
-                  id = "Notifications";
-                }
-                {
-                  id = "PowerProfile";
-                }
-                {
-                  id = "KeepAwake";
-                }
-                {
-                  id = "NightLight";
-                }
-                {
-                  id = "DarkMode";
-                }
-              ];
-            };
+
+          # --- App Launcher ---
+          shell.panel = {
+            launcher_compact = false;
+            launcher_categories = true;
+            launcher_placement = "centered";
           };
-          appLauncher = {
-            enableClipboardHistory = true;
-            autoPasteClipboard = false;
-            enableClipPreview = true;
-            clipboardWrapText = true;
-            clipboardWatchTextCommand = "wl-paste --type text --watch cliphist store";
-            clipboardWatchImageCommand = "wl-paste --type image --watch cliphist store";
-            position = "center";
-            pinnedApps = [ ];
-            useApp2Unit = false;
-            sortByMostUsed = true;
-            terminalCommand = "alacritty -e";
-            customLaunchPrefixEnabled = false;
-            customLaunchPrefix = "";
-            viewMode = "grid";
-            showCategories = true;
-            iconMode = "native";
-            showIconBackground = false;
-            enableSettingsSearch = true;
-            enableWindowsSearch = true;
-            enableSessionSearch = true;
-            ignoreMouseInput = false;
-            screenshotAnnotationTool = "";
-            overviewLayer = true;
-            density = "default";
+
+          # --- Lock Screen ---
+          lockscreen = {
+            blurred_desktop = false;
           };
-          plugins = {
-            autoUpdate = true;
-            sources = [
-              {
-                enabled = true;
-                name = "Official Source";
-                url = "https://github.com/noctalia-dev/noctalia-plugins";
-              }
-            ];
-            states = {
-              timer = {
-                enabled = true;
-                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-              };
-              model-usage = {
-                enabled = true;
-                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-              };
-              sticky-notes = {
-                enabled = true;
-                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-              };
-              screen-recorder = {
-                enabled = true;
-                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-              };
-              usb-drive-manager = {
-                enabled = true;
-                sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-              };
-            };
-            version = 1;
+
+          # --- Location ---
+          location = {
+            auto_locate = false;
+            address = "Novosibirsk, Russia";
+          };
+
+          # --- OSD ---
+          osd = {
+            position = "top_center";
+            orientation = "horizontal";
+          };
+
+          osd.kinds = {
+            volume = true;
+            brightness = true;
+            wifi = true;
+            bluetooth = true;
+            power_profile = true;
+            caffeine = true;
+            notification = true;
+            keyboard_layout = true;
           };
         };
-        pluginSettings = {
-          timer = {
-            defaulltDuration = 0;
-            compactMode = true;
-            iconColor = "tertiary";
-            textColor = "tertiary";
-          };
-        };
-        # this may also be a string or a path to a JSON file.
       };
     };
 }

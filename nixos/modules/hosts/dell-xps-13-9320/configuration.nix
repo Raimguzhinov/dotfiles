@@ -34,35 +34,6 @@
             ];
           };
 
-      # Flakes
-      nix.settings = {
-        experimental-features = [
-          "nix-command"
-          "flakes"
-        ];
-        auto-optimise-store = true;
-        # При недоступности кэша — сборка из исходников
-        fallback = true;
-        # Таймауты для проблемного интернета
-        connect-timeout = 10;
-        stalled-download-timeout = 60;
-        download-attempts = 3;
-        substituters = [
-          "https://mirror.yandex.ru/nixos"
-          "https://mirrors.ustc.edu.cn/nix-channels/store"
-          "https://cache.nixos.org"
-          "https://niri.cachix.org"
-          "https://notashelf.cachix.org"
-          "https://nix-community.cachix.org"
-        ];
-        trusted-public-keys = [
-          "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-          "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
-          "notashelf.cachix.org-1:VTTBFNQWbfyLuRzgm2I7AWSDJdqAa11ytLXHBhrprZk="
-          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-        ];
-      };
-
       # Garbage collector
       nix.gc = {
         automatic = true;
@@ -336,15 +307,12 @@
 
             programs.mpv = {
               enable = true;
-              package = (
-                pkgs.mpv-unwrapped.wrapper {
-                  scripts = with pkgs.mpvScripts; [
-                    uosc
-                    sponsorblock
-                  ];
-                  mpv = pkgs.mpv-unwrapped.override { waylandSupport = true; };
-                }
-              );
+              package = pkgs.mpv.override {
+                scripts = with pkgs.mpvScripts; [
+                  uosc
+                  sponsorblock
+                ];
+              };
               config = {
                 profile = "high-quality";
                 ytdl-format = "bestvideo+bestaudio";
@@ -873,7 +841,7 @@
           lsof
           nettools
           nix-ld
-          nixfmt-rfc-style
+          nixfmt
           nurl # nix fetcher
           nwg-drawer
           onlyoffice-desktopeditors

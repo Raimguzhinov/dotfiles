@@ -8,7 +8,7 @@
       inherit inputs;
       hostname = "raimguzhinov";
       username = "dias";
-      version = "25.11";
+      version = "26.05";
       pkgs-unstable = import inputs.nixpkgs-unstable {
         system = "x86_64-linux";
         config.allowUnfree = true;

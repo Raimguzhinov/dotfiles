@@ -4,7 +4,6 @@
     {
       config,
       pkgs,
-      pkgs-unstable,
       ...
     }:
     {
@@ -422,7 +421,6 @@
         enable = true;
         enableZshIntegration = true;
         enableBashIntegration = true;
-        package = pkgs-unstable.yazi;
         shellWrapperName = "rr";
         settings = {
           mgr = {

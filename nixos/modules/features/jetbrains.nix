@@ -1,7 +1,7 @@
 { ... }:
 let
   makeJetbrainsPkgs =
-    pkgs: pkgs-unstable: jdk:
+    pkgs: pkgs-jetbrains:
 
     let
       # tar c -C nixos/modules/features jetbrains-agent/ | xz -9 | base64 -w76 > nixos/modules/features/jetbrains-agent.b64
@@ -48,25 +48,35 @@ let
           -Dawt.toolkit.name=${toolkit}
         '';
 
+      jdk = pkgs.jetbrains.jdk-21;
       mkIde =
         base: xmx:
         let
-          auto = base.override { vmopts = commonVmopts xmx + jaAgent "auto"; inherit jdk; };
-          wl = base.override { vmopts = commonVmopts xmx + jaAgent "WLToolkit"; inherit jdk; };
-          x11 = base.override { vmopts = commonVmopts xmx + jaAgent "XToolkit"; inherit jdk; };
+          auto = base.override {
+            vmopts = commonVmopts xmx + jaAgent "auto";
+            inherit jdk;
+          };
+          wl = base.override {
+            vmopts = commonVmopts xmx + jaAgent "WLToolkit";
+            inherit jdk;
+          };
+          x11 = base.override {
+            vmopts = commonVmopts xmx + jaAgent "XToolkit";
+            inherit jdk;
+          };
         in
         {
           inherit auto wl x11;
         };
 
-      golandPkgs = mkIde pkgs-unstable.jetbrains.goland "4096m";
-      pycharmPkgs = mkIde pkgs-unstable.jetbrains.pycharm "4096m";
-      ideaPkgs = mkIde pkgs-unstable.jetbrains.idea "4096m";
-      clionPkgs = mkIde pkgs-unstable.jetbrains.clion "1024m";
-      datagrip = mkIde pkgs-unstable.jetbrains.datagrip "1024m";
-      phpstormPkgs = mkIde pkgs-unstable.jetbrains.phpstorm "1024m";
-      riderPkgs = mkIde pkgs-unstable.jetbrains.rider "1024m";
-      webstormPkgs = mkIde pkgs-unstable.jetbrains.webstorm "1024m";
+      golandPkgs = mkIde pkgs-jetbrains.jetbrains.goland "4096m";
+      pycharmPkgs = mkIde pkgs-jetbrains.jetbrains.pycharm "4096m";
+      ideaPkgs = mkIde pkgs-jetbrains.jetbrains.idea "4096m";
+      clionPkgs = mkIde pkgs-jetbrains.jetbrains.clion "1024m";
+      datagrip = mkIde pkgs-jetbrains.jetbrains.datagrip "1024m";
+      phpstormPkgs = mkIde pkgs-jetbrains.jetbrains.phpstorm "1024m";
+      riderPkgs = mkIde pkgs-jetbrains.jetbrains.rider "1024m";
+      webstormPkgs = mkIde pkgs-jetbrains.jetbrains.webstorm "1024m";
     in
     {
       # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
@@ -98,15 +108,15 @@ let
 in
 {
   perSystem =
-    { pkgs, pkgs-jetbrains, pkgs-unstable, ... }:
+    { pkgs, pkgs-jetbrains, ... }:
     {
-      packages = makeJetbrainsPkgs pkgs pkgs-jetbrains pkgs-unstable.jetbrains.jdk-21;
+      packages = makeJetbrainsPkgs pkgs pkgs-jetbrains;
     };
 
   flake.homeModules.jetbrains =
-    { pkgs, pkgs-jetbrains, pkgs-unstable, ... }:
+    { pkgs, pkgs-jetbrains, ... }:
     let
-      jbPkgs = makeJetbrainsPkgs pkgs pkgs-jetbrains pkgs-unstable.jetbrains.jdk-21;
+      jbPkgs = makeJetbrainsPkgs pkgs pkgs-jetbrains;
     in
     {
       home.packages = [
