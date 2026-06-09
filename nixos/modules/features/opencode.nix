@@ -1,9 +1,9 @@
 { ... }:
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, pkgs-unstable, ... }:
     {
-      packages.opencode = pkgs.opencode;
+      packages.opencode = pkgs-unstable.opencode;
     };
 
   flake.homeModules.opencode =
@@ -12,6 +12,7 @@
       inputs ? null,
       lib,
       pkgs,
+      pkgs-unstable,
       ...
     }:
 
@@ -115,6 +116,8 @@
     {
       config = {
         programs.opencode = {
+          enable = true;
+          package = pkgs-unstable.opencode;
           # Skills и agents через нативный HM-модуль (xdg.configFile).
           # Порядок применения:
           #   1) Pre-seed — opencode.json из Nix (nixPreseedConfig)
@@ -188,8 +191,6 @@
           };
         };
 
-        programs.opencode.enable = true;
-
         # Sops template: renders .env with secret values substituted at activation
         sops.templates."llm-toolkit-env" = {
           content = ''
@@ -242,9 +243,9 @@
             fi
           fi
 
-          # Copy sops-rendered .env (sops-nix already substituted placeholders)
-          if [[ "$toolkit_available" == "1" ]]; then
-            cp --reflink=never "${config.sops.templates."llm-toolkit-env".path}" "$toolkit_dir/.env"
+          sops_env="${config.sops.templates."llm-toolkit-env".path}"
+          if [[ "$toolkit_available" == "1" ]] && [[ -f "$sops_env" ]]; then
+            cp --reflink=never "$sops_env" "$toolkit_dir/.env"
             chmod 600 "$toolkit_dir/.env"
             log ".env deployed (sops-rendered)"
           fi

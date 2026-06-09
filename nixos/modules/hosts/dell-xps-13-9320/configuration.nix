@@ -37,7 +37,10 @@
       # Flakes — experimental features must be in nix.settings for CLI commands
       # (flake.nix nixConfig only applies during flake evaluation)
       nix.settings = {
-        experimental-features = [ "nix-command" "flakes" ];
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
         auto-optimise-store = true;
       };
       nix.settings.trusted-users = [ username ];
@@ -266,44 +269,6 @@
               '';
             };
 
-            programs.kitty = {
-              enable = true;
-              package = pkgs-unstable.kitty;
-              font = {
-                name = "JetBrainsMono Nerd Font";
-                size = 10.5;
-              };
-              settings = {
-                enable_audio_bell = "no";
-                visual_bell_duration = "0.0";
-                window_alert_on_bell = "no";
-                shell = "${pkgs.zsh}/bin/zsh";
-                scrollback_lines = 10000;
-                bold_is_bright = "yes";
-                background = "#181818";
-                foreground = "#ffffff";
-                color0 = "#181818";
-                color1 = "#f62b5a";
-                color2 = "#47b413";
-                color3 = "#e3c401";
-                color4 = "#24acd4";
-                color5 = "#f2affd";
-                color6 = "#13c299";
-                color7 = "#e6e6e6";
-                color8 = "#616161";
-                color9 = "#ff4d51";
-                color10 = "#35d450";
-                color11 = "#e9e836";
-                color12 = "#5dc5f8";
-                color13 = "#feabf2";
-                color14 = "#24dfc4";
-                color15 = "#ffffff";
-              };
-              keybindings = {
-                "ctrl+c" = "copy_or_interrupt";
-              };
-            };
-
             programs.obs-studio = {
               enable = true;
               plugins = with pkgs.obs-studio-plugins; [
@@ -329,27 +294,28 @@
             };
 
             imports = [
+              inputs.meridian.homeManagerModules.default
               inputs.noctalia.homeModules.default
               inputs.nvf.homeManagerModules.default
               inputs.zen-browser.homeModules.beta
-              inputs.meridian.homeManagerModules.default
               homeModules.chromium
-              homeModules.sops
+              homeModules.claude
               homeModules.development
+              homeModules.git
               homeModules.jetbrains
+              homeModules.kitty
+              homeModules.llamaCpp
               homeModules.neovim
               homeModules.niri
               homeModules.noctalia
+              homeModules.obsidian
+              homeModules.opencode
               homeModules.rofi
+              homeModules.sops
+              homeModules.thunderbird
               homeModules.tools
-              homeModules.git
               homeModules.zed
               homeModules.zenBrowser
-              homeModules.claude
-              homeModules.opencode
-              homeModules.llamaCpp
-              homeModules.obsidian
-              homeModules.thunderbird
             ];
           };
       };

@@ -7,6 +7,7 @@
         enable = true;
         settings = {
           dock.enabled = false;
+          backdrop.enabled = true;
 
           shell = {
             font_family = "Inter Nerd Font Display";
@@ -63,10 +64,12 @@
                 "active_window"
               ];
               end = [
+                "screen_recorder"
                 "keyboard_layout"
                 "battery"
                 "clock"
                 "tray"
+                "session"
               ];
             };
           };
@@ -87,6 +90,7 @@
           };
 
           widget.tray = {
+            drawer = true;
             pinned = [
               "AmneziaVPN"
               "MAX"
@@ -124,18 +128,22 @@
             enable_daemon = true;
             position = "top_right";
             show_app_name = true;
-            show_actions = true;
+            show_actions = false;
+            layer = "overlay";
+            scale = 0.95;
           };
 
           audio = {
             enable_overdrive = true;
-            enable_sounds = false;
+            enable_sounds = true;
           };
 
           shell.panel = {
+            open_near_click_control_center = true;
             launcher_compact = false;
             launcher_categories = true;
             launcher_placement = "centered";
+            session_placement = "centered";
           };
 
           lockscreen = {

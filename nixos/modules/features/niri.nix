@@ -151,6 +151,12 @@
                 ];
                 open-floating = true;
               }
+              {
+                matches = [ { app-id = "dev.noctalia.Noctalia.Settings"; } ];
+                open-floating = true;
+                default-column-width.fixed = 1080;
+                default-window-height.fixed = 920;
+              }
             ];
             debug = {
               honor-xdg-activation-with-invalid-serial = { };
@@ -383,7 +389,7 @@
                 })
               ];
             switch-events = {
-              lid-close.action.spawn = noctalia "session lock";
+              lid-close.action.spawn = noctalia "session lock-and-suspend";
               tablet-mode-on.action.spawn = [
                 "bash"
                 "-c"

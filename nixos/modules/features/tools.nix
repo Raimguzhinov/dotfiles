@@ -412,6 +412,7 @@
       };
 
       home.packages = [
+        pkgs.dragon-drop
         (pkgs.writeShellScriptBin "rr" ''
           exec ${pkgs.yazi}/bin/yazi "$@"
         '')
@@ -435,6 +436,20 @@
         };
         keymap = {
           mgr.prepend_keymap = [
+            {
+              on = "!";
+              for = "unix";
+              run = ''shell "env YAZI_SHELL=1 $SHELL" --block'';
+              desc = "Open $SHELL here";
+            }
+            {
+              on = [
+                "c"
+                "y"
+              ];
+              run = "shell -- ${pkgs.dragon-drop}/bin/dragon-drop -x -i -T %h";
+              desc = "Drag and drop";
+            }
             {
               on = [
                 "g"
@@ -477,6 +492,12 @@
         enableInteractive = true;
         enableTransience = true;
         enableZshIntegration = true;
+        settings = {
+          custom.yazi_shell = {
+            when = ''test "$YAZI_SHELL" = "1"'';
+            format = "[║══ yazi ══║](bold yellow) ";
+          };
+        };
       };
 
       programs.bat = {
