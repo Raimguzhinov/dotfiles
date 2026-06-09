@@ -34,6 +34,14 @@
             ];
           };
 
+      # Flakes — experimental features must be in nix.settings for CLI commands
+      # (flake.nix nixConfig only applies during flake evaluation)
+      nix.settings = {
+        experimental-features = [ "nix-command" "flakes" ];
+        auto-optimise-store = true;
+      };
+      nix.trustedUsers = [ username ];
+
       # Garbage collector
       nix.gc = {
         automatic = true;

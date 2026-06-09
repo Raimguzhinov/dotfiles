@@ -24,33 +24,6 @@
       toolkitRepoUrl = "https://git.protei.ru/qa-stuff/llm/llm-toolkit.git";
       toolkitDir = "${config.home.homeDirectory}/Work/llm-toolkit";
 
-      claudeForMeridian = "${pkgs.claude-code}/bin/claude";
-
-      # --- Meridian patch (duplicate ESM export in 1.42.1) ---
-      meridianPkgPatched =
-        if inputs != null && inputs ? meridian then
-          inputs.meridian.packages.${pkgs.system}.meridian.overrideAttrs (old: {
-            nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ pkgs.makeWrapper ];
-
-            postInstall = (old.postInstall or "") + ''
-              for f in "$out"/lib/meridian/dist/tokenRefresh-*.js; do
-                if [ -f "$f" ]; then
-                  substituteInPlace "$f" \
-                    --replace-fail \
-                    'export { withClaudeLogContext, claudeLog, createPlatformCredentialStore, refreshOAuthToken, ensureFreshToken, startBackgroundRefresh, stopBackgroundRefresh };' \
-                    'export { withClaudeLogContext, claudeLog };'
-                fi
-              done
-            '';
-
-            postFixup = (old.postFixup or "") + ''
-              wrapProgram "$out/bin/meridian" \
-                --set MERIDIAN_CLAUDE_PATH "${claudeForMeridian}"
-            '';
-          })
-        else
-          null;
-
       # --- Wrapper: sets UV env + PATH so install.sh's `uv run` works on NixOS ---
       # Per nixpkgs uv docs: UV_PYTHON + UV_PYTHON_DOWNLOADS=never + LD_LIBRARY_PATH
       installWrapper = pkgs.writeShellScriptBin "run-install" ''
@@ -211,11 +184,8 @@
             host = "127.0.0.1";
           };
           environment = {
-            MERIDIAN_CLAUDE_PATH = claudeForMeridian;
+            MERIDIAN_CLAUDE_PATH = "${pkgs.claude-code}/bin/claude";
           };
-        }
-        // lib.optionalAttrs (meridianPkgPatched != null) {
-          package = meridianPkgPatched;
         };
 
         programs.opencode.enable = true;

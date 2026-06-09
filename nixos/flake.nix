@@ -2,17 +2,12 @@
   description = "NixOS configuration";
 
   nixConfig = {
-    extra-experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-    auto-optimise-store = true;
     # При недоступности кэша — сборка из исходников
     fallback = true;
-    # Минимальные таймауты: лучше быстро упасть, чем выжимать плохой интернет
-    connect-timeout = 3;
-    stalled-download-timeout = 10;
-    download-attempts = 1;
+    # Быстрый отказ при плохом интернете, но не слишком агрессивные
+    connect-timeout = 10;
+    stalled-download-timeout = 30;
+    download-attempts = 2;
     extra-substituters = [
       "https://mirror.yandex.ru/nixos"
       "https://mirrors.ustc.edu.cn/nix-channels/store"
