@@ -1,13 +1,13 @@
 { ... }:
 {
   flake.nixosModules.llamaCpp =
-    { pkgs, ... }:
+    { pkgs, pkgs-unstable, ... }:
     {
       config = {
         services.llama-cpp = {
           enable = true;
           port = 8085;
-          package = pkgs.llama-cpp.override {
+          package = pkgs-unstable.llama-cpp.override {
             blasSupport = true;
             vulkanSupport = true;
             cudaSupport = false;
@@ -23,27 +23,27 @@
               temp = "0.6";
               top-p = "0.95";
               top-k = "20";
-              extra-args = [
-                "--jinja"
-                "--presence-penalty 0.0"
-                "--repeat-penalty 1.0"
-                "--batch-size 512"
-                "--ubatch-size 256"
-                "--flash-attn on"
-                "--parallel 1"
-                "--spec-draft-n-max 2"
-              ];
+              jinja = "on";
+              presence-penalty = "0.0";
+              repeat-penalty = "1.0";
+              flash-attn = "on";
+              spec-draft-n-max = "2";
             };
           };
+          extraFlags = [
+            "--batch-size" "512"
+            "--ubatch-size" "256"
+            "--parallel" "1"
+          ];
         };
       };
     };
 
   flake.homeModules.llamaCpp =
-    { pkgs, ... }:
+    { pkgs-unstable, ... }:
     {
       home.packages = [
-        (pkgs.llama-cpp.override {
+        (pkgs-unstable.llama-cpp.override {
           blasSupport = true;
           vulkanSupport = true;
           cudaSupport = false;
