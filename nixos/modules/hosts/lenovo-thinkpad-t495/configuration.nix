@@ -37,7 +37,7 @@
         ];
         auto-optimise-store = true;
       };
-      nix.trustedUsers = [ username ];
+      nix.settings.trusted-users = [ username ];
 
       nix.gc = {
         automatic = true;

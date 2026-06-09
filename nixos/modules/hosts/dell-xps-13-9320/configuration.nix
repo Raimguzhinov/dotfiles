@@ -40,7 +40,7 @@
         experimental-features = [ "nix-command" "flakes" ];
         auto-optimise-store = true;
       };
-      nix.trustedUsers = [ username ];
+      nix.settings.trusted-users = [ username ];
 
       # Garbage collector
       nix.gc = {
@@ -446,7 +446,7 @@
 
       # NOTE: `ly` shows only a password form, but PAM modules like pam_fprintd may
       # still run and block. To allow both "password OR fingerprint" without long
-      # blocking, we override PAM stacks for ly and noctalia-shell with short
+      # blocking, we override PAM stacks for ly and noctalia with short
       # pam_fprintd timeouts.
       security.pam.services.ly.fprintAuth = false;
       security.pam.services.ly.text = ''
@@ -473,8 +473,8 @@
         session optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so auto_start
       '';
 
-      security.pam.services.noctalia-shell.fprintAuth = false;
-      security.pam.services.noctalia-shell.text = ''
+      security.pam.services.noctalia.fprintAuth = false;
+      security.pam.services.noctalia.text = ''
         # Account management.
         account required ${pkgs.pam}/lib/security/pam_unix.so
 

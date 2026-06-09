@@ -71,9 +71,8 @@
             noctalia =
               cmd:
               [
-                "noctalia-shell"
-                "ipc"
-                "call"
+                "noctalia"
+                "msg"
               ]
               ++ (lib.splitString " " cmd);
           in
@@ -158,7 +157,7 @@
             };
             prefer-no-csd = true;
             spawn-at-startup = [
-              { command = [ "noctalia-shell" ]; }
+              { command = [ "noctalia" ]; }
               { command = [ "xwayland-satellite" ]; }
               { command = [ "soteria" ]; }
               {
@@ -175,7 +174,7 @@
                 block-out-from = "screen-capture";
               }
               {
-                matches = [ { namespace = "^noctalia-overview*"; } ];
+                matches = [ { namespace = "^noctalia-backdrop*"; } ];
                 place-within-backdrop = true;
               }
             ];
@@ -228,7 +227,7 @@
                     hotkey-overlay.title = "Open a Terminal: kitty";
                   };
                   "Mod+A" = {
-                    action.spawn = noctalia "launcher toggle"; # "rofi" "-show" "drun";
+                    action.spawn = noctalia "panel-toggle launcher";
                     hotkey-overlay.title = "Run an Application: noctalia launcher";
                   };
                   "Mod+D" = {
@@ -254,7 +253,7 @@
                     hotkey-overlay.title = "Calculator: rofi-calc";
                   };
                   "Mod+V" = {
-                    action.spawn = noctalia "launcher clipboard";
+                    action.spawn = noctalia "panel-toggle clipboard";
                     # let
                     #   cliphistRofi = pkgs.writeShellScriptBin "cliphistRofi" ''
                     #     cliphist list | rofi -dmenu -p "Select item to copy" -lines 10 \
@@ -277,31 +276,31 @@
                     hotkey-overlay.title = "Toggle camera bridge";
                   };
                   "Mod+Alt+Q" = {
-                    action.spawn = noctalia "lockScreen lock";
+                    action.spawn = noctalia "session lock";
                     hotkey-overlay.title = "Lock Screen";
                   };
                   XF86AudioRaiseVolume = {
-                    action.spawn = noctalia "volume increase"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1+";
+                    action.spawn = noctalia "volume-up";
                     allow-when-locked = true;
                   };
                   XF86AudioLowerVolume = {
-                    action.spawn = noctalia "volume decrease"; # "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.1-";
+                    action.spawn = noctalia "volume-down";
                     allow-when-locked = true;
                   };
                   XF86AudioMute = {
-                    action.spawn = noctalia "volume muteOutput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle";
+                    action.spawn = noctalia "volume-mute";
                     allow-when-locked = true;
                   };
                   XF86AudioMicMute = {
-                    action.spawn = noctalia "volume muteInput"; # "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle";
+                    action.spawn = noctalia "volume-mute-input";
                     allow-when-locked = true;
                   };
                   XF86MonBrightnessUp = {
-                    action.spawn = noctalia "brightness increase"; # "brightnessctl" "set" "+10%";
+                    action.spawn = noctalia "brightness-up";
                     allow-when-locked = true;
                   };
                   XF86MonBrightnessDown = {
-                    action.spawn = noctalia "brightness decrease"; # "brightnessctl" "set" "10%-";
+                    action.spawn = noctalia "brightness-down";
                     allow-when-locked = true;
                   };
 
@@ -384,7 +383,7 @@
                 })
               ];
             switch-events = {
-              lid-close.action.spawn = noctalia "lockScreen lock";
+              lid-close.action.spawn = noctalia "session lock";
               tablet-mode-on.action.spawn = [
                 "bash"
                 "-c"
