@@ -123,6 +123,14 @@
                   refresh = 60.0;
                 };
               };
+              "Acer Technologies V277U E K410039F04208" = {
+                scale = 1;
+                mode = {
+                  width = 1280;
+                  height = 1024;
+                  refresh = 75.025;
+                };
+              };
             };
             layout = {
               default-column-width.proportion = 0.975;
