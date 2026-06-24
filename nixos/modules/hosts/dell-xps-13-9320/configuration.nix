@@ -293,6 +293,19 @@
               };
             };
 
+            programs.vscode = {
+              enable = true;
+              profiles.default.extensions = with pkgs.vscode-extensions; [
+                dracula-theme.theme-dracula
+                jnoortheen.nix-ide
+                ms-azuretools.vscode-docker
+                ms-python.python
+                ms-vscode-remote.remote-ssh
+                vscodevim.vim
+                yzhang.markdown-all-in-one
+              ];
+            };
+
             imports = [
               inputs.meridian.homeManagerModules.default
               inputs.noctalia.homeModules.default
@@ -395,7 +408,33 @@
       systemd.services.display-manager.environment.XDG_CURRENT_DESKTOP = "X-NIXOS-SYSTEMD-AWARE";
 
       # Enable CUPS to print documents.
-      services.printing.enable = true;
+      services.avahi = {
+        enable = true;
+        nssmdns4 = true;
+        openFirewall = true;
+      };
+      services.printing = {
+        enable = true;
+        drivers = with pkgs; [
+          cups-filters
+          cups-browsed
+        ];
+      };
+
+      # Canon MF260: socket:// вместо ipp://everywhere — баг прошивки
+      # (некорректный dateTime в IPP-ответах: UTC-смещение > 59 мин)
+      hardware.printers = {
+        ensurePrinters = [{
+          name = "Canon_MF260";
+          location = "Home";
+          deviceUri = "socket://Canon8be959.local:9100";
+          model = "drv:///cupsfilters.drv/pwgrast.ppd";
+          ppdOptions = {
+            PageSize = "A4";
+          };
+        }];
+        ensureDefaultPrinter = "Canon_MF260";
+      };
 
       # Fingerprint reader (Goodix, XPS 13 Plus 9320)
       services.fprintd.enable = true;
@@ -753,7 +792,8 @@
           niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
         ])
         ++ (with pkgs-unstable; [
-          censor # PDF document redaction
+          amnezia-vpn-bin
+          handy
         ])
         ++ (with pkgs.gst_all_1; [
           gst-libav
@@ -772,6 +812,7 @@
           alsa-utils
           brightnessctl
           bruno # lightweight insomnia
+          censor # PDF document redaction
           chafa # terminal image viewer
           choose # cut → choose
           cliphist
@@ -822,6 +863,7 @@
           papers
           papirus-icon-theme
           pdfchain # pdftk GUI
+          pi-coding-agent
           popsicle # USB flasher
           postgresql
           procs # ps → procs

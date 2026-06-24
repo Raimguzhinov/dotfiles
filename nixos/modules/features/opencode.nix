@@ -3,7 +3,7 @@
   perSystem =
     { pkgs, pkgs-unstable, ... }:
     {
-      packages.opencode = pkgs-unstable.opencode;
+      packages.opencode = pkgs.opencode;
     };
 
   flake.homeModules.opencode =
@@ -103,7 +103,7 @@
 
         # plugin is LIST_UNION_KEY: repo ["opencode-auto-resume"] + ours = union
         plugin = [
-          config.services.meridian.opencode.pluginPath
+          "${pkgs.opencode-claude-auth}/lib/node_modules/opencode-claude-auth"
         ];
       };
 
@@ -115,9 +115,14 @@
     in
     {
       config = {
+
+        home.packages = [
+          pkgs.opencode-desktop
+        ];
+
         programs.opencode = {
           enable = true;
-          package = pkgs-unstable.opencode;
+          package = pkgs.opencode;
           # Skills и agents через нативный HM-модуль (xdg.configFile).
           # Порядок применения:
           #   1) Pre-seed — opencode.json из Nix (nixPreseedConfig)
@@ -178,16 +183,6 @@
               - Затем конкретные правки (с командами/фрагментами)
               - Не предлагать изменения вне запроса
             '';
-          };
-        };
-        services.meridian = {
-          enable = true;
-          settings = {
-            port = 3456;
-            host = "127.0.0.1";
-          };
-          environment = {
-            MERIDIAN_CLAUDE_PATH = "${pkgs.claude-code}/bin/claude";
           };
         };
 
