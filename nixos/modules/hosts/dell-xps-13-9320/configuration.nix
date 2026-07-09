@@ -369,10 +369,6 @@
       networking.networkmanager = {
         enable = true;
         wifi.powersave = true;
-        plugins = with pkgs; [
-          networkmanager-openvpn
-          networkmanager-sstp
-        ];
       };
 
       # Set your time zone.
@@ -407,6 +403,14 @@
       # Ensure services start properly
       systemd.services.display-manager.environment.XDG_CURRENT_DESKTOP = "X-NIXOS-SYSTEMD-AWARE";
 
+      # LLama CPP
+      systemd.services.llama-cpp = {
+        environment = {
+          XDG_CACHE_HOME = "/var/cache/llama-cpp";
+          MESA_SHADER_CACHE_DIR = "/var/cache/llama-cpp";
+        };
+      };
+
       # Enable CUPS to print documents.
       services.avahi = {
         enable = true;
@@ -419,21 +423,6 @@
           cups-filters
           cups-browsed
         ];
-      };
-
-      # Canon MF260: socket:// вместо ipp://everywhere — баг прошивки
-      # (некорректный dateTime в IPP-ответах: UTC-смещение > 59 мин)
-      hardware.printers = {
-        ensurePrinters = [{
-          name = "Canon_MF260";
-          location = "Home";
-          deviceUri = "socket://Canon8be959.local:9100";
-          model = "drv:///cupsfilters.drv/pwgrast.ppd";
-          ppdOptions = {
-            PageSize = "A4";
-          };
-        }];
-        ensureDefaultPrinter = "Canon_MF260";
       };
 
       # Fingerprint reader (Goodix, XPS 13 Plus 9320)
@@ -558,7 +547,6 @@
       # For global user
       users.defaultUserShell = pkgs.zsh;
       programs = {
-        amnezia-vpn.enable = true;
         localsend.enable = true;
         nm-applet.enable = true;
         partition-manager.enable = true;
@@ -653,6 +641,17 @@
 
       # Password store
       services.gnome.gnome-keyring.enable = true;
+
+      # VPN
+      networking.networkmanager.plugins = with pkgs; [
+        networkmanager-openvpn
+        networkmanager-sstp
+      ];
+      programs.amnezia-vpn = {
+        enable = true;
+        package = pkgs-unstable.amnezia-vpn;
+      };
+      services.v2raya.enable = true;
 
       # Bluetooth
       hardware.bluetooth.enable = true; # enables support for Bluetooth
@@ -777,6 +776,12 @@
       # Or disable the firewall altogether.
       # networking.firewall.enable = false;
 
+      # Allow libvirt VM (virbr0) forwarding past docker's FORWARD DROP policy.
+      networking.nat = {
+        enable = true;
+        internalInterfaces = [ "virbr0" ];
+      };
+
       # This value determines the NixOS release from which the default
       # settings for stateful data, like file locations and database versions
       # on your system were taken. It’s perfectly fine and recommended to leave
@@ -838,6 +843,7 @@
           gopass-jsonapi
           gpu-screen-recorder
           gtk3
+          gtk-layer-shell
           hicolor-icon-theme
           htop-vim
           imagemagick
@@ -883,6 +889,7 @@
           wget
           wl-clipboard
           wl-color-picker
+          wtype
           xdg-desktop-portal-gnome
           xdg-desktop-portal-gtk
           xh # curl/httpie → xh

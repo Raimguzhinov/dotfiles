@@ -3,7 +3,7 @@
   perSystem =
     { pkgs, pkgs-unstable, ... }:
     {
-      packages.opencode = pkgs.opencode;
+      packages.opencode = pkgs-unstable.opencode;
     };
 
   flake.homeModules.opencode =
@@ -122,7 +122,7 @@
 
         programs.opencode = {
           enable = true;
-          package = pkgs.opencode;
+          package = pkgs-unstable.opencode;
           # Skills и agents через нативный HM-модуль (xdg.configFile).
           # Порядок применения:
           #   1) Pre-seed — opencode.json из Nix (nixPreseedConfig)
@@ -270,7 +270,7 @@
             log "Skipping install (no toolkit available)"
           fi
 
-          # Post-process: remove enabled_providers (repo restricts to ["protei"])
+          # Post-process: remove enabled_providers (repo restricts to ["Protei"])
           if [[ -f "$opencode_dir/opencode.json" ]]; then
             "${pkgs.jq}/bin/jq" 'del(.enabled_providers)' "$opencode_dir/opencode.json" \
               > "$opencode_dir/opencode.json.tmp" && \
@@ -280,7 +280,7 @@
 
           # Mirror opencode.json -> config.json (OpenCode reads both)
           if [[ -f "$opencode_dir/opencode.json" ]]; then
-            cp --reflink=never "$opencode_dir/opencode.json" "$opencode_dir/config.json"
+            ln -sf "$opencode_dir/opencode.json" "$opencode_dir/config.json"
           fi
 
           log "opencode setup complete"

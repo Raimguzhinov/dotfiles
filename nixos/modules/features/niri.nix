@@ -20,6 +20,7 @@
     {
       config,
       pkgs,
+      pkgs-unstable,
       lib,
       ...
     }:
@@ -174,6 +175,7 @@
               { command = [ "noctalia" ]; }
               { command = [ "xwayland-satellite" ]; }
               { command = [ "soteria" ]; }
+              { command = [ "handy" ]; }
               {
                 command = [
                   "bash"
@@ -280,6 +282,10 @@
                   "Mod+G" = {
                     action = spawn "niri-float-sticky" "-ipc" "toggle_sticky";
                     hotkey-overlay.title = "Toggle sticky";
+                  };
+                  "Mod+Shift+Space" = {
+                    action = spawn "${pkgs-unstable.handy}/bin/handy" "--toggle-transcription";
+                    hotkey-overlay.title = "Toggle transcription";
                   };
                   "Mod+Shift+P" = {
                     action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
