@@ -56,6 +56,21 @@ let
           end
         '';
       }
+      {
+        # nixfmt (RFC style) uses 2-space indentation; conform passes the
+        # buffer shiftwidth to `nixfmt --indent`, so keep nix at 2 spaces
+        # instead of the global 4 to match the repo formatting.
+        event = ["FileType"];
+        pattern = ["nix"];
+        callback = lib.generators.mkLuaInline ''
+          function()
+            vim.bo.tabstop = 2
+            vim.bo.shiftwidth = 2
+            vim.bo.softtabstop = 2
+            vim.bo.expandtab = true
+          end
+        '';
+      }
     ];
 
     treesitter = {
@@ -456,7 +471,7 @@ in
       neovimPkg =
         (inputs.nvf.lib.neovimConfiguration {
           inherit pkgs;
-          modules = [ { config.vim = makeNvimSettings pkgs inputs.nvf.lib; } ];
+          modules = [ { config.vim = makeNvimSettings pkgs pkgs.lib; } ];
         }).neovim;
     in
     {
