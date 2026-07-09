@@ -651,7 +651,13 @@
         enable = true;
         package = pkgs-unstable.amnezia-vpn;
       };
-      services.v2raya.enable = true;
+      # services.v2raya.enable = true;
+      programs.clash-verge = {
+        enable = true;
+        tunMode = true;
+        serviceMode = true;
+        autoStart = true;
+      };
 
       # Bluetooth
       hardware.bluetooth.enable = true; # enables support for Bluetooth
@@ -821,6 +827,7 @@
           chafa # terminal image viewer
           choose # cut → choose
           cliphist
+          ddgr
           docker-buildx
           docker-compose
           docker-init

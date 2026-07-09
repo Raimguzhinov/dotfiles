@@ -150,6 +150,12 @@
           ssh-run-debugger
           ssh-copy-vimrc
           # tracktime
+
+          # Default Go toolchain on PATH so gopls works everywhere. Inside
+          # ~/Work, direnv loads the devshell which prepends go 1.21 and wins;
+          # outside ~/Work this nixpkgs Go is used.
+          pkgs.go
+          pkgs.nodejs
         ];
     };
 }

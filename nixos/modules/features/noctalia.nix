@@ -93,6 +93,7 @@
             drawer = true;
             pinned = [
               "AmneziaVPN"
+              "Clash-verge"
               "Handy"
               "MAX"
               "OBS Studio"
