@@ -43,26 +43,27 @@ let
 
       jaAgent =
         toolkit: # "auto", "WLToolkit", or "XToolkit"
-        ''
-          -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
-          -Dawt.toolkit.name=${toolkit}
-        '';
+        "-Dawt.toolkit.name=${toolkit}";
+      # ''
+      #   -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
+      #   -Dawt.toolkit.name=${toolkit}
+      # '';
 
-      jdk = pkgs.jetbrains.jdk-21;
+      # jdk = pkgs.jetbrains.jdk-21;
       mkIde =
         base: xmx:
         let
           auto = base.override {
             vmopts = commonVmopts xmx + jaAgent "auto";
-            inherit jdk;
+            # inherit jdk;
           };
           wl = base.override {
             vmopts = commonVmopts xmx + jaAgent "WLToolkit";
-            inherit jdk;
+            # inherit jdk;
           };
           x11 = base.override {
             vmopts = commonVmopts xmx + jaAgent "XToolkit";
-            inherit jdk;
+            # inherit jdk;
           };
         in
         {

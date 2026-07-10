@@ -296,11 +296,15 @@
             programs.vscode = {
               enable = true;
               profiles.default.extensions = with pkgs.vscode-extensions; [
-                dracula-theme.theme-dracula
+                drblury.protobuf-vsc
                 jnoortheen.nix-ide
+                k--kato.intellij-idea-keybindings
+                mhutchie.git-graph
+                ms-azuretools.vscode-containers
                 ms-azuretools.vscode-docker
                 ms-python.python
                 ms-vscode-remote.remote-ssh
+                ms-vscode.makefile-tools
                 vscodevim.vim
                 yzhang.markdown-all-in-one
               ];

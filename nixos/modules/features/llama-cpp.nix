@@ -31,9 +31,12 @@
             };
           };
           extraFlags = [
-            "--batch-size" "512"
-            "--ubatch-size" "256"
-            "--parallel" "1"
+            "--batch-size"
+            "512"
+            "--ubatch-size"
+            "256"
+            "--parallel"
+            "1"
           ];
         };
       };
@@ -52,5 +55,9 @@
           openclSupport = false;
         })
       ];
+
+      programs.zsh.sessionVariables = {
+        LLAMA_SERVER_URL = "http://127.0.0.1:8085";
+      };
     };
 }

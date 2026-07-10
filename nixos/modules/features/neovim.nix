@@ -41,7 +41,14 @@ let
       formatOnSave = true;
       inlayHints.enable = true;
       lightbulb.enable = true;
-      trouble.enable = true; # diagnostics/references list (<leader>x*, <leader>lw*)
+      trouble = {
+        enable = true;
+        mappings = {
+          quickfix = "<leader>lq";
+          locList = "<leader>ll";
+          symbols = "<leader>lx";
+        };
+      };
       # gopls tuned for large monorepos. `settings` is freeform passthrough on
       # top of the nvf gopls preset (which sets cmd/root_dir).
       servers.gopls.settings.gopls = {
@@ -61,11 +68,12 @@ let
         };
         hints = {
           # feeds vim.lsp.inlayHints (already enabled above)
-          assignVariableTypes = true;
+          assignVariableTypes = false;
           compositeLiteralFields = true;
           constantValues = true;
-          functionTypeParameters = true;
-          parameterNames = true;
+          functionTypeParameters = false;
+          ignoredError = true;
+          parameterNames = false;
           rangeVariableTypes = true;
         };
       };
@@ -153,6 +161,103 @@ let
               vim.schedule(function()
                 require("oil").open(vim.fn.getcwd())
               end)
+            end
+          end
+        '';
+      }
+      {
+        # nvim-dap-go's adapter always spawns a *local* `dlv dap -l host:port`,
+        # even for remote configs — fine for local launch/test/attach, but
+        # wrong for attaching to an already-running headless delve (e.g. the
+        # `dlv exec --headless --accept-multiclient` instances in docker
+        # containers, as configured per-service in project .vscode/launch.json,
+        # auto-loaded by nvim-dap on `:DapContinue`). For request=attach +
+        # mode=remote, connect straight to host:port instead of spawning.
+        #
+        # Also swap the local-spawn `dlv` command from nvf's baked-in store
+        # path to a bare "dlv" resolved via $PATH at spawn time, so per-project
+        # pinned versions (e.g. the go devshell's delve, see
+        # modules/devshells/go.nix) take precedence when active.
+        event = [ "VimEnter" ];
+        callback = lib.generators.mkLuaInline ''
+          function()
+            -- telescope (and its ui-select extension, which routes
+            -- vim.ui.select through Telescope) is lazy-loaded on the
+            -- `:Telescope` command via lz.n. Calling vim.ui.select (e.g.
+            -- nvim-dap's config picker) doesn't trigger that lazy-load, so
+            -- force telescope to load now instead of falling back to the
+            -- tiny builtin confirm() popup.
+            local ok_lzn, lzn = pcall(require, "lz.n")
+            if ok_lzn then
+              lzn.trigger_load("telescope")
+            end
+
+            local dap = require("dap")
+            local delve_adapter = dap.adapters.go
+            dap.adapters.go = function(callback, client_config)
+              if client_config.request == "attach" and client_config.mode == "remote" then
+                callback({
+                  type = "server",
+                  host = client_config.host or "127.0.0.1",
+                  port = client_config.port,
+                  -- The remote delve was built without -trimpath, so its DWARF
+                  -- debug info embeds the *container's* build path, not the
+                  -- local checkout path — without a mapping, delve can't find
+                  -- the source file for a local breakpoint and reports it
+                  -- unverified (never hit). Docker builds for this project's
+                  -- services all COPY the repo into /build (see any service's
+                  -- Dockerfile: `WORKDIR /build`), so map the local repo root
+                  -- straight onto /build. `from`/`to` are intentionally
+                  -- reversed vs. what you'd expect — see delve's
+                  -- substitutePath docs (from = debugger/local, to = compiler
+                  -- /remote).
+                  enrich_config = function(config, on_config)
+                    if not config.substitutePath then
+                      local root = vim.fs.root(0, ".vscode")
+                      if root then
+                        config = vim.tbl_extend("force", config, {
+                          substitutePath = { { from = root, to = "/build" } },
+                        })
+                      end
+                    end
+                    on_config(config)
+                  end,
+                })
+                return
+              end
+              delve_adapter(function(adapter_config)
+                if adapter_config.executable then
+                  adapter_config.executable.command = "dlv"
+                end
+                callback(adapter_config)
+              end, client_config)
+            end
+
+            -- nvim-dap's built-in "dap.launch.json" provider only looks at
+            -- `getcwd() .. "/.vscode/launch.json"` — misses it whenever nvim
+            -- is opened from a subdirectory (e.g. services/foo) rather than
+            -- the repo root. Walk up from the buffer to find `.vscode/`
+            -- instead, same approach as the git-root lookup below.
+            dap.providers.configs["dap.launch.json"] = function(bufnr)
+              local root = vim.fs.root(bufnr, ".vscode")
+              if not root then
+                return {}
+              end
+              local ok, configs = pcall(require("dap.ext.vscode").getconfigs, root .. "/.vscode/launch.json")
+              if not ok then
+                return {}
+              end
+              return configs
+            end
+
+            dap.listeners.after.event_initialized["lualine_winbar"] = function()
+              require("lualine").hide({ place = { "winbar" }, unhide = false })
+            end
+            dap.listeners.before.event_terminated["lualine_winbar"] = function()
+              require("lualine").hide({ place = { "winbar" }, unhide = true })
+            end
+            dap.listeners.before.event_exited["lualine_winbar"] = function()
+              require("lualine").hide({ place = { "winbar" }, unhide = true })
             end
           end
         '';
@@ -255,10 +360,12 @@ let
       };
       yaml = {
         enable = true;
+        format.enable = false;
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.yaml;
       };
       markdown = {
         enable = true;
+        format.enable = false;
         treesitter = {
           mdPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown;
           mdInlinePackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown_inline;
@@ -292,7 +399,6 @@ let
         return {}
       end
     '';
-
     theme = {
       enable = true;
       name = "tokyonight";
@@ -418,14 +524,30 @@ let
           packages = [ pkgs.vimPlugins.telescope-fzf-native-nvim ];
           setup.fzf.fuzzy = true;
         }
+        {
+          # Routes vim.ui.select (nvim-dap's config picker, LSP code actions,
+          # etc.) through Telescope instead of the tiny, unscrollable builtin
+          # confirm() popup — matters once dap.configurations.go has dozens
+          # of entries loaded from a project's .vscode/launch.json.
+          name = "ui-select";
+          packages = [ pkgs.vimPlugins.telescope-ui-select-nvim ];
+          setup."ui-select" = [
+            (lib.generators.mkLuaInline ''require("telescope.themes").get_dropdown({})'')
+          ];
+        }
       ];
     };
     tabline.nvimBufferline = {
       enable = true;
       mappings = {
-        cycleNext = "<S-l>"; # replaces old <C-i> buffer cycling
-        cyclePrevious = "<S-h>"; # replaces old <C-o> buffer cycling
+        cycleNext = "<Tab>";
+        cyclePrevious = "<S-Tab>";
+        closeCurrent = "<leader>x";
       };
+      # nvf's default shows "buffer_id·tab_position" (superscript/subscript) —
+      # buffer_id is just an ever-growing internal counter and reads as
+      # confusing noise. Plain left-to-right tab position instead.
+      setupOpts.options.numbers = "ordinal";
     };
     notes.todo-comments.enable = true; # TODO/FIXME highlights + search
     binds = {
@@ -443,7 +565,6 @@ let
           "<leader>l" = "LSP";
           "<leader>r" = "Run/Refactor";
           "<leader>td" = "Todo";
-          "<leader>x" = "Diagnostics";
         };
       };
     };
@@ -560,6 +681,11 @@ let
       }
       {
         key = "<leader>q";
+        mode = "n";
+        action = "<cmd>quit<CR>";
+      }
+      {
+        key = "<leader>Q";
         mode = "n";
         action = "<cmd>quitall<CR>";
       }
