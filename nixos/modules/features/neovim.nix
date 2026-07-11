@@ -9,7 +9,14 @@ let
       yazi # yazi.nvim wraps the yazi binary
       fd # faster telescope find_files on huge repos
       ripgrep # telescope live_grep
+      protobuf-language-server # LSP for .proto files, enabled below via vim.lsp.enable
+      golangci-lint-langserver # go diagnostics, enabled below via vim.lsp.enable
+      # clang-tools # protobuf-language-server shells out to clang-format for
+      # proto formatting; without it on $PATH it crashes on format. Left
+      # disabled — formatting for proto is off entirely instead.
     ];
+    globals.loaded_netrwPlugin = 1;
+    filetype.extension.log = "log";
     viAlias = true;
     vimAlias = true;
     withNodeJs = false;
@@ -52,7 +59,9 @@ let
       # gopls tuned for large monorepos. `settings` is freeform passthrough on
       # top of the nvf gopls preset (which sets cmd/root_dir).
       servers.gopls.settings.gopls = {
-        staticcheck = true;
+        # golangci-lint (via golangci-lint-langserver, see extraPackages/
+        # autocmds below) already runs staticcheck; avoid duplicate diagnostics.
+        staticcheck = false;
         completeUnimported = true;
         usePlaceholders = true;
         symbolScope = "workspace"; # don't index deps for workspace/symbol
@@ -112,8 +121,45 @@ let
         '';
       }
       {
+        # No dedicated nvf language module for protobuf/Go-lint-as-LSP.
+        # golangci_lint_ls comes from nvim-lspconfig's bundled lsp/*.lua
+        # (cmd, filetypes, root_markers, and v1-vs-v2 CLI flag detection via
+        # `go version -m` in its own before_init) — no need to redefine any
+        # of that here. protobuf_language_server isn't in nvim-lspconfig's
+        # registry, so it needs an explicit vim.lsp.config.
+        #
+        # golangci-lint diagnostics move to this LSP entirely: nvf's
+        # nvim-lint wiring pins golangci-lint to a fixed nix-store v2
+        # binary with hardcoded v2 flags, bypassing $PATH — breaks on
+        # projects pinning golangci-lint v1 via their own devshell. Drop it
+        # from linters_by_ft rather than patch it, so it doesn't also run
+        # as a second, differently-configured copy alongside the LSP.
+        event = [ "VimEnter" ];
+        callback = lib.generators.mkLuaInline ''
+          function()
+            require("lint").linters_by_ft.go = nil
+
+            vim.lsp.config("protobuf_language_server", {
+              cmd = { "protobuf-language-server" },
+              filetypes = { "proto" },
+              root_markers = { ".git" },
+              -- Its formatting support shells out to clang-format (not
+              -- installed, see extraPackages) and crashes the server outright
+              -- when that fails. Strip the capability so a manual
+              -- <leader>lf (plain vim.lsp.buf.format, bypasses conform and
+              -- the disableFormatSave guard below) can't trigger it either.
+              on_init = function(client)
+                client.server_capabilities.documentFormattingProvider = false
+                client.server_capabilities.documentRangeFormattingProvider = false
+              end,
+            })
+            vim.lsp.enable({ "protobuf_language_server", "golangci_lint_ls" })
+          end
+        '';
+      }
+      {
         # Guard so piping into nvim (`... | nvim -`) does not trigger the
-        # no-args oil startup below.
+        # no-args yazi startup below.
         event = [ "StdinReadPre" ];
         callback = lib.generators.mkLuaInline ''
           function()
@@ -145,7 +191,7 @@ let
       }
       {
         # `nvim` with no args → three-way merge tab if the repo has unresolved
-        # conflicts (mid merge/rebase), otherwise oil at cwd.
+        # conflicts (mid merge/rebase), otherwise yazi at cwd.
         event = [ "VimEnter" ];
         callback = lib.generators.mkLuaInline ''
           function()
@@ -159,7 +205,7 @@ let
               end)
             else
               vim.schedule(function()
-                require("oil").open(vim.fn.getcwd())
+                require("yazi").yazi(nil, vim.fn.getcwd())
               end)
             end
           end
@@ -310,12 +356,30 @@ let
           end
         '';
       }
+      {
+        # protobuf_language_server's formatting shells out to clang-format
+        # (not installed) and crashes on save. Skip the format-on-save call
+        # for proto entirely — conform's own LSP fallback (format_on_save
+        # always passes lsp_format="fallback") still reaches this server's
+        # broken formatter even with formatters_by_ft.proto.lsp_format
+        # set to "never", so that alone isn't enough.
+        event = [ "FileType" ];
+        pattern = [ "proto" ];
+        callback = lib.generators.mkLuaInline ''
+          function()
+            vim.b.disableFormatSave = true
+          end
+        '';
+      }
     ];
 
     treesitter = {
       enable = true;
       highlight.enable = true;
       indent.enable = true;
+      # No dedicated nvf language module for protobuf, so wire the grammar
+      # in directly instead of through a languages.<lang>.treesitter option.
+      grammars = [ pkgs.vimPlugins.nvim-treesitter.builtGrammars.proto ];
     };
     languages = {
       enableDAP = true;
@@ -424,17 +488,8 @@ let
       preview.markdownPreview = {
         enable = true;
       };
-      # Directory buffers / `nvim .` / `nvim` (no args) → editable netrw-style
-      # explorer. nvim-tree stays as the sidebar (see filetree below).
-      oil-nvim = {
-        enable = true;
-        gitStatus.enable = true;
-        setupOpts = {
-          default_file_explorer = true;
-          view_options.show_hidden = true;
-          skip_confirm_for_simple_edits = true;
-        };
-      };
+      # Directory buffers / `nvim .` / `nvim` (no args) → yazi, netrw's full
+      # replacement. nvim-tree stays as the sidebar (see filetree below).
       yazi-nvim = {
         enable = true;
         mappings = {
@@ -442,7 +497,7 @@ let
           openYaziDir = "<leader>O"; # yazi at cwd (default <leader>cw)
           yaziToggle = null; # drop default <c-up>
         };
-        setupOpts.open_for_directories = false; # oil owns directories
+        setupOpts.open_for_directories = true;
       };
       # snacks bigfile: files >2 MiB get ft=bigfile → treesitter/syntax/LSP off,
       # keeping million-line repos responsive.
@@ -495,7 +550,23 @@ let
       };
     };
     ui = {
-      noice.enable = true;
+      noice = {
+        enable = true;
+        # protobuf_language_server occasionally sends a malformed response
+        # (id comes back nil), which Neovim's LSP client always echoes as an
+        # error regardless of any on_error handler (client.lua calls
+        # write_error() unconditionally, before the configurable callback).
+        # Harmless — goto-def/hover/etc. keep working — so just drop it here.
+        setupOpts.routes = [
+          {
+            filter = {
+              event = "msg_show";
+              find = "protobuf_language_server.*INVALID_SERVER_MESSAGE";
+            };
+            opts.skip = true;
+          }
+        ];
+      };
       breadcrumbs = {
         enable = true; # navic source
         lualine.winbar.enable = true; # breadcrumbs in the winbar
@@ -618,7 +689,7 @@ let
           update_root = false;
         };
         hijack_cursor = true;
-        # Directory buffers are owned by oil.nvim now; hand netrw over.
+        # Directory buffers are owned by yazi.nvim now; hand netrw over.
         disable_netrw = false;
         hijack_netrw = false;
         hijack_directories.enable = false;
