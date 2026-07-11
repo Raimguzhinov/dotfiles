@@ -4,16 +4,13 @@ let
   makeNvimSettings = pkgs: lib: {
     extraPackages = with pkgs; [
       git
-      lazygit # also used by toggleterm.lazygit integration
-      lazydocker # lazydocker.nvim shells out to the `lazydocker` binary
-      yazi # yazi.nvim wraps the yazi binary
-      fd # faster telescope find_files on huge repos
-      ripgrep # telescope live_grep
-      protobuf-language-server # LSP for .proto files, enabled below via vim.lsp.enable
-      golangci-lint-langserver # go diagnostics, enabled below via vim.lsp.enable
-      # clang-tools # protobuf-language-server shells out to clang-format for
-      # proto formatting; without it on $PATH it crashes on format. Left
-      # disabled — formatting for proto is off entirely instead.
+      lazygit
+      lazydocker
+      yazi
+      fd
+      ripgrep
+      golangci-lint-langserver
+      # clang-tools # форматер для protobuf; включить при необходимости
     ];
     globals.loaded_netrwPlugin = 1;
     filetype.extension.log = "log";
@@ -38,7 +35,10 @@ let
       softtabstop = 4;
       autoindent = true;
       breakindent = true;
-      indentkeys = "0";
+      # Neovim's factory default; "o"/"O" specifically govern reindenting when
+      # <CR> opens a new line in insert mode (see :help indentkeys-format) —
+      # without them, indentexpr is never invoked on Enter, for any language.
+      indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e";
 
       wrap = true;
       termguicolors = true;
@@ -56,320 +56,276 @@ let
           symbols = "<leader>lx";
         };
       };
-      # gopls tuned for large monorepos. `settings` is freeform passthrough on
-      # top of the nvf gopls preset (which sets cmd/root_dir).
-      servers.gopls.settings.gopls = {
-        # golangci-lint (via golangci-lint-langserver, see extraPackages/
-        # autocmds below) already runs staticcheck; avoid duplicate diagnostics.
-        staticcheck = false;
-        completeUnimported = true;
-        usePlaceholders = true;
-        symbolScope = "workspace"; # don't index deps for workspace/symbol
-        directoryFilters = [
-          "-**/node_modules"
-          "-**/.git"
-          "-**/.direnv"
-        ];
-        analyses = {
-          unusedparams = true;
-          unusedwrite = true;
-          nilness = true;
+      mappings = {
+        goToDefinition = "gd";
+        goToDeclaration = "gI";
+        goToType = "gD";
+        listImplementations = "gi";
+        hover = "<leader>K";
+        renameSymbol = "<leader>ra";
+      };
+      servers = {
+        gopls.settings.gopls = {
+          staticcheck = false; # golangci_lint_ls already runs this
+          completeUnimported = true;
+          usePlaceholders = true;
+          symbolScope = "workspace";
+          directoryFilters = [
+            "-**/node_modules"
+            "-**/.git"
+            "-**/.direnv"
+          ];
+          analyses = {
+            unusedparams = true;
+            unusedwrite = true;
+            nilness = true;
+          };
+          hints = {
+            assignVariableTypes = false;
+            compositeLiteralFields = true;
+            constantValues = true;
+            functionTypeParameters = false;
+            ignoredError = true;
+            parameterNames = false;
+            rangeVariableTypes = true;
+          };
         };
-        hints = {
-          # feeds vim.lsp.inlayHints (already enabled above)
-          assignVariableTypes = false;
-          compositeLiteralFields = true;
-          constantValues = true;
-          functionTypeParameters = false;
-          ignoredError = true;
-          parameterNames = false;
-          rangeVariableTypes = true;
+
+        golangci_lint_ls.enable = true;
+
+        protobuf_language_server = {
+          cmd = [ (lib.getExe pkgs.protobuf-language-server) ];
+          filetypes = [ "proto" ];
+          root_markers = [ ".git" ];
+          # Formatter shells out to missing clang-format and crashes; strip the capability.
+          on_init =
+            lib.generators.mkLuaInline # lua
+              ''
+                function(client)
+                  client.server_capabilities.documentFormattingProvider = false
+                  client.server_capabilities.documentRangeFormattingProvider = false
+                end
+              '';
         };
       };
     };
     autocmds = [
       {
+        # ftplugins can set their own indentexpr/indentkeys on FileType, after
+        # treesitter's own FileType autocmd runs; reassert on LspAttach (fires
+        # later) so per-language treesitter indent always wins.
         event = [ "LspAttach" ];
-        callback = lib.generators.mkLuaInline ''
-          function(event)
-            vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-            vim.bo.indentkeys = "0"
-          end
-        '';
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(event)
+                vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+                vim.bo.indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e"
+              end
+            '';
       }
       {
         event = [ "FileType" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            vim.bo.indentkeys = "0"
-          end
-        '';
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                vim.bo.indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e"
+              end
+            '';
       }
       {
-        # nixfmt (RFC style) uses 2-space indentation; conform passes the
-        # buffer shiftwidth to `nixfmt --indent`, so keep nix at 2 spaces
-        # instead of the global 4 to match the repo formatting.
+        # nixfmt indents 2 spaces
         event = [ "FileType" ];
         pattern = [ "nix" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            vim.bo.tabstop = 2
-            vim.bo.shiftwidth = 2
-            vim.bo.softtabstop = 2
-            vim.bo.expandtab = true
-          end
-        '';
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                vim.bo.tabstop = 2
+                vim.bo.shiftwidth = 2
+                vim.bo.softtabstop = 2
+                vim.bo.expandtab = true
+              end
+            '';
       }
       {
-        # No dedicated nvf language module for protobuf/Go-lint-as-LSP.
-        # golangci_lint_ls comes from nvim-lspconfig's bundled lsp/*.lua
-        # (cmd, filetypes, root_markers, and v1-vs-v2 CLI flag detection via
-        # `go version -m` in its own before_init) — no need to redefine any
-        # of that here. protobuf_language_server isn't in nvim-lspconfig's
-        # registry, so it needs an explicit vim.lsp.config.
-        #
-        # golangci-lint diagnostics move to this LSP entirely: nvf's
-        # nvim-lint wiring pins golangci-lint to a fixed nix-store v2
-        # binary with hardcoded v2 flags, bypassing $PATH — breaks on
-        # projects pinning golangci-lint v1 via their own devshell. Drop it
-        # from linters_by_ft rather than patch it, so it doesn't also run
-        # as a second, differently-configured copy alongside the LSP.
-        event = [ "VimEnter" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            require("lint").linters_by_ft.go = nil
-
-            vim.lsp.config("protobuf_language_server", {
-              cmd = { "protobuf-language-server" },
-              filetypes = { "proto" },
-              root_markers = { ".git" },
-              -- Its formatting support shells out to clang-format (not
-              -- installed, see extraPackages) and crashes the server outright
-              -- when that fails. Strip the capability so a manual
-              -- <leader>lf (plain vim.lsp.buf.format, bypasses conform and
-              -- the disableFormatSave guard below) can't trigger it either.
-              on_init = function(client)
-                client.server_capabilities.documentFormattingProvider = false
-                client.server_capabilities.documentRangeFormattingProvider = false
-              end,
-            })
-            vim.lsp.enable({ "protobuf_language_server", "golangci_lint_ls" })
-          end
-        '';
-      }
-      {
-        # Guard so piping into nvim (`... | nvim -`) does not trigger the
-        # no-args yazi startup below.
         event = [ "StdinReadPre" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            vim.g.nvf_started_with_stdin = true
-          end
-        '';
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                vim.g.nvf_started_with_stdin = true
+              end
+            '';
       }
       {
-        # After any fugitive git command (e.g. `:Git merge`), if it left the
-        # repo with unresolved conflicts, open the three-way merge tab — unless
-        # we are already viewing it.
         event = [ "User" ];
         pattern = [ "FugitiveChanged" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            local unmerged = vim.fn.systemlist({ "git", "diff", "--name-only", "--diff-filter=U" })
-            if vim.v.shell_error ~= 0 or #unmerged == 0 then
-              return
-            end
-            local ok, lib = pcall(require, "diffview.lib")
-            if ok and lib.get_current_view() then
-              return
-            end
-            vim.schedule(function()
-              vim.cmd("DiffviewOpen")
-            end)
-          end
-        '';
-      }
-      {
-        # `nvim` with no args → three-way merge tab if the repo has unresolved
-        # conflicts (mid merge/rebase), otherwise yazi at cwd.
-        event = [ "VimEnter" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            if vim.fn.argc() ~= 0 or vim.g.nvf_started_with_stdin then
-              return
-            end
-            local unmerged = vim.fn.systemlist({ "git", "diff", "--name-only", "--diff-filter=U" })
-            if vim.v.shell_error == 0 and #unmerged > 0 then
-              vim.schedule(function()
-                vim.cmd("DiffviewOpen")
-              end)
-            else
-              vim.schedule(function()
-                require("yazi").yazi(nil, vim.fn.getcwd())
-              end)
-            end
-          end
-        '';
-      }
-      {
-        # nvim-dap-go's adapter always spawns a *local* `dlv dap -l host:port`,
-        # even for remote configs — fine for local launch/test/attach, but
-        # wrong for attaching to an already-running headless delve (e.g. the
-        # `dlv exec --headless --accept-multiclient` instances in docker
-        # containers, as configured per-service in project .vscode/launch.json,
-        # auto-loaded by nvim-dap on `:DapContinue`). For request=attach +
-        # mode=remote, connect straight to host:port instead of spawning.
-        #
-        # Also swap the local-spawn `dlv` command from nvf's baked-in store
-        # path to a bare "dlv" resolved via $PATH at spawn time, so per-project
-        # pinned versions (e.g. the go devshell's delve, see
-        # modules/devshells/go.nix) take precedence when active.
-        event = [ "VimEnter" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            -- telescope (and its ui-select extension, which routes
-            -- vim.ui.select through Telescope) is lazy-loaded on the
-            -- `:Telescope` command via lz.n. Calling vim.ui.select (e.g.
-            -- nvim-dap's config picker) doesn't trigger that lazy-load, so
-            -- force telescope to load now instead of falling back to the
-            -- tiny builtin confirm() popup.
-            local ok_lzn, lzn = pcall(require, "lz.n")
-            if ok_lzn then
-              lzn.trigger_load("telescope")
-            end
-
-            local dap = require("dap")
-            local delve_adapter = dap.adapters.go
-            dap.adapters.go = function(callback, client_config)
-              if client_config.request == "attach" and client_config.mode == "remote" then
-                callback({
-                  type = "server",
-                  host = client_config.host or "127.0.0.1",
-                  port = client_config.port,
-                  -- The remote delve was built without -trimpath, so its DWARF
-                  -- debug info embeds the *container's* build path, not the
-                  -- local checkout path — without a mapping, delve can't find
-                  -- the source file for a local breakpoint and reports it
-                  -- unverified (never hit). Docker builds for this project's
-                  -- services all COPY the repo into /build (see any service's
-                  -- Dockerfile: `WORKDIR /build`), so map the local repo root
-                  -- straight onto /build. `from`/`to` are intentionally
-                  -- reversed vs. what you'd expect — see delve's
-                  -- substitutePath docs (from = debugger/local, to = compiler
-                  -- /remote).
-                  enrich_config = function(config, on_config)
-                    if not config.substitutePath then
-                      local root = vim.fs.root(0, ".vscode")
-                      if root then
-                        config = vim.tbl_extend("force", config, {
-                          substitutePath = { { from = root, to = "/build" } },
-                        })
-                      end
-                    end
-                    on_config(config)
-                  end,
-                })
-                return
-              end
-              delve_adapter(function(adapter_config)
-                if adapter_config.executable then
-                  adapter_config.executable.command = "dlv"
-                end
-                callback(adapter_config)
-              end, client_config)
-            end
-
-            -- nvim-dap's built-in "dap.launch.json" provider only looks at
-            -- `getcwd() .. "/.vscode/launch.json"` — misses it whenever nvim
-            -- is opened from a subdirectory (e.g. services/foo) rather than
-            -- the repo root. Walk up from the buffer to find `.vscode/`
-            -- instead, same approach as the git-root lookup below.
-            dap.providers.configs["dap.launch.json"] = function(bufnr)
-              local root = vim.fs.root(bufnr, ".vscode")
-              if not root then
-                return {}
-              end
-              local ok, configs = pcall(require("dap.ext.vscode").getconfigs, root .. "/.vscode/launch.json")
-              if not ok then
-                return {}
-              end
-              return configs
-            end
-
-            dap.listeners.after.event_initialized["lualine_winbar"] = function()
-              require("lualine").hide({ place = { "winbar" }, unhide = false })
-            end
-            dap.listeners.before.event_terminated["lualine_winbar"] = function()
-              require("lualine").hide({ place = { "winbar" }, unhide = true })
-            end
-            dap.listeners.before.event_exited["lualine_winbar"] = function()
-              require("lualine").hide({ place = { "winbar" }, unhide = true })
-            end
-          end
-        '';
-      }
-      {
-        # Remember the git root of the file being edited (skip special/uri
-        # buffers), so nvim-tree can root there instead of the shell cwd.
-        event = [ "BufEnter" ];
-        callback = lib.generators.mkLuaInline ''
-          function(args)
-            if vim.bo[args.buf].buftype ~= "" then
-              return
-            end
-            local name = vim.api.nvim_buf_get_name(args.buf)
-            if name == "" or name:match("^%w+://") then
-              return
-            end
-            local root = vim.fs.root(args.buf, ".git")
-            if root then
-              vim.g.want_tree_root = root
-            end
-          end
-        '';
-      }
-      {
-        # Root nvim-tree at the git project of the focused file, not the shell
-        # cwd: `nvim ~/other-project/sub/file` shows other-project's tree from
-        # its .git root. Subscribe once; fires on every tree open.
-        event = [ "VimEnter" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            local ok, api = pcall(require, "nvim-tree.api")
-            if not ok then
-              return
-            end
-            api.events.subscribe(api.events.Event.TreeOpen, function()
-              local root = vim.g.want_tree_root
-              if not root then
-                return
-              end
-              local ok_core, core = pcall(require, "nvim-tree.core")
-              if ok_core then
-                local expl = core.get_explorer()
-                if expl and expl.absolute_path == root then
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                local unmerged = vim.fn.systemlist({ "git", "diff", "--name-only", "--diff-filter=U" })
+                if vim.v.shell_error ~= 0 or #unmerged == 0 then
                   return
                 end
+                local ok, lib = pcall(require, "diffview.lib")
+                if ok and lib.get_current_view() then
+                  return
+                end
+                vim.schedule(function()
+                  vim.cmd("DiffviewOpen")
+                end)
               end
-              pcall(api.tree.change_root, root)
-            end)
-          end
-        '';
+            '';
       }
       {
-        # protobuf_language_server's formatting shells out to clang-format
-        # (not installed) and crashes on save. Skip the format-on-save call
-        # for proto entirely — conform's own LSP fallback (format_on_save
-        # always passes lsp_format="fallback") still reaches this server's
-        # broken formatter even with formatters_by_ft.proto.lsp_format
-        # set to "never", so that alone isn't enough.
+        event = [ "VimEnter" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                if vim.fn.argc() ~= 0 or vim.g.nvf_started_with_stdin then
+                  return
+                end
+                local unmerged = vim.fn.systemlist({ "git", "diff", "--name-only", "--diff-filter=U" })
+                if vim.v.shell_error == 0 and #unmerged > 0 then
+                  vim.schedule(function()
+                    vim.cmd("DiffviewOpen")
+                  end)
+                else
+                  vim.schedule(function()
+                    require("yazi").yazi(nil, vim.fn.getcwd())
+                  end)
+                end
+              end
+            '';
+      }
+      {
+        event = [ "VimEnter" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                local ok_lzn, lzn = pcall(require, "lz.n")
+                if ok_lzn then
+                  lzn.trigger_load("telescope")
+                end
+
+                local dap = require("dap")
+                local delve_adapter = dap.adapters.go
+                dap.adapters.go = function(callback, client_config)
+                  if client_config.request == "attach" and client_config.mode == "remote" then
+                    -- Remote attach: connect directly instead of spawning a local dlv.
+                    callback({
+                      type = "server",
+                      host = client_config.host or "127.0.0.1",
+                      port = client_config.port,
+                      enrich_config = function(config, on_config)
+                        if not config.substitutePath then
+                          local root = vim.fs.root(0, ".vscode")
+                          if root then
+                            -- from/to reversed on purpose, see delve's substitutePath docs.
+                            config = vim.tbl_extend("force", config, {
+                              substitutePath = { { from = root, to = "/build" } },
+                            })
+                          end
+                        end
+                        on_config(config)
+                      end,
+                    })
+                    return
+                  end
+                  delve_adapter(function(adapter_config)
+                    if adapter_config.executable then
+                      adapter_config.executable.command = "dlv"
+                    end
+                    callback(adapter_config)
+                  end, client_config)
+                end
+
+                dap.providers.configs["dap.launch.json"] = function(bufnr)
+                  local root = vim.fs.root(bufnr, ".vscode")
+                  if not root then
+                    return {}
+                  end
+                  local ok, configs = pcall(require("dap.ext.vscode").getconfigs, root .. "/.vscode/launch.json")
+                  if not ok then
+                    return {}
+                  end
+                  return configs
+                end
+
+                dap.listeners.after.event_initialized["lualine_winbar"] = function()
+                  require("lualine").hide({ place = { "winbar" }, unhide = false })
+                end
+                dap.listeners.before.event_terminated["lualine_winbar"] = function()
+                  require("lualine").hide({ place = { "winbar" }, unhide = true })
+                end
+                dap.listeners.before.event_exited["lualine_winbar"] = function()
+                  require("lualine").hide({ place = { "winbar" }, unhide = true })
+                end
+              end
+            '';
+      }
+      {
+        event = [ "BufEnter" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(args)
+                if vim.bo[args.buf].buftype ~= "" then
+                  return
+                end
+                local name = vim.api.nvim_buf_get_name(args.buf)
+                if name == "" or name:match("^%w+://") then
+                  return
+                end
+                local root = vim.fs.root(args.buf, ".git")
+                if root then
+                  vim.g.want_tree_root = root
+                end
+              end
+            '';
+      }
+      {
+        event = [ "VimEnter" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                local ok, api = pcall(require, "nvim-tree.api")
+                if not ok then
+                  return
+                end
+                api.events.subscribe(api.events.Event.TreeOpen, function()
+                  local root = vim.g.want_tree_root
+                  if not root then
+                    return
+                  end
+                  local ok_core, core = pcall(require, "nvim-tree.core")
+                  if ok_core then
+                    local expl = core.get_explorer()
+                    if expl and expl.absolute_path == root then
+                      return
+                    end
+                  end
+                  pcall(api.tree.change_root, root)
+                end)
+              end
+            '';
+      }
+      {
         event = [ "FileType" ];
         pattern = [ "proto" ];
-        callback = lib.generators.mkLuaInline ''
-          function()
-            vim.b.disableFormatSave = true
-          end
-        '';
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                vim.b.disableFormatSave = true
+              end
+            '';
       }
     ];
 
@@ -377,8 +333,6 @@ let
       enable = true;
       highlight.enable = true;
       indent.enable = true;
-      # No dedicated nvf language module for protobuf, so wire the grammar
-      # in directly instead of through a languages.<lang>.treesitter option.
       grammars = [ pkgs.vimPlugins.nvim-treesitter.builtGrammars.proto ];
     };
     languages = {
@@ -389,12 +343,9 @@ let
       go = {
         enable = true;
         dap.enable = true;
-        # goimports (not gofmt) so imports are grouped GoLand-style; the
-        # `-local` prefix is injected per-project below via conform args.
-        # format.enable must be explicit: it defaults off when LSP is on, which
-        # would leave formatting to gopls (no -local grouping) instead.
         format.enable = true;
         format.type = [ "goimports" ];
+        extraDiagnostics.enable = false; # golangci_lint_ls (LSP, above) replaces this
         extensions.gopher-nvim.enable = true;
         treesitter = {
           goPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.go;
@@ -444,25 +395,22 @@ let
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.sql;
       };
     };
-    # goimports `-local <module>` gives GoLand-style import groups
-    # (stdlib / third-party / local). The module path is detected from the
-    # nearest go.mod at format time, so it works in any project without config.
-    # gopls settings.gopls.local is intentionally left unset (can't be computed
-    # statically); conform's goimports runs last on save, so grouping is correct.
-    formatter.conform-nvim.setupOpts.formatters.goimports.args = lib.generators.mkLuaInline ''
-      function(self, ctx)
-        local gomod = vim.fs.find("go.mod", { upward = true, path = ctx.dirname })[1]
-        if gomod then
-          for line in io.lines(gomod) do
-            local mod = line:match("^module%s+(%S+)")
-            if mod then
-              return { "-local", mod }
+    formatter.conform-nvim.setupOpts.formatters.goimports.args =
+      lib.generators.mkLuaInline # lua
+        ''
+          function(self, ctx)
+            local gomod = vim.fs.find("go.mod", { upward = true, path = ctx.dirname })[1]
+            if gomod then
+              for line in io.lines(gomod) do
+                local mod = line:match("^module%s+(%S+)")
+                if mod then
+                  return { "-local", mod }
+                end
+              end
             end
+            return {}
           end
-        end
-        return {}
-      end
-    '';
+        '';
     theme = {
       enable = true;
       name = "tokyonight";
@@ -475,9 +423,6 @@ let
       setupOpts = {
         direction = "horizontal";
       };
-      # Native lazygit float on <leader>gg. Git stash workflow lives in
-      # lazygit's stash panel (view/diff/apply/pop/drop); quick fuzzy stash
-      # browsing is telescope git_stash on <leader>fvx (nvf default mapping).
       lazygit = {
         enable = true;
         direction = "float";
@@ -488,19 +433,15 @@ let
       preview.markdownPreview = {
         enable = true;
       };
-      # Directory buffers / `nvim .` / `nvim` (no args) → yazi, netrw's full
-      # replacement. nvim-tree stays as the sidebar (see filetree below).
       yazi-nvim = {
         enable = true;
         mappings = {
-          openYazi = "<leader>o"; # yazi at current file (default <leader>-)
-          openYaziDir = "<leader>O"; # yazi at cwd (default <leader>cw)
-          yaziToggle = null; # drop default <c-up>
+          openYazi = "<leader>o";
+          openYaziDir = "<leader>O";
+          yaziToggle = null;
         };
         setupOpts.open_for_directories = true;
       };
-      # snacks bigfile: files >2 MiB get ft=bigfile → treesitter/syntax/LSP off,
-      # keeping million-line repos responsive.
       snacks-nvim = {
         enable = true;
         setupOpts.bigfile = {
@@ -508,55 +449,45 @@ let
           size = 2097152;
         };
       };
-      outline.aerial-nvim.enable = true; # structure panel on gO
-      # Three-way merge tool: a single tab with OURS | RESULT (center) | THEIRS.
-      # Resolve with <leader>co (ours) / <leader>ct (theirs) / <leader>cb (base),
-      # ]x / [x to jump between conflicts. Auto-opens on startup when the repo
-      # has unresolved conflicts (see VimEnter autocmd above).
+      outline.aerial-nvim.enable = true;
       diffview-nvim = {
         enable = true;
         setupOpts = {
           view.merge_tool = {
             layout = "diff3_horizontal";
             disable_diagnostics = true;
-            winbar_info = true; # label panes: OURS (branch) / THEIRS / BASE
+            winbar_info = true;
           };
           view.default.winbar_info = true;
           view.file_history.winbar_info = true;
-          # The global navic breadcrumbs (lualine winbar) otherwise cover
-          # diffview's own OURS/THEIRS winbar labels. Hide the lualine winbar
-          # while a diffview tab is focused and restore it on leave — keeps
-          # breadcrumbs when editing, shows branch labels when merging.
-          hooks = lib.generators.mkLuaInline ''
-            {
-              view_opened = function()
-                require("lualine").hide({ place = { "winbar" }, unhide = false })
-                vim.schedule(function()
-                  pcall(vim.cmd, "DiffviewRefresh")
-                end)
-              end,
-              view_enter = function()
-                require("lualine").hide({ place = { "winbar" }, unhide = false })
-              end,
-              view_leave = function()
-                require("lualine").hide({ place = { "winbar" }, unhide = true })
-              end,
-              view_closed = function()
-                require("lualine").hide({ place = { "winbar" }, unhide = true })
-              end,
-            }
-          '';
+          hooks =
+            lib.generators.mkLuaInline # lua
+              ''
+                {
+                  view_opened = function()
+                    require("lualine").hide({ place = { "winbar" }, unhide = false })
+                    vim.schedule(function()
+                      pcall(vim.cmd, "DiffviewRefresh")
+                    end)
+                  end,
+                  view_enter = function()
+                    require("lualine").hide({ place = { "winbar" }, unhide = false })
+                  end,
+                  view_leave = function()
+                    require("lualine").hide({ place = { "winbar" }, unhide = true })
+                  end,
+                  view_closed = function()
+                    require("lualine").hide({ place = { "winbar" }, unhide = true })
+                  end,
+                }
+              '';
         };
       };
     };
     ui = {
       noice = {
         enable = true;
-        # protobuf_language_server occasionally sends a malformed response
-        # (id comes back nil), which Neovim's LSP client always echoes as an
-        # error regardless of any on_error handler (client.lua calls
-        # write_error() unconditionally, before the configurable callback).
-        # Harmless — goto-def/hover/etc. keep working — so just drop it here.
+        # Suppresses a harmless but recurring protobuf_language_server error popup.
         setupOpts.routes = [
           {
             filter = {
@@ -568,8 +499,8 @@ let
         ];
       };
       breadcrumbs = {
-        enable = true; # navic source
-        lualine.winbar.enable = true; # breadcrumbs in the winbar
+        enable = true;
+        lualine.winbar.enable = true;
       };
       borders = {
         enable = true;
@@ -585,10 +516,10 @@ let
         };
       };
     };
+    visuals.nvim-web-devicons.enable = true;
     statusline.lualine.enable = true;
     telescope = {
       enable = true;
-      # native fzf sorter — much faster fuzzy matching on large file sets
       extensions = [
         {
           name = "fzf";
@@ -596,14 +527,12 @@ let
           setup.fzf.fuzzy = true;
         }
         {
-          # Routes vim.ui.select (nvim-dap's config picker, LSP code actions,
-          # etc.) through Telescope instead of the tiny, unscrollable builtin
-          # confirm() popup — matters once dap.configurations.go has dozens
-          # of entries loaded from a project's .vscode/launch.json.
           name = "ui-select";
           packages = [ pkgs.vimPlugins.telescope-ui-select-nvim ];
           setup."ui-select" = [
-            (lib.generators.mkLuaInline ''require("telescope.themes").get_dropdown({})'')
+            (lib.generators.mkLuaInline # lua
+              ''require("telescope.themes").get_dropdown({})''
+            )
           ];
         }
       ];
@@ -615,14 +544,11 @@ let
         cyclePrevious = "<S-Tab>";
         closeCurrent = "<leader>x";
       };
-      # nvf's default shows "buffer_id·tab_position" (superscript/subscript) —
-      # buffer_id is just an ever-growing internal counter and reads as
-      # confusing noise. Plain left-to-right tab position instead.
       setupOpts.options.numbers = "ordinal";
     };
-    notes.todo-comments.enable = true; # TODO/FIXME highlights + search
+    notes.todo-comments.enable = true;
     binds = {
-      cheatsheet.enable = true; # :Cheatsheet — searchable keymap docs
+      cheatsheet.enable = true;
       whichKey = {
         enable = true;
         register = {
@@ -635,39 +561,27 @@ let
           "<leader>g" = "Git";
           "<leader>l" = "LSP";
           "<leader>r" = "Run/Refactor";
+          "<leader>t" = "Todo"; # overrides nvimtree's stale default for this key
           "<leader>td" = "Todo";
         };
       };
     };
     autocomplete.nvim-cmp.enable = true;
-    lazy.plugins.nvim-cmp = {
-      after = # lua
-        ''
-          vim.schedule(function()
-            local cmp = require("cmp")
-            local config = cmp.get_config()
-            if config and config.mapping then
-              config.mapping["<Tab>"] = cmp.mapping(function(fallback)
-                if cmp.visible() then
-                  cmp.confirm({ select = false })
-                else
-                  fallback()
-                end
-              end)
-            end
-          end)
-        '';
-    };
     autopairs.nvim-autopairs.enable = true;
     comments.comment-nvim = {
       enable = true;
       mappings.toggleCurrentLine = "<leader>/";
       mappings.toggleSelectedLine = "<leader>/";
     };
-    git.gitsigns.enable = true;
-    git.vim-fugitive.enable = true; # provides :Git and friends
-    # Inline conflict resolution in normal buffers (same <leader>co/ct/cb keys
-    # as the diffview merge tool, but for editing files directly).
+    git.gitsigns = {
+      enable = true;
+      mappings = {
+        # Defaults collide with the Todo group above (<leader>tb/<leader>td)
+        toggleBlame = "<leader>htb";
+        toggleDeleted = "<leader>htd";
+      };
+    };
+    git.vim-fugitive.enable = true;
     git.git-conflict.enable = true;
     filetree.nvimTree = {
       enable = true;
@@ -677,8 +591,6 @@ let
       mappings.focus = "<leader>e";
       openOnSetup = false;
       setupOpts = {
-        # Root pinned to the startup cwd; the current file is still revealed
-        # and highlighted, but the tree root never jumps around.
         sync_root_with_cwd = false;
         respect_buf_cwd = false;
         prefer_startup_root = true;
@@ -689,7 +601,6 @@ let
           update_root = false;
         };
         hijack_cursor = true;
-        # Directory buffers are owned by yazi.nvim now; hand netrw over.
         disable_netrw = false;
         hijack_netrw = false;
         hijack_directories.enable = false;
@@ -749,33 +660,39 @@ let
         key = "<leader>w";
         mode = "n";
         action = "<cmd>write<CR>";
+        desc = "Write file";
       }
       {
         key = "<leader>q";
         mode = "n";
         action = "<cmd>quit<CR>";
+        desc = "Quit";
       }
       {
         key = "<leader>Q";
         mode = "n";
         action = "<cmd>quitall<CR>";
+        desc = "Quit all";
       }
       {
         key = "<leader>wq";
         mode = "n";
         action = ":wqa<CR>";
+        desc = "Write file and quit all";
       }
       {
         key = "jk";
         mode = "i";
         silent = true;
         action = "<Esc>";
+        desc = "Exit insert mode";
       }
       {
         key = "vv";
         mode = "n";
         silent = true;
         action = "V";
+        desc = "Select line";
       }
       {
         key = "<Up>";
@@ -810,56 +727,13 @@ let
           '';
       }
       {
-        key = "gd";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.definition()
-            end
-          '';
-      }
-      {
-        key = "gi";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.implementation()
-            end
-          '';
-      }
-      {
-        key = "gI";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.declaration()
-            end
-          '';
-      }
-      {
-        key = "gD";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.type_definition()
-            end
-          '';
-      }
-      {
         key = "<C-s>";
         mode = [
           "n"
           "i"
         ];
         lua = true;
+        desc = "Signature help";
         action = # lua
           ''
             function()
@@ -867,40 +741,6 @@ let
             end
           '';
       }
-      {
-        key = "<leader>K";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.hover()
-            end
-          '';
-      }
-      {
-        key = "<leader>la";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.code_action()
-            end
-          '';
-      }
-      {
-        key = "<leader>ra";
-        mode = "n";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.rename()
-            end
-          '';
-      }
-      # Git: diffview (diff/merge tab) + fugitive status
       {
         key = "<leader>gd";
         mode = "n";
@@ -933,6 +773,24 @@ let
       }
     ];
     lazy.plugins = {
+      nvim-cmp = {
+        after = # lua
+          ''
+            vim.schedule(function()
+              local cmp = require("cmp")
+              local config = cmp.get_config()
+              if config and config.mapping then
+                config.mapping["<Tab>"] = cmp.mapping(function(fallback)
+                  if cmp.visible() then
+                    cmp.confirm({ select = false })
+                  else
+                    fallback()
+                  end
+                end)
+              end
+            end)
+          '';
+      };
       vim-dadbod-ui = {
         package = pkgs.vimPlugins.vim-dadbod-ui;
         lazy = true;
@@ -957,8 +815,6 @@ let
           "plsql"
         ];
       };
-      # Task runner panel (GoLand-style run/build/test). <leader>rr runs a
-      # task, <leader>rt toggles the task list.
       "overseer.nvim" = {
         package = pkgs.vimPlugins.overseer-nvim;
         setupModule = "overseer";
@@ -1010,7 +866,6 @@ let
             overseer.register_template(go_template("go: mod tidy", { "mod", "tidy" }, false))
           '';
       };
-      # Docker TUI float on <leader>D (needs docker running).
       "lazydocker.nvim" = {
         package = pkgs.vimPlugins.lazydocker-nvim;
         setupModule = "lazydocker";
@@ -1027,7 +882,6 @@ let
           }
         ];
       };
-      # Inline variable values during a debug session.
       "nvim-dap-virtual-text" = {
         package = pkgs.vimPlugins.nvim-dap-virtual-text;
         setupModule = "nvim-dap-virtual-text";
@@ -1042,7 +896,6 @@ in
   perSystem =
     { pkgs, ... }:
     let
-      # Standalone nvf package with all settings baked in — for nix run/build
       neovimPkg =
         (inputs.nvf.lib.neovimConfiguration {
           inherit pkgs;
