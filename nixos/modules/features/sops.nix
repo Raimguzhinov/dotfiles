@@ -55,25 +55,26 @@
         secrets."obsidian/remotely_save_settings" = { };
       };
 
-      programs.zsh.initContent = ''
-        _sops_load_secrets() {
-          if [[ -f ${config.sops.secrets."git/github_token".path} ]]; then
-            export GITHUB_TOKEN=$(cat ${config.sops.secrets."git/github_token".path} 2> /dev/null)
-          fi
-          if [[ -f ${config.sops.secrets."youtrack/url".path} && -f ${
-            config.sops.secrets."youtrack/token".path
-          } ]]; then
-            export YOUTRACK_URL=$(cat ${config.sops.secrets."youtrack/url".path} 2> /dev/null)
-            export YOUTRACK_TOKEN=$(cat ${config.sops.secrets."youtrack/token".path} 2> /dev/null)
-          fi
-        }
-        add-zsh-hook precmd _sops_load_secrets
+      programs.zsh.initContent = # bash
+        ''
+          _sops_load_secrets() {
+            if [[ -f ${config.sops.secrets."git/github_token".path} ]]; then
+              export GITHUB_TOKEN=$(cat ${config.sops.secrets."git/github_token".path} 2> /dev/null)
+            fi
+            if [[ -f ${config.sops.secrets."youtrack/url".path} && -f ${
+              config.sops.secrets."youtrack/token".path
+            } ]]; then
+              export YOUTRACK_URL=$(cat ${config.sops.secrets."youtrack/url".path} 2> /dev/null)
+              export YOUTRACK_TOKEN=$(cat ${config.sops.secrets."youtrack/token".path} 2> /dev/null)
+            fi
+          }
+          add-zsh-hook precmd _sops_load_secrets
 
-        # Post-install reminder until password-store is cloned
-        if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass_store/clone_cmd".path} ]]; then
-          echo "Клонировать хранилище паролей:"
-          echo "  $(cat ${config.sops.secrets."pass_store/clone_cmd".path})"
-        fi
-      '';
+          # Post-install reminder until password-store is cloned
+          if [[ ! -d ~/.password-store && -f ${config.sops.secrets."pass_store/clone_cmd".path} ]]; then
+            echo "Клонировать хранилище паролей:"
+            echo "  $(cat ${config.sops.secrets."pass_store/clone_cmd".path})"
+          fi
+        '';
     };
 }

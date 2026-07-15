@@ -67,7 +67,7 @@
           zstd
         ];
 
-        shellHook = ''
+        shellHook = /* bash */ ''
           export GOROOT="${pkgs-go21.go_1_21}/share/go"
           export GOPATH="$HOME/go"
           export GOBIN="$GOPATH/bin"

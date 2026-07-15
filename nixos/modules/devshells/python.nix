@@ -21,7 +21,7 @@
           ))
         ];
 
-        shellHook = ''
+        shellHook = /* bash */ ''
           echo "Using Python version: $(${pkgs.python3}/bin/python3 --version)"
         '';
       };

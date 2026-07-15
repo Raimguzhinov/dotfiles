@@ -27,7 +27,7 @@
 
       # --- Wrapper: sets UV env + PATH so install.sh's `uv run` works on NixOS ---
       # Per nixpkgs uv docs: UV_PYTHON + UV_PYTHON_DOWNLOADS=never + LD_LIBRARY_PATH
-      installWrapper = pkgs.writeShellScriptBin "run-install" ''
+      installWrapper = pkgs.writeShellScriptBin "run-install" /* bash */ ''
         export PATH="${pkgs.uv}/bin:${pkgs.bash}/bin:${pkgs.coreutils}/bin:${pkgs.findutils}/bin:${pkgs.diffutils}/bin:${pkgs.gzip}/bin:${pkgs.gawk}/bin:${pkgs.openssh}/bin:$PATH"
         export UV_PYTHON=${pkgs.python3}/bin/python3
         export UV_PYTHON_DOWNLOADS=never
@@ -146,7 +146,7 @@
           #   # Store path (строка) → работает аналогично
           #   beads = "${pkgs.beads.src}/claude-plugin/skills/beads";
           skills = {
-            nix-review-checklist = ''
+            nix-review-checklist = /* markdown */ ''
               # Чек\u2011лист ревью Nix
 
               Быстрый чек\u2011лист для самопроверки перед PR/rebuild.
@@ -165,7 +165,7 @@
             '';
           };
           agents = {
-            nix-code-reviewer = ''
+            nix-code-reviewer = /* markdown */ ''
               # Ревьюер Nix-конфигураций
 
               Специалист по ревью Nix/NixOS/Home Manager.
@@ -188,7 +188,7 @@
 
         # Sops template: renders .env with secret values substituted at activation
         sops.templates."llm-toolkit-env" = {
-          content = ''
+          content = /* bash */ ''
             # Agent token from chat.protei.ru
             PROTEI_AGENT_TOKEN=${config.sops.placeholder."work_ai/litellm_api_key"}
 
@@ -207,7 +207,7 @@
           '';
         };
 
-        home.activation.setupOpencodeToolkit = mkAfter ''
+        home.activation.setupOpencodeToolkit = mkAfter /* bash */ ''
           set -euo pipefail
 
           toolkit_dir="${toolkitDir}"

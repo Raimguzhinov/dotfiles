@@ -17,7 +17,7 @@
         ];
       };
 
-      home.file.".config/chromium/NativeMessagingHosts/com.justwatch.gopass.json".text = ''
+      home.file.".config/chromium/NativeMessagingHosts/com.justwatch.gopass.json".text = /* json */ ''
         {
           "name": "com.justwatch.gopass",
           "description": "Gopass wrapper to search and return passwords",
@@ -29,7 +29,7 @@
         }
       '';
 
-      home.file.".config/chromium/NativeMessagingHosts/com.add0n.node.json".text = ''
+      home.file.".config/chromium/NativeMessagingHosts/com.add0n.node.json".text = /* json */ ''
         {
           "name": "com.add0n.node",
           "description": "Node Host for Native Messaging",
@@ -98,7 +98,7 @@
         '';
         executable = true;
       };
-      home.file.".config/com.add0n.node/host.js".text = ''
+      home.file.".config/com.add0n.node/host.js".text = /* javascript */ ''
         'use strict';
 
         function lazyRequire(lib, name) {
@@ -309,7 +309,7 @@
           .pipe(output)
           .pipe(process.stdout);
       '';
-      home.file.".config/com.add0n.node/messaging.js".text = ''
+      home.file.".config/com.add0n.node/messaging.js".text = /* javascript */ ''
         // chrome-native-messaging module
         //
         // Defines three Transform streams:
