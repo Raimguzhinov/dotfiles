@@ -57,10 +57,10 @@ let
         };
       };
       mappings = {
-        goToDefinition = "gd";
+        goToDefinition = null;
+        goToType = null;
+        listImplementations = null;
         goToDeclaration = "gI";
-        goToType = "gD";
-        listImplementations = "gi";
         hover = "<leader>K";
         renameSymbol = "<leader>ra";
       };
@@ -512,7 +512,8 @@ let
         enable = true;
         setupOpts.custom_colorcolumn = {
           nix = "90";
-          python = "120";
+          go = "140";
+          python = "140";
         };
       };
     };
@@ -520,6 +521,12 @@ let
     statusline.lualine.enable = true;
     telescope = {
       enable = true;
+      mappings = {
+        lspDefinitions = "gd";
+        lspReferences = "gu";
+        lspImplementations = "gi";
+        lspTypeDefinitions = "gD";
+      };
       extensions = [
         {
           name = "fzf";

@@ -54,7 +54,7 @@
           gotestsum
           libwebp
           libxml2
-          nodejs_20
+
           pkg-config
           pkgs-go21.go_1_21
           pkgs-go21.golangci-lint
@@ -62,8 +62,7 @@
           pkgs-protoc-gen-go.protoc-gen-go
           protobuf23
           rustc
-          yarn
-          yarn2nix
+
           zstd
         ];
 

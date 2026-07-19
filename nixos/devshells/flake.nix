@@ -22,6 +22,7 @@
       imports = [
         ../modules/devshells/go.nix
         ../modules/devshells/python.nix
+        ../modules/devshells/nodejs.nix
       ];
 
       perSystem =

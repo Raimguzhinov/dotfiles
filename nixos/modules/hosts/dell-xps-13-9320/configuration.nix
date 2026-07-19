@@ -810,6 +810,7 @@
         ++ (with pkgs-unstable; [
           amnezia-vpn-bin
           handy
+          pi-coding-agent
         ])
         ++ (with pkgs.gst_all_1; [
           gst-libav
@@ -881,7 +882,6 @@
           papers
           papirus-icon-theme
           pdfchain # pdftk GUI
-          pi-coding-agent
           popsicle # USB flasher
           postgresql
           procs # ps → procs
