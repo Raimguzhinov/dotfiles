@@ -312,7 +312,6 @@
             };
 
             imports = [
-              inputs.meridian.homeManagerModules.default
               inputs.noctalia.homeModules.default
               inputs.nvf.homeManagerModules.default
               inputs.zen-browser.homeModules.beta
@@ -808,7 +807,6 @@
           niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
         ])
         ++ (with pkgs-unstable; [
-          amnezia-vpn-bin
           handy
           pi-coding-agent
         ])

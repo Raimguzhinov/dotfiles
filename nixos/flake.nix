@@ -83,10 +83,6 @@
       url = "github:cjavad/nixpille-obsidian-community-plugins";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    meridian = {
-      url = "github:rynfar/meridian";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } (inputs.import-tree ./modules);
