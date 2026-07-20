@@ -427,12 +427,30 @@
           mgr = {
             show_hidden = true;
           };
-          # [[plugin.prepend_previewers]]
-          # url = "*.md"
-          # run = 'piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark "$1"'
+          plugin.prepend_fetchers = [
+            {
+              url = "*";
+              run = "git";
+              group = "git";
+            }
+            {
+              url = "*/";
+              run = "git";
+              group = "git";
+            }
+          ];
         };
         plugins = {
+          git = {
+            package = pkgs.yaziPlugins.git;
+            setup = true;
+            settings.order = 1500;
+          };
           piper = pkgs.yaziPlugins.piper;
+          starship = {
+            package = pkgs.yaziPlugins.starship;
+            setup = true;
+          };
         };
         keymap = {
           mgr.prepend_keymap = [
