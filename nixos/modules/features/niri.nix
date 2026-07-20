@@ -29,6 +29,11 @@
         helper_path = "/run/wrappers/bin/polkit-agent-helper-1"
       '';
 
+      xdg.terminal-exec = {
+        enable = true;
+        settings.default = [ "kitty.desktop" ];
+      };
+
       home.packages = [
         (pkgs.writeShellScriptBin "cam-on" ''
           set -euo pipefail
