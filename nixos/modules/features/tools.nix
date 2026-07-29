@@ -65,6 +65,7 @@
           http = "xh";
           https = "xhs";
           nvimdiff = "nvim -d";
+          nvimgitdiff = ''nvim --cmd "set nomodelines" +DiffviewOpen'';
         };
       };
 

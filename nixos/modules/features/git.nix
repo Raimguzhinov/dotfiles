@@ -26,9 +26,9 @@
             autoStash = true;
             updateRefs = true;
           };
-          diff.tool = "nvimdiff";
+          diff.tool = "meld";
           difftool.prompt = false;
-          merge.tool = "nvimdiff";
+          merge.tool = "meld";
           mergetool.prompt = false;
           commit.gpgsign = true;
           gpg.program = "${pkgs.gnupg}/bin/gpg";
@@ -52,5 +52,7 @@
           side-by-side = true;
         };
       };
+
+      home.packages = [ pkgs.meld ];
     };
 }

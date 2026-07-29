@@ -107,6 +107,8 @@ let
                 end
               '';
         };
+
+        sqls.on_attach = lib.mkForce null;
       };
     };
     autocmds = [
@@ -188,6 +190,11 @@ let
               function()
                 if vim.fn.argc() ~= 0 or vim.g.nvf_started_with_stdin then
                   return
+                end
+                for _, arg in ipairs(vim.v.argv) do
+                  if arg == "-c" or arg == "-S" or arg:match("^%+") then
+                    return
+                  end
                 end
                 local unmerged = vim.fn.systemlist({ "git", "diff", "--name-only", "--diff-filter=U" })
                 if vim.v.shell_error == 0 and #unmerged > 0 then
