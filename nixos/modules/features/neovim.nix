@@ -65,6 +65,13 @@ let
         renameSymbol = "<leader>ra";
       };
       servers = {
+        gopls.before_attach =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(config)
+                return vim.bo.filetype ~= "diffview"
+              end
+            '';
         gopls.settings.gopls = {
           staticcheck = false; # golangci_lint_ls already runs this
           completeUnimported = true;
@@ -195,6 +202,19 @@ let
                   if arg == "-c" or arg == "-S" or arg:match("^%+") then
                     return
                   end
+                end
+                local has_diff_flag = false
+                for _, arg in ipairs(vim.v.argv) do
+                  if arg == "-d" then
+                    has_diff_flag = true
+                    break
+                  end
+                end
+                if has_diff_flag then
+                  vim.schedule(function()
+                    vim.cmd("DiffviewOpen")
+                  end)
+                  return
                 end
                 local unmerged = vim.fn.systemlist({ "git", "diff", "--name-only", "--diff-filter=U" })
                 if vim.v.shell_error == 0 and #unmerged > 0 then
