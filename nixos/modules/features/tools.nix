@@ -56,6 +56,8 @@
           la = "ls -la";
           clr = "clear";
           cat = "bat -p";
+          "дф" = "ls -la";
+          "св" = "cd";
           "cd.." = "cd ..";
           sudo = "sudo ";
           tree = "eza --tree";
@@ -64,6 +66,7 @@
           dbui = "nvim +DBUI";
           http = "xh";
           https = "xhs";
+          "тмшь" = "nvim";
           nvimdiff = "nvim -d";
           nvimgitdiff = ''nvim --cmd "set nomodelines" +DiffviewOpen'';
         };

@@ -283,16 +283,6 @@ let
                   end
                   return configs
                 end
-
-                dap.listeners.after.event_initialized["lualine_winbar"] = function()
-                  require("lualine").hide({ place = { "winbar" }, unhide = false })
-                end
-                dap.listeners.before.event_terminated["lualine_winbar"] = function()
-                  require("lualine").hide({ place = { "winbar" }, unhide = true })
-                end
-                dap.listeners.before.event_exited["lualine_winbar"] = function()
-                  require("lualine").hide({ place = { "winbar" }, unhide = true })
-                end
               end
             '';
       }
@@ -545,7 +535,13 @@ let
       };
     };
     visuals.nvim-web-devicons.enable = true;
-    statusline.lualine.enable = true;
+    statusline.lualine = {
+      enable = true;
+      # nvim-dap-ui renders its play/step/stop controls in the dap-repl
+      # window's winbar; keep lualine's breadcrumbs winbar off that window so
+      # it doesn't overwrite them.
+      disabledFiletypes.winbar = [ "dap-repl" ];
+    };
     telescope = {
       enable = true;
       mappings = {
