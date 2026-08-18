@@ -240,6 +240,15 @@ let
                   lzn.trigger_load("telescope")
                 end
 
+                local go_env_cache = {}
+                local function go_env(name)
+                  if go_env_cache[name] == nil then
+                    local out = vim.fn.systemlist({ "go", "env", name })
+                    go_env_cache[name] = (vim.v.shell_error == 0 and out[1] and out[1] ~= "") and out[1] or false
+                  end
+                  return go_env_cache[name] or nil
+                end
+
                 local dap = require("dap")
                 local delve_adapter = dap.adapters.go
                 dap.adapters.go = function(callback, client_config)
@@ -251,12 +260,21 @@ let
                       port = client_config.port,
                       enrich_config = function(config, on_config)
                         if not config.substitutePath then
+                          local rules = {}
                           local root = vim.fs.root(0, ".vscode")
                           if root then
-                            -- from/to reversed on purpose, see delve's substitutePath docs.
-                            config = vim.tbl_extend("force", config, {
-                              substitutePath = { { from = root, to = "/build" } },
-                            })
+                            rules[#rules + 1] = { from = root, to = "/build" }
+                          end
+                          local modcache = go_env("GOMODCACHE")
+                          if modcache then
+                            rules[#rules + 1] = { from = modcache, to = "/go/pkg/mod" }
+                          end
+                          local goroot = go_env("GOROOT")
+                          if goroot then
+                            rules[#rules + 1] = { from = goroot .. "/src", to = "/usr/local/go/src" }
+                          end
+                          if #rules > 0 then
+                            config = vim.tbl_extend("force", config, { substitutePath = rules })
                           end
                         end
                         on_config(config)
@@ -265,8 +283,9 @@ let
                     return
                   end
                   delve_adapter(function(adapter_config)
-                    if adapter_config.executable then
-                      adapter_config.executable.command = "dlv"
+                    local dlv = vim.fn.exepath("dlv")
+                    if adapter_config.executable and dlv ~= "" then
+                      adapter_config.executable.command = dlv
                     end
                     callback(adapter_config)
                   end, client_config)
@@ -380,10 +399,11 @@ let
       };
       json = {
         enable = true;
-        treesitter.jsonPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.json;
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.json;
       };
       bash = {
         enable = true;
+        format.enable = false;
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.bash;
       };
       python = {
@@ -407,8 +427,17 @@ let
         enable = true;
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.typst;
       };
+      lua = {
+        enable = true;
+        extensions.lazydev = {
+          enable = true;
+          setupOpts.library = [ "nvim-dap-ui" ];
+        };
+        treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.lua;
+      };
       sql = {
         enable = true;
+        format.enable = false;
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.sql;
       };
     };
@@ -679,7 +708,47 @@ let
       };
     };
     utility.nix-develop.enable = true;
-    debugger.nvim-dap.ui.enable = true;
+    debugger.nvim-dap.ui = {
+      enable = true;
+      setupOpts.layouts = [
+        {
+          position = "left";
+          size = 40;
+          elements = [
+            {
+              id = "breakpoints";
+              size = 0.2;
+            }
+            {
+              id = "stacks";
+              size = 0.2;
+            }
+            {
+              id = "watches";
+              size = 0.2;
+            }
+            {
+              id = "repl";
+              size = 0.2;
+            }
+            {
+              id = "console";
+              size = 0.2;
+            }
+          ];
+        }
+        {
+          position = "bottom";
+          size = 20;
+          elements = [
+            {
+              id = "scopes";
+              size = 1;
+            }
+          ];
+        }
+      ];
+    };
     clipboard = {
       enable = true;
       providers.wl-copy.enable = true;
@@ -915,7 +984,20 @@ let
       "nvim-dap-virtual-text" = {
         package = pkgs.vimPlugins.nvim-dap-virtual-text;
         setupModule = "nvim-dap-virtual-text";
-        setupOpts = { };
+        setupOpts = {
+          virt_text_pos = "eol";
+          display_callback =
+            lib.generators.mkLuaInline # lua
+              ''
+                function(variable, buf, stackframe, node, opts)
+                  local value = variable.value:gsub("%s+", " ")
+                  if vim.fn.strdisplaywidth(value) > 60 then
+                    value = vim.fn.strcharpart(value, 0, 57) .. "…"
+                  end
+                  return " " .. variable.name .. " = " .. value
+                end
+              '';
+        };
         lazy = true;
         ft = [ "go" ];
       };
