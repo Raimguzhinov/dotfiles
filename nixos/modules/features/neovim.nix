@@ -981,6 +981,151 @@ let
           }
         ];
       };
+      "symbol-usage.nvim" = {
+        package = pkgs.vimPlugins.symbol-usage-nvim;
+        setupModule = "symbol-usage";
+        setupOpts = {
+          vt_position = "signcolumn";
+          vt_priority = 5;
+          request_pending_text = false;
+          references.enabled = false;
+          definition.enabled = false;
+          implementation.enabled = true;
+          hl.link = "DiagnosticHint";
+          kinds = [
+            (lib.generators.mkLuaInline "vim.lsp.protocol.SymbolKind.Interface")
+            (lib.generators.mkLuaInline "vim.lsp.protocol.SymbolKind.Struct")
+            (lib.generators.mkLuaInline "vim.lsp.protocol.SymbolKind.Method")
+          ];
+          text_format =
+            lib.generators.mkLuaInline # lua
+              ''
+                function(symbol)
+                  local raw = symbol.raw_symbol
+                  local has_impl = symbol.implementation and symbol.implementation > 0
+                  if raw and raw.kind == vim.lsp.protocol.SymbolKind.Interface then
+                    return has_impl and { { "↓", "SymbolUsageText" } } or nil
+                  end
+                  local overrides = vim.b[vim.api.nvim_get_current_buf()].go_override_methods
+                  if raw and overrides and overrides[raw.name] then
+                    return { { "↑↑", "SymbolUsageText" } }
+                  end
+                  return has_impl and { { "↑", "SymbolUsageText" } } or nil
+                end
+              '';
+        };
+        lazy = true;
+        ft = [ "go" ];
+        after = # lua
+          ''
+            local SymbolKind = vim.lsp.protocol.SymbolKind
+            local member_cache = {}
+
+            local function members_of(client, bufnr, uri, typename, cb)
+              local key = uri .. "#" .. typename
+              if member_cache[key] then
+                return cb(member_cache[key])
+              end
+              client:request("textDocument/documentSymbol", { textDocument = { uri = uri } }, function(err, syms)
+                local set = {}
+                if not err then
+                  local pattern = "^%(%*?" .. vim.pesc(typename) .. "%)%.(.+)$"
+                  for _, s in ipairs(syms or {}) do
+                    local method = s.name:match(pattern)
+                    if method then
+                      set[method] = true
+                    end
+                  end
+                end
+                member_cache[key] = set
+                cb(set)
+              end, bufnr)
+            end
+
+            local function refresh_overrides(bufnr)
+              local client = vim.lsp.get_clients({ bufnr = bufnr, name = "gopls" })[1]
+              if not client then
+                return
+              end
+              local td = { uri = vim.uri_from_bufnr(bufnr) }
+              client:request("textDocument/documentSymbol", { textDocument = td }, function(err, syms)
+                if err or not syms then
+                  return
+                end
+                local embedded, methods = {}, {}
+                for _, s in ipairs(syms) do
+                  if s.kind == SymbolKind.Struct then
+                    for _, f in ipairs(s.children or {}) do
+                      if
+                        f.kind == SymbolKind.Field
+                        and f.detail
+                        and (f.detail == f.name or vim.endswith(f.detail, "." .. f.name))
+                      then
+                        embedded[#embedded + 1] = { owner = s.name, field = f }
+                      end
+                    end
+                  end
+                  local recv, method = s.name:match("^%(%*?([%w_]+)%)%.(.+)$")
+                  if recv then
+                    methods[#methods + 1] = { recv = recv, method = method, id = s.name }
+                  end
+                end
+                if #embedded == 0 or #methods == 0 then
+                  vim.b[bufnr].go_override_methods = vim.empty_dict()
+                  return
+                end
+                local found, pending = {}, #embedded
+                local function finish()
+                  pending = pending - 1
+                  if pending > 0 then
+                    return
+                  end
+                  vim.b[bufnr].go_override_methods = next(found) and found or vim.empty_dict()
+                  if next(found) and vim.api.nvim_get_current_buf() == bufnr then
+                    require("symbol-usage").refresh()
+                  end
+                end
+                for _, e in ipairs(embedded) do
+                  client:request(
+                    "textDocument/definition",
+                    { textDocument = td, position = e.field.selectionRange.start },
+                    function(derr, dres)
+                      local loc = not derr and (dres and (dres[1] or dres)) or nil
+                      if not loc or not loc.uri then
+                        return finish()
+                      end
+                      members_of(client, bufnr, loc.uri, e.field.name, function(set)
+                        for _, m in ipairs(methods) do
+                          if m.recv == e.owner and set[m.method] then
+                            found[m.id] = true
+                          end
+                        end
+                        finish()
+                      end)
+                    end,
+                    bufnr
+                  )
+                end
+              end, bufnr)
+            end
+
+            vim.api.nvim_create_autocmd({ "LspAttach", "BufWritePost" }, {
+              callback = function(event)
+                if vim.bo[event.buf].filetype ~= "go" then
+                  return
+                end
+                if event.event == "BufWritePost" then
+                  member_cache = {}
+                end
+                vim.schedule(function()
+                  if vim.api.nvim_buf_is_valid(event.buf) then
+                    refresh_overrides(event.buf)
+                  end
+                end)
+              end,
+            })
+          '';
+      };
       "nvim-dap-virtual-text" = {
         package = pkgs.vimPlugins.nvim-dap-virtual-text;
         setupModule = "nvim-dap-virtual-text";
