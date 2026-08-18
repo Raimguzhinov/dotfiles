@@ -11,7 +11,6 @@
 
           shell = {
             font_family = "Inter Nerd Font Display";
-            ui_scale = 1.0;
             time_format = "{:%H:%M}";
             date_format = "%A, %x";
             offline_mode = false;
@@ -81,8 +80,8 @@
           };
 
           widget.workspaces = {
-            display = "id";
-            minimal = false;
+            label_source = "id";
+            style = "regular";
             max_label_chars = 1;
             focused_color = "primary";
             occupied_color = "secondary";
@@ -104,7 +103,6 @@
 
           widget.volume = {
             device = "output";
-            scroll_step = 5;
             show_label = true;
           };
 
@@ -142,10 +140,19 @@
 
           shell.panel = {
             open_near_click_control_center = true;
-            launcher_compact = false;
-            launcher_categories = true;
-            launcher_placement = "centered";
-            session_placement = "centered";
+            launcher_placement = "floating";
+            launcher_position = "center";
+            session_placement = "floating";
+            session_position = "center";
+          };
+
+          shell.launcher = {
+            categories = true;
+            compact = false;
+          };
+
+          accessibility = {
+            ui_scale = 1.0;
           };
 
           lockscreen = {
