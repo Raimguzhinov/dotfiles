@@ -764,6 +764,24 @@ let
         sync_root_with_cwd = false;
         respect_buf_cwd = false;
         prefer_startup_root = true;
+        view.float = {
+          enable = true;
+          quit_on_focus_loss = false;
+          open_win_config =
+            lib.generators.mkLuaInline # lua
+              ''
+                function()
+                  return {
+                    relative = "editor",
+                    border = "rounded",
+                    row = 0,
+                    col = 0,
+                    width = 40,
+                    height = vim.o.lines - vim.o.cmdheight - 2,
+                  }
+                end
+              '';
+        };
         sort_by = "case_sensitive";
         git.enable = true;
         update_focused_file = {
