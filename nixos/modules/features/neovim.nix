@@ -757,8 +757,8 @@ let
       enable = true;
       mappings.findFile = "<leader>eg";
       mappings.refresh = "<leader>er";
-      mappings.toggle = "<leader>eq";
-      mappings.focus = "<leader>e";
+      mappings.toggle = "<leader>e";
+      mappings.focus = "<leader>ef";
       openOnSetup = false;
       setupOpts = {
         sync_root_with_cwd = false;
@@ -1275,10 +1275,15 @@ let
         keys = [
           {
             key = "<leader>aa";
-            mode = [
-              "n"
-              "x"
-            ];
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").ask() end'';
+            desc = "Ask [opencode]";
+          }
+          {
+            key = "<leader>aa";
+            mode = "x";
             lua = true;
             action = # lua
               ''function() require("opencode").ask("@this: ") end'';
@@ -1286,10 +1291,15 @@ let
           }
           {
             key = "<leader>aA";
-            mode = [
-              "n"
-              "x"
-            ];
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").ask("@this: ") end'';
+            desc = "Ask about this [opencode]";
+          }
+          {
+            key = "<leader>aA";
+            mode = "x";
             lua = true;
             action = # lua
               ''function() require("opencode").ask() end'';
