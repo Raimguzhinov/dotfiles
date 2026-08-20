@@ -909,6 +909,13 @@ let
         desc = "Write file and quit all";
       }
       {
+        key = "<leader>eq";
+        mode = "n";
+        silent = true;
+        action = ":NvimTreeClose<CR>";
+        desc = "Close filetree";
+      }
+      {
         key = "jk";
         mode = "i";
         silent = true;
