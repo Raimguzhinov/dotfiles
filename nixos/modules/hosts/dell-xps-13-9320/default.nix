@@ -20,6 +20,7 @@
       config.flake.nixosModules.configDellXps
       config.flake.nixosModules.overlays
       config.flake.nixosModules.llamaCpp
+      config.flake.nixosModules.pi
       inputs.home-manager.nixosModules.home-manager
       inputs.niri.nixosModules.niri
     ];

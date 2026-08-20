@@ -327,6 +327,7 @@
               homeModules.noctalia
               homeModules.obsidian
               homeModules.opencode
+              homeModules.pi
               homeModules.rofi
               homeModules.sops
               homeModules.thunderbird
@@ -808,7 +809,6 @@
         ])
         ++ (with pkgs-unstable; [
           handy
-          pi-coding-agent
         ])
         ++ (with pkgs.gst_all_1; [
           gst-libav
