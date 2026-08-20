@@ -200,13 +200,6 @@ in
         share = "disabled";
 
         provider = {
-          anthropic = {
-            options = {
-              baseURL = "http://127.0.0.1:3456/v1";
-              apiKey = "x";
-            };
-          };
-
           llamaCpp = {
             npm = "@ai-sdk/openai-compatible";
             name = "Local llama.cpp";
@@ -249,9 +242,7 @@ in
         };
 
         # plugin is LIST_UNION_KEY: repo ["opencode-auto-resume"] + ours = union
-        plugin = [
-          "${pkgs.opencode-claude-auth}/lib/node_modules/opencode-claude-auth"
-        ];
+        plugin = [ "opencode-claude-auth@latest" ];
       };
 
       nixPreseedJsonFile = pkgs.writeText "opencode-preseed.json" (builtins.toJSON nixPreseedConfig);
