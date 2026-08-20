@@ -757,8 +757,8 @@ let
       enable = true;
       mappings.findFile = "<leader>eg";
       mappings.refresh = "<leader>er";
-      mappings.toggle = "<leader>e";
-      mappings.focus = "<leader>ef";
+      mappings.toggle = null;
+      mappings.focus = null;
       openOnSetup = false;
       setupOpts = {
         sync_root_with_cwd = false;
@@ -1004,6 +1004,47 @@ let
         mode = "t";
         action = "<C-\\><C-n>";
         desc = "Leave terminal mode";
+      }
+      {
+        key = "<leader>e";
+        mode = "n";
+        lua = true;
+        desc = "Toggle NvimTree (floating)";
+        action = # lua
+          ''
+            function()
+              require("lz.n").trigger_load("nvim-tree-lua")
+              local api = require("nvim-tree.api")
+              local conf = require("nvim-tree.config")
+              if api.tree.is_visible() then
+                api.tree.close()
+                if conf.g.view.float.enable then
+                  return
+                end
+              end
+              conf.g.view.float.enable = true
+              api.tree.open()
+            end
+          '';
+      }
+      {
+        key = "<leader>ef";
+        mode = "n";
+        lua = true;
+        desc = "Focus NvimTree (split)";
+        action = # lua
+          ''
+            function()
+              require("lz.n").trigger_load("nvim-tree-lua")
+              local api = require("nvim-tree.api")
+              local conf = require("nvim-tree.config")
+              if api.tree.is_visible() and conf.g.view.float.enable then
+                api.tree.close()
+              end
+              conf.g.view.float.enable = false
+              api.tree.open()
+            end
+          '';
       }
       {
         key = "<leader>gs";
