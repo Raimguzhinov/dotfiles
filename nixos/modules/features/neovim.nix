@@ -547,6 +547,10 @@ let
           };
         };
       };
+      motion.flash-nvim = {
+        enable = true;
+        setupOpts.modes.search.enabled = true;
+      };
       outline.aerial-nvim.enable = true;
       diffview-nvim = {
         enable = true;
@@ -926,6 +930,18 @@ let
         mode = "n";
         action = "<cmd>DiffviewFileHistory<CR>";
         desc = "File history (repo)";
+      }
+      {
+        key = "<LeftMouse>";
+        mode = "n";
+        action = "<LeftMouse><cmd>lua if vim.bo.buftype == 'terminal' then vim.cmd.startinsert() end<CR>";
+        desc = "Enter terminal mode when clicking into a terminal";
+      }
+      {
+        key = "<Esc><Esc>";
+        mode = "t";
+        action = "<C-\\><C-n>";
+        desc = "Leave terminal mode";
       }
       {
         key = "<leader>gs";
