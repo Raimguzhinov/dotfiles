@@ -10,9 +10,28 @@ let
       fd
       ripgrep
       golangci-lint-langserver
+      procps # opencode.nvim: pgrep-based server discovery
+      lsof # opencode.nvim: port lookup for discovered servers
       # clang-tools # форматер для protobuf; включить при необходимости
     ];
     globals.loaded_netrwPlugin = 1;
+    globals.opencode_opts = {
+      lsp = {
+        enabled = true;
+        handlers = {
+          hover.enabled = true;
+          code_action.enabled = true;
+        };
+      };
+      events = {
+        enabled = true;
+        reload = true;
+        permissions = {
+          enabled = true;
+          edits.enabled = true;
+        };
+      };
+    };
     filetype.extension.log = "log";
     viAlias = true;
     vimAlias = true;
@@ -42,6 +61,7 @@ let
 
       wrap = true;
       termguicolors = true;
+      autoread = true;
     };
     lsp = {
       enable = true;
@@ -165,6 +185,22 @@ let
             ''
               function()
                 vim.g.nvf_started_with_stdin = true
+              end
+            '';
+      }
+      {
+        event = [ "User" ];
+        pattern = [ "OpencodeEvent:session.status" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(args)
+                local status = args.data.event.properties.status
+                if status.type == "error" then
+                  vim.notify(status.message or "error", vim.log.levels.ERROR, { title = "opencode" })
+                elseif status.type == "requesting_permission" then
+                  vim.notify("waiting for permission", vim.log.levels.WARN, { title = "opencode" })
+                end
               end
             '';
       }
@@ -490,9 +526,25 @@ let
       };
       snacks-nvim = {
         enable = true;
-        setupOpts.bigfile = {
-          enabled = true;
-          size = 2097152;
+        setupOpts = {
+          bigfile = {
+            enabled = true;
+            size = 2097152;
+          };
+          input.enabled = true;
+          picker = {
+            enabled = true;
+            win.input.keys."<a-o>" = {
+              "@" = "opencode_send";
+              mode = [
+                "n"
+                "i"
+              ];
+            };
+            actions.opencode_send =
+              lib.generators.mkLuaInline # lua
+                ''require("opencode").snacks_picker_send'';
+          };
         };
       };
       outline.aerial-nvim.enable = true;
@@ -570,6 +622,16 @@ let
       # window's winbar; keep lualine's breadcrumbs winbar off that window so
       # it doesn't overwrite them.
       disabledFiletypes.winbar = [ "dap-repl" ];
+      extraActiveSection.z = [
+        # Deferred through pcall: lz.n loads opencode.nvim after lualine's setup.
+        # lua
+        (''
+          function()
+            local ok, opencode = pcall(require, "opencode")
+            return ok and opencode.statusline() or ""
+          end
+        '')
+      ];
     };
     telescope = {
       enable = true;
@@ -611,6 +673,7 @@ let
       whichKey = {
         enable = true;
         register = {
+          "<leader>a" = "AI (opencode)";
           "<leader>b" = "Buffers";
           "<leader>c" = "Conflict (ours/theirs/base)";
           "<leader>d" = "Debug";
@@ -1125,6 +1188,148 @@ let
               end,
             })
           '';
+      };
+      "opencode.nvim" = {
+        package = pkgs.vimPlugins.opencode-nvim;
+        # Not lazy: events, edit permissions and buffer reload must be live from
+        # startup, and lualine resolves the statusline component on setup.
+        lazy = false;
+        keys = [
+          {
+            key = "<leader>aa";
+            mode = [
+              "n"
+              "x"
+            ];
+            lua = true;
+            action = # lua
+              ''function() require("opencode").ask("@this: ") end'';
+            desc = "Ask about this [opencode]";
+          }
+          {
+            key = "<leader>aA";
+            mode = [
+              "n"
+              "x"
+            ];
+            lua = true;
+            action = # lua
+              ''function() require("opencode").ask() end'';
+            desc = "Ask [opencode]";
+          }
+          {
+            key = "<leader>as";
+            mode = [
+              "n"
+              "x"
+            ];
+            lua = true;
+            action = # lua
+              ''function() require("opencode").select() end'';
+            desc = "Select prompt/command [opencode]";
+          }
+          {
+            key = "<leader>at";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").toggle() end'';
+            desc = "Toggle opencode terminal";
+          }
+          {
+            key = "<leader>an";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.new") end'';
+            desc = "New session [opencode]";
+          }
+          {
+            key = "<leader>ae";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.select") end'';
+            desc = "Select session [opencode]";
+          }
+          {
+            key = "<leader>ac";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.compact") end'';
+            desc = "Compact session [opencode]";
+          }
+          {
+            key = "<leader>ai";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.interrupt") end'';
+            desc = "Interrupt session [opencode]";
+          }
+          {
+            key = "<leader>au";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.undo") end'';
+            desc = "Undo session step [opencode]";
+          }
+          {
+            key = "<leader>aR";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.redo") end'';
+            desc = "Redo session step [opencode]";
+          }
+          {
+            key = "<leader>ag";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("agent.cycle") end'';
+            desc = "Cycle agent [opencode]";
+          }
+          {
+            key = "<C-S-u>";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.half.page.up") end'';
+            desc = "Scroll opencode up";
+          }
+          {
+            key = "<C-S-d>";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("opencode").command("session.half.page.down") end'';
+            desc = "Scroll opencode down";
+          }
+          {
+            key = "go";
+            mode = [
+              "n"
+              "x"
+            ];
+            lua = true;
+            expr = true;
+            action = # lua
+              ''function() return require("opencode").operator("@this ") end'';
+            desc = "Append range to opencode";
+          }
+          {
+            key = "goo";
+            mode = "n";
+            lua = true;
+            expr = true;
+            action = # lua
+              ''function() return require("opencode").operator("@this ") .. "_" end'';
+            desc = "Append line to opencode";
+          }
+        ];
       };
       "nvim-dap-virtual-text" = {
         package = pkgs.vimPlugins.nvim-dap-virtual-text;
