@@ -23,6 +23,12 @@
             awk 'found && /^---/{exit} /^## После первой загрузки/{found=1} found' ~/dotfiles/README.md | glow -
           fi
 
+          tailf() {
+            tail -f "$@" | bat --paging=never -l log -p
+          }
+
+          compdef _files tailf
+
           drestart() {
             docker restart "$@"
           }
