@@ -69,8 +69,6 @@
           "тмшь" = "nvim";
           nvimdiff = "nvim -d";
           nvimgitdiff = ''nvim --cmd "set nomodelines" +DiffviewOpen'';
-          # --port makes the session discoverable by opencode.nvim (pgrep -f "opencode.*--port")
-          opencode = "opencode --port";
         };
       };
 

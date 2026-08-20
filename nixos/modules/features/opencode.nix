@@ -1,9 +1,154 @@
 { ... }:
+let
+  mkNvimHandoff =
+    pkgs: opencode:
+    let
+      handoff =
+        pkgs.writeShellScriptBin "opencode-nvim-handoff" # bash
+          ''
+            set -eu
+
+            if [ -n "''${NVIM-}" ]; then
+              echo "opencode уже запущен внутри Neovim — используй <leader>at, а не /nvim."
+              exit 0
+            fi
+
+            if [ -z "''${OPENCODE_NVIM_HANDOFF-}" ] || [ -z "''${OPENCODE_NVIM_SERVER-}" ]; then
+              echo "Передача сессии недоступна: opencode запущен не через обёртку из dotfiles."
+              exit 0
+            fi
+
+            : > "$OPENCODE_NVIM_HANDOFF"
+            set -f
+            # shellcheck disable=SC2086
+            set -- ''${1-}
+            set +f
+            for arg in "$@"; do
+              printf '%s\n' "''${arg#@}" >> "$OPENCODE_NVIM_HANDOFF"
+            done
+
+            ${pkgs.curl}/bin/curl -sS -m 5 -X POST \
+              -H 'Content-Type: application/json' \
+              -d '{"type":"tui.command.execute","properties":{"command":"app.exit"}}' \
+              "$OPENCODE_NVIM_SERVER/tui/publish" > /dev/null
+
+            sleep 30
+            rm -f "$OPENCODE_NVIM_HANDOFF"
+            echo "Не удалось закрыть TUI opencode — передача сессии в Neovim отменена."
+          '';
+
+      subcommands =
+        pkgs.runCommand "opencode-subcommands" { } # bash
+          ''
+            export HOME="$TMPDIR"
+            ${opencode}/bin/opencode --help 2>&1 \
+              | sed -e 's/\x1b\[[0-9;]*m//g' \
+              | awk '
+                  /^Commands:/ { block = 1; next }
+                  block && (/^$/ || /^[^[:space:]]/) { block = 0 }
+                  block && $1 == "opencode" && $2 !~ /^[[<]/ { print $2 }
+                  block && match($0, /\[aliases: [^]]+\]/) {
+                    list = substr($0, RSTART + 10, RLENGTH - 11)
+                    n = split(list, parts, /, */)
+                    for (i = 1; i <= n; i++) print parts[i]
+                  }
+                ' \
+              | sort -u > "$out"
+
+            found=$(wc -l < "$out")
+            if [ "$found" -lt 5 ]; then
+              echo "opencode --help: разобрано только $found подкоманд — формат вывода изменился" >&2
+              exit 1
+            fi
+          '';
+
+      launcher =
+        pkgs.writeShellScriptBin "opencode" # bash
+          ''
+            set -u
+
+            real="${opencode}/bin/opencode"
+
+            if [ -n "''${1-}" ]; then
+              while read -r subcommand; do
+                [ "$1" = "$subcommand" ] && exec "$real" "$@"
+              done < ${subcommands}
+            fi
+
+            port=""
+            prev=""
+            for arg in "$@"; do
+              case "$arg" in
+                --port=*) port="''${arg#--port=}" ;;
+              esac
+              [ "$prev" = "--port" ] && port="$arg"
+              prev="$arg"
+            done
+
+            args=("$@")
+            if [ -z "$port" ]; then
+              for _ in $(seq 1 64); do
+                candidate=$((30000 + RANDOM % 20000))
+                if ! (exec 3<>/dev/tcp/127.0.0.1/"$candidate") 2> /dev/null; then
+                  port="$candidate"
+                  break
+                fi
+                exec 3>&- 2> /dev/null || true
+              done
+              [ -n "$port" ] && args=(--port "$port" "$@")
+            fi
+
+            case "$port" in
+              "" | *[!0-9]*) port="" ;;
+            esac
+
+            if [ -n "$port" ]; then
+              export OPENCODE_NVIM_SERVER="http://127.0.0.1:$port"
+              if [ -z "''${NVIM-}" ]; then
+                OPENCODE_NVIM_HANDOFF="''${XDG_RUNTIME_DIR:-/tmp}/opencode-nvim-handoff.$$"
+                export OPENCODE_NVIM_HANDOFF
+                rm -f "$OPENCODE_NVIM_HANDOFF"
+              fi
+            fi
+
+            "$real" "''${args[@]}"
+            status=$?
+
+            state="''${OPENCODE_NVIM_HANDOFF-}"
+            if [ -n "$state" ] && [ -e "$state" ]; then
+              mapfile -t files < "$state"
+              rm -f "$state"
+              unset OPENCODE_NVIM_HANDOFF OPENCODE_NVIM_SERVER
+              if ! command -v nvim > /dev/null; then
+                echo "opencode: nvim не найден в PATH, передача сессии невозможна." >&2
+                exit 1
+              fi
+              export OPENCODE_NVIM_RESUME=1
+              exec nvim "''${files[@]}"
+            fi
+
+            exit $status
+          '';
+
+      wrapped = pkgs.symlinkJoin {
+        name = "opencode-nvim-${opencode.version}";
+        inherit (opencode) meta version;
+        paths = [ opencode ];
+        postBuild = ''
+          rm -f "$out/bin/opencode"
+          ln -s ${launcher}/bin/opencode "$out/bin/opencode"
+        '';
+      };
+    in
+    {
+      inherit handoff wrapped;
+    };
+in
 {
   perSystem =
     { pkgs, pkgs-unstable, ... }:
     {
-      packages.opencode = pkgs-unstable.opencode;
+      packages.opencode = (mkNvimHandoff pkgs pkgs-unstable.opencode).wrapped;
     };
 
   flake.homeModules.opencode =
@@ -20,6 +165,8 @@
       inherit (lib)
         mkAfter
         ;
+
+      nvimHandoff = mkNvimHandoff pkgs pkgs-unstable.opencode;
 
       opencodeConfigDir = "${config.xdg.configHome}/opencode";
       toolkitRepoUrl = "https://git.protei.ru/qa-stuff/llm/llm-toolkit.git";
@@ -122,7 +269,16 @@
 
         programs.opencode = {
           enable = true;
-          package = pkgs-unstable.opencode;
+          package = nvimHandoff.wrapped;
+
+          commands.nvim = /* markdown */ ''
+            ---
+            description: Закрыть TUI opencode и продолжить текущую сессию в Neovim (opencode.nvim). Аргументы — файлы, которые нужно открыть
+            ---
+
+            !`${nvimHandoff.handoff}/bin/opencode-nvim-handoff "$ARGUMENTS"`
+          '';
+
           # Skills и agents через нативный HM-модуль (xdg.configFile).
           # Порядок применения:
           #   1) Pre-seed — opencode.json из Nix (nixPreseedConfig)

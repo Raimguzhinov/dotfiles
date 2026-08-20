@@ -16,6 +16,32 @@ let
     ];
     globals.loaded_netrwPlugin = 1;
     globals.opencode_opts = {
+      server =
+        let
+          openTerminal =
+            fn:
+            lib.generators.mkLuaInline # lua
+              ''
+                function()
+                  local cmd = vim.env.OPENCODE_NVIM_RESUME == "1" and "opencode --continue" or "opencode"
+                  require("opencode.terminal").${fn}(cmd, {
+                    split = "right",
+                    width = math.floor(vim.o.columns * 0.35),
+                  })
+                end
+              '';
+        in
+        {
+          start = openTerminal "open";
+          toggle = openTerminal "toggle";
+          stop =
+            lib.generators.mkLuaInline # lua
+              ''
+                function()
+                  require("opencode.terminal").close()
+                end
+              '';
+        };
       lsp = {
         enabled = true;
         handlers = {
@@ -234,6 +260,9 @@ let
                 if vim.fn.argc() ~= 0 or vim.g.nvf_started_with_stdin then
                   return
                 end
+                if vim.env.OPENCODE_NVIM_RESUME == "1" then
+                  return
+                end
                 for _, arg in ipairs(vim.v.argv) do
                   if arg == "-c" or arg == "-S" or arg:match("^%+") then
                     return
@@ -262,6 +291,21 @@ let
                     require("yazi").yazi(nil, vim.fn.getcwd())
                   end)
                 end
+              end
+            '';
+      }
+      {
+        event = [ "VimEnter" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                if vim.env.OPENCODE_NVIM_RESUME ~= "1" then
+                  return
+                end
+                vim.schedule(function()
+                  require("opencode").toggle()
+                end)
               end
             '';
       }
@@ -1265,7 +1309,20 @@ let
             mode = "n";
             lua = true;
             action = # lua
-              ''function() require("opencode").command("session.select") end'';
+              ''
+                function()
+                  require("opencode.ui.select_session")
+                    .select_session()
+                    :next(function(picked)
+                      picked.server:select_session(picked.session.id)
+                    end)
+                    :catch(function(err)
+                      if err then
+                        vim.notify(err, vim.log.levels.ERROR, { title = "opencode" })
+                      end
+                    end)
+                end
+              '';
             desc = "Select session [opencode]";
           }
           {
