@@ -315,6 +315,7 @@
               inputs.noctalia.homeModules.default
               inputs.nvf.homeManagerModules.default
               inputs.zen-browser.homeModules.beta
+              homeModules.aiUsagebar
               homeModules.chromium
               homeModules.claude
               homeModules.development

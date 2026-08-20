@@ -57,15 +57,19 @@
                 "volume"
                 "network"
                 "bluetooth"
+                "notes"
+                "timer"
+                "screen_recorder"
               ];
               center = [
+                "ai_usage"
                 "workspaces"
                 "active_window"
               ];
               end = [
-                "screen_recorder"
                 "keyboard_layout"
                 "battery"
+                "world_clock"
                 "clock"
                 "tray"
                 "session"
@@ -73,9 +77,36 @@
             };
           };
 
+          plugins = {
+            enabled = [
+              "noctalia/notes"
+              "noctalia/screen_recorder"
+              "noctalia/timer"
+              "noctalia/world_clock"
+
+              "felipeartur/ai-usagebar"
+            ];
+            auto_update = "all";
+            source = [
+              {
+                name = "official";
+                kind = "git";
+                location = "https://github.com/noctalia-dev/official-plugins";
+                enabled = true;
+              }
+              {
+                name = "community";
+                kind = "git";
+                location = "https://github.com/noctalia-dev/community-plugins";
+                enabled = true;
+              }
+            ];
+          };
+
           widget.clock = {
             format = "{:%H:%M}";
             vertical_format = "{:%H\n%M}";
+            tooltip_format = "{:%A, %d %B %Y}\n{:%H:%M:%S}";
             scale = 1.0;
           };
 
@@ -104,6 +135,36 @@
           widget.volume = {
             device = "output";
             show_label = true;
+          };
+
+          # Плагины подтягиваются автоматически из plugins.source; в бар
+          # подключаются именованными инстансами (type = "author/plugin:entry")
+          widget.screen_recorder = {
+            type = "noctalia/screen_recorder:recorder";
+          };
+
+          widget.notes = {
+            type = "noctalia/notes:notes";
+          };
+
+          # Бар-виджет плагина рисует ui.row и не влезает в вертикальный бар
+          # (35px), поэтому в баре — статичная иконка, а данные в панели плагина.
+          widget.ai_usage = {
+            type = "custom_button";
+            glyph = "brain";
+            tooltip = "Использование AI-планов";
+            actions = {
+              left = "panel-toggle felipeartur/ai-usagebar:panel";
+              right = "exec kitty -e ai-usagebar-tui";
+            };
+          };
+
+          widget.timer = {
+            type = "noctalia/timer:bar";
+          };
+
+          widget.world_clock = {
+            type = "noctalia/world_clock:bar";
           };
 
           control_center = {
