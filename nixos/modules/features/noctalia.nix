@@ -59,7 +59,6 @@
                 "bluetooth"
                 "notes"
                 "timer"
-                "screen_recorder"
               ];
               center = [
                 "ai_usage"
@@ -67,6 +66,7 @@
                 "active_window"
               ];
               end = [
+                "screen_recorder"
                 "keyboard_layout"
                 "battery"
                 "world_clock"
@@ -141,6 +141,10 @@
           # подключаются именованными инстансами (type = "author/plugin:entry")
           widget.screen_recorder = {
             type = "noctalia/screen_recorder:recorder";
+          };
+
+          plugin_settings."noctalia/screen_recorder" = {
+            audio_source = "both";
           };
 
           widget.notes = {
