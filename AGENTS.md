@@ -16,8 +16,9 @@ sudo nixos-rebuild build --flake ~/dotfiles/nixos#raimguzhinov
 sudo nixos-rebuild build-vm --flake ~/dotfiles/nixos#raimguzhinov
 ./result/bin/run-raimguzhinov-vm -device virtio-vga-gl -display gtk,gl=on
 
-# Форматирование Nix-файлов (если установлен)
-# nixfmt-rfc-style nixos/
+# Форматирование Nix-файлов (nixfmt-rfc-style deprecated, nixfmt >= 1.4
+# включает rfc-style)
+nixfmt nixos/
 ```
 
 ## Архитектура конфигурации
