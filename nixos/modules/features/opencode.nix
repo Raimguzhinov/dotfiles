@@ -196,7 +196,7 @@
             YOUTRACK_TOKEN=${config.sops.placeholder."youtrack/token"}
 
             # LightRAG MCP settings
-            LIGHTRAG_BASE_URL=http://localhost:9621
+            LIGHTRAG_BASE_URL=${config.sops.placeholder."work_ai/lightrag_url"}
 
             # GitLab MCP token
             GITLAB_TOKEN=${config.sops.placeholder."git/gitlab_mcp_token"}
