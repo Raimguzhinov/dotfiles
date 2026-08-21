@@ -824,7 +824,6 @@
           adw-gtk3
           adwaita-icon-theme
           adwaita-qt6
-          aichat
           alsa-utils
           brightnessctl
           bruno # lightweight insomnia
@@ -842,20 +841,20 @@
           file-roller
           firefoxpwa
           gcc
+          gdlv
           gdu # du -> ncdu/dust -> gdu
           gh
           gitlab-ci-local
           glab
           glow
-          gdlv
           gnome-settings-daemon
           gnumake
           gnupg
           gopass
           gopass-jsonapi
           gpu-screen-recorder
-          gtk3
           gtk-layer-shell
+          gtk3
           hicolor-icon-theme
           htop-vim
           imagemagick
@@ -887,7 +886,9 @@
           psmisc
           python3
           qrencode
+          scrcpy # android screen mirroring
           sops
+          sshfs
           tessen
           tig
           tlrc
