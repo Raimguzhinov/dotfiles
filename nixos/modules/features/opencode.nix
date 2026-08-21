@@ -239,6 +239,16 @@ in
             url = "https://mcp.grep.app";
             enabled = true;
           };
+          searxng = {
+            type = "local";
+            command = [
+              "npx"
+              "-y"
+              "mcp-searxng"
+            ];
+            environment.SEARXNG_URL = "http://127.0.0.1:8899";
+            enabled = true;
+          };
         };
 
         # plugin is LIST_UNION_KEY: repo ["opencode-auto-resume"] + ours = union
