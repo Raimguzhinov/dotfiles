@@ -112,6 +112,7 @@
             config.allowUnfree = true;
           };
           inherit username;
+          inherit hostname;
         };
         users.root =
           { config, lib, ... }:

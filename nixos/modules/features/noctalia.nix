@@ -1,7 +1,12 @@
 { ... }:
 {
   flake.homeModules.noctalia =
-    { config, pkgs, ... }:
+    {
+      config,
+      pkgs,
+      hostname,
+      ...
+    }:
     {
       programs.noctalia = {
         enable = true;
@@ -57,6 +62,7 @@
                 "volume"
                 "network"
                 "bluetooth"
+                "git_companion"
                 "notes"
                 "timer"
               ];
@@ -84,6 +90,7 @@
               "noctalia/world_clock"
 
               "felipeartur/ai-usagebar"
+              "tphilippot/git_companion"
             ];
             auto_update = "all";
             source = [
@@ -165,6 +172,17 @@
 
           widget.timer = {
             type = "noctalia/timer:bar";
+          };
+
+          widget.git_companion = {
+            type = "tphilippot/git_companion:widget";
+          };
+
+          plugin_settings."tphilippot/git_companion" = {
+            platform = "gitlab";
+            group = hostname;
+            bar_display_mode = "both";
+            refresh_interval = 300;
           };
 
           control_center = {
