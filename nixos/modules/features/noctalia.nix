@@ -69,7 +69,6 @@
                 "screen_recorder"
                 "keyboard_layout"
                 "battery"
-                "world_clock"
                 "clock"
                 "tray"
                 "session"
@@ -108,6 +107,9 @@
             vertical_format = "{:%H\n%M}";
             tooltip_format = "{:%A, %d %B %Y}\n{:%H:%M:%S}";
             scale = 1.0;
+            actions = {
+              right = "panel-toggle noctalia/world_clock:panel";
+            };
           };
 
           widget.workspaces = {
@@ -125,9 +127,7 @@
               "AmneziaVPN"
               "Clash-verge"
               "Handy"
-              "MAX"
               "OBS Studio"
-              "Telegram Desktop"
               "spotify-client"
             ];
           };
@@ -165,10 +165,6 @@
 
           widget.timer = {
             type = "noctalia/timer:bar";
-          };
-
-          widget.world_clock = {
-            type = "noctalia/world_clock:bar";
           };
 
           control_center = {
