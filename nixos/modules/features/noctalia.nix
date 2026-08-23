@@ -4,7 +4,6 @@
     {
       config,
       pkgs,
-      hostname,
       ...
     }:
     {
@@ -180,9 +179,9 @@
 
           plugin_settings."tphilippot/git_companion" = {
             platform = "gitlab";
-            group = hostname;
-            bar_display_mode = "both";
-            refresh_interval = 300;
+            group = "uc";
+            bar_display_mode = "none";
+            refresh_interval = 100;
           };
 
           control_center = {
