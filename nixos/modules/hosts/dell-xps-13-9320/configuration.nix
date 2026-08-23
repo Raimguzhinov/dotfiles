@@ -663,7 +663,7 @@
         enable = true;
         tunMode = true;
         serviceMode = true;
-        autoStart = true;
+        autoStart = false;
       };
 
       # Bluetooth
