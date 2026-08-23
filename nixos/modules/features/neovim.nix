@@ -1,5 +1,44 @@
 { inputs, ... }:
 let
+  # nixd вычисляет рабочее дерево флейка, поэтому собственные mkOption попадают
+  # в completion без пересборки. Накладывается поверх makeNvimSettings только
+  # там, где хост известен — в standalone-сборке его нет.
+  mkNixdSettings =
+    pkgs: lib:
+    {
+      flakePath,
+      hostname,
+      username,
+    }:
+    let
+      flake = ''(builtins.getFlake "${flakePath}")'';
+      host = "${flake}.nixosConfigurations.${hostname}";
+      hmType = "${host}.options.home-manager.users.type";
+      # HM-модули подключены через users.<name>.imports, поэтому голый
+      # getSubOptions видит только апстрим — доопределяем тип определениями
+      # пользователя, чтобы в наборе оказались опции nvf/noctalia/zen и прочих.
+      hmModules = ''${hmType}.getSubModules ++ builtins.catAttrs "${username}" ${host}.options.home-manager.users.definitions'';
+    in
+    {
+      lsp.servers.nixd.settings.nixd = {
+        nixpkgs.expr = "import ${flake}.inputs.nixpkgs { }";
+        formatting.command = [ (lib.getExe pkgs.nixfmt) ];
+        options = {
+          nixos.expr = "${host}.options";
+          home_manager.expr = "(${hmType}.substSubModules (${hmModules})).getSubOptions [ ]";
+          flake_parts.expr = "${flake}.debug.options";
+          flake_parts_persystem.expr = "${flake}.currentSystem.options";
+        };
+      };
+    };
+
+  sqlSources = [
+    "lsp"
+    "dadbod"
+    "snippets"
+    "buffer"
+  ];
+
   # Shared vim settings — used both in perSystem (nvf standalone) and homeModules (nvf HM)
   makeNvimSettings = pkgs: lib: {
     extraPackages = with pkgs; [
@@ -45,7 +84,9 @@ let
       lsp = {
         enabled = true;
         handlers = {
-          hover.enabled = true;
+          # Апстрим удалил всю lsp-фичу в v1.0.0: hover требует re-trigger,
+          # который перерисовывает экран поверх чужих hover и blink.
+          hover.enabled = false;
           code_action.enabled = true;
         };
       };
@@ -109,6 +150,7 @@ let
         goToDeclaration = "gI";
         hover = "<leader>K";
         renameSymbol = "<leader>ra";
+        signatureHelp = "<C-s>";
       };
       servers = {
         gopls.before_attach =
@@ -174,8 +216,8 @@ let
           lib.generators.mkLuaInline # lua
             ''
               function(event)
-                vim.bo.indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-                vim.bo.indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e"
+                vim.bo[event.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+                vim.bo[event.buf].indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e"
               end
             '';
       }
@@ -184,8 +226,8 @@ let
         callback =
           lib.generators.mkLuaInline # lua
             ''
-              function()
-                vim.bo.indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e"
+              function(event)
+                vim.bo[event.buf].indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e"
               end
             '';
       }
@@ -196,11 +238,11 @@ let
         callback =
           lib.generators.mkLuaInline # lua
             ''
-              function()
-                vim.bo.tabstop = 2
-                vim.bo.shiftwidth = 2
-                vim.bo.softtabstop = 2
-                vim.bo.expandtab = true
+              function(event)
+                vim.bo[event.buf].tabstop = 2
+                vim.bo[event.buf].shiftwidth = 2
+                vim.bo[event.buf].softtabstop = 2
+                vim.bo[event.buf].expandtab = true
               end
             '';
       }
@@ -438,8 +480,8 @@ let
         callback =
           lib.generators.mkLuaInline # lua
             ''
-              function()
-                vim.b.disableFormatSave = true
+              function(event)
+                vim.b[event.buf].disableFormatSave = true
               end
             '';
       }
@@ -475,6 +517,7 @@ let
         enable = true;
         format.enable = true;
         format.type = [ "nixfmt" ];
+        lsp.servers = [ "nixd" ];
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.nix;
       };
       json = {
@@ -651,8 +694,6 @@ let
       borders = {
         enable = true;
         globalStyle = "rounded";
-
-        plugins.nvim-cmp.enable = false;
       };
       smartcolumn = {
         enable = true;
@@ -736,7 +777,86 @@ let
         };
       };
     };
-    autocomplete.nvim-cmp.enable = true;
+    snippets.luasnip = {
+      enable = true;
+      providers = [ ];
+    };
+    autocomplete.blink-cmp = {
+      enable = true;
+      friendly-snippets.enable = true;
+      mappings = {
+        confirm = null;
+        next = null;
+        previous = null;
+      };
+      setupOpts = {
+        keymap = {
+          "<CR>" = [
+            "select_and_accept"
+            "fallback"
+          ];
+          "<Tab>" = [
+            "snippet_forward"
+            "accept"
+            "fallback"
+          ];
+          "<S-Tab>" = [
+            "snippet_backward"
+            "select_prev"
+            "fallback"
+          ];
+          "<Up>" = [
+            "select_prev"
+            "fallback"
+          ];
+          "<Down>" = [
+            "select_next"
+            "fallback"
+          ];
+          "<C-s>" = [
+            "show_signature"
+            "hide_signature"
+            "fallback"
+          ];
+        };
+        cmdline.keymap.preset = "cmdline";
+        appearance.nerd_font_variant = "mono";
+        completion = {
+          list.selection.preselect = false;
+          ghost_text.enabled = true;
+          documentation.window.border = "rounded";
+          menu = {
+            border = "rounded";
+            draw = {
+              treesitter = [ "lsp" ];
+              columns = [
+                [ "kind_icon" ]
+                [
+                  "label"
+                  "label_description"
+                ]
+                [ "kind" ]
+              ];
+            };
+          };
+        };
+        signature = {
+          enabled = true;
+          window.border = "rounded";
+        };
+        sources = {
+          per_filetype = {
+            sql = sqlSources;
+            mysql = sqlSources;
+            plsql = sqlSources;
+          };
+          providers.dadbod = {
+            name = "Dadbod";
+            module = "vim_dadbod_completion.blink";
+          };
+        };
+      };
+    };
     autopairs.nvim-autopairs.enable = true;
     comments.comment-nvim = {
       enable = true;
@@ -930,49 +1050,17 @@ let
         desc = "Select line";
       }
       {
-        key = "<Up>";
-        mode = "i";
+        key = "<leader>rf";
+        mode = "n";
         lua = true;
+        desc = "Fill struct [gopls]";
         action = # lua
           ''
             function()
-              local cmp = require("cmp")
-              if cmp.visible() then
-                cmp.select_prev_item()
-              else
-                vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Up>", true, true, true), "n", true)
-              end
-            end
-          '';
-      }
-      {
-        key = "<Down>";
-        mode = "i";
-        lua = true;
-        action = # lua
-          ''
-            function()
-              local cmp = require("cmp")
-              if cmp.visible() then
-                cmp.select_next_item()
-              else
-                vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Down>", true, true, true), "n", true)
-              end
-            end
-          '';
-      }
-      {
-        key = "<C-s>";
-        mode = [
-          "n"
-          "i"
-        ];
-        lua = true;
-        desc = "Signature help";
-        action = # lua
-          ''
-            function()
-              vim.lsp.buf.signature_help()
+              vim.lsp.buf.code_action({
+                context = { only = { "refactor.rewrite.fillStruct" } },
+                apply = true,
+              })
             end
           '';
       }
@@ -1061,24 +1149,6 @@ let
       }
     ];
     lazy.plugins = {
-      nvim-cmp = {
-        after = # lua
-          ''
-            vim.schedule(function()
-              local cmp = require("cmp")
-              local config = cmp.get_config()
-              if config and config.mapping then
-                config.mapping["<Tab>"] = cmp.mapping(function(fallback)
-                  if cmp.visible() then
-                    cmp.confirm({ select = false })
-                  else
-                    fallback()
-                  end
-                end)
-              end
-            end)
-          '';
-      };
       vim-dadbod-ui = {
         package = pkgs.vimPlugins.vim-dadbod-ui;
         lazy = true;
@@ -1354,6 +1424,17 @@ let
             desc = "Ask [opencode]";
           }
           {
+            key = "<leader>ax";
+            mode = [
+              "n"
+              "x"
+            ];
+            lua = true;
+            action = # lua
+              ''function() require("opencode").prompt("Explain @this and its context") end'';
+            desc = "Explain this [opencode]";
+          }
+          {
             key = "<leader>as";
             mode = [
               "n"
@@ -1518,12 +1599,25 @@ in
     };
 
   flake.homeModules.neovim =
-    { pkgs, ... }:
+    {
+      pkgs,
+      hostname,
+      username,
+      ...
+    }:
     {
       programs.nvf = {
         enable = true;
         defaultEditor = true;
-        settings.vim = makeNvimSettings pkgs pkgs.lib;
+        # Не home.homeDirectory: модуль подключён и для users.root, а флейк
+        # лежит в домашнем каталоге основного пользователя.
+        settings.vim = pkgs.lib.recursiveUpdate (makeNvimSettings pkgs pkgs.lib) (
+          mkNixdSettings pkgs pkgs.lib {
+            flakePath = "/home/${username}/dotfiles/nixos";
+            inherit hostname;
+            inherit username;
+          }
+        );
       };
     };
 }
