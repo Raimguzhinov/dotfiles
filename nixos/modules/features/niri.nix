@@ -247,6 +247,10 @@
                     action = spawn "${pkgs.kitty}/bin/kitty";
                     hotkey-overlay.title = "Open a Terminal: kitty";
                   };
+                  "Mod+Shift+Return" = {
+                    action = spawn "${pkgs.kitty}/bin/kitty" "--class=herdr" "herdr";
+                    hotkey-overlay.title = "Open a Terminal: herdr";
+                  };
                   "Mod+A" = {
                     action.spawn = noctalia "panel-toggle launcher";
                     hotkey-overlay.title = "Run an Application: noctalia launcher";

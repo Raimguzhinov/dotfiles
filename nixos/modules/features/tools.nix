@@ -480,6 +480,14 @@
             }
             {
               on = [
+                "c"
+                "a"
+              ];
+              run = "shell -- herdr-send-paths \"$@\"";
+              desc = "Send paths to the herdr agent";
+            }
+            {
+              on = [
                 "g"
                 "s"
               ];
@@ -524,6 +532,10 @@
           custom.yazi_shell = {
             when = ''test "$YAZI_SHELL" = "1"'';
             format = "[║══ yazi ══║](bold yellow) ";
+          };
+          custom.herdr = {
+            when = ''test "$HERDR_ENV" = "1"'';
+            format = "[󰆍 herdr](bold cyan) ";
           };
         };
       };

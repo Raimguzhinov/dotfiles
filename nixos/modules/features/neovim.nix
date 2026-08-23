@@ -39,16 +39,20 @@ let
     "buffer"
   ];
 
-  # Shared vim settings — used both in perSystem (nvf standalone) and homeModules (nvf HM)
+  # Общие настройки nvf для двух потребителей: standalone packages.neovim
+  # (perSystem) и flake.homeModules.neovim. Рантайм-зависимости плагинов
+  # объявляются здесь, в extraPackages, а не в home.packages: у
+  # standalone-сборки нет ни HM, ни системы — обёрнутый nvim должен видеть
+  # эти бинари в собственном PATH.
   makeNvimSettings = pkgs: lib: {
     extraPackages = with pkgs; [
-      git
-      lazygit
-      lazydocker
-      yazi
-      fd
-      ripgrep
-      golangci-lint-langserver
+      git # fugitive/gitsigns/diffview, :!git
+      lazygit # toggleterm.lazygit (<leader>gg)
+      lazydocker # lazydocker.nvim
+      yazi # yazi-nvim
+      fd # telescope find_files
+      ripgrep # telescope live_grep
+      golangci-lint-langserver # бинарь LSP-сервера из lsp.servers выше
       procps # opencode.nvim: pgrep-based server discovery
       lsof # opencode.nvim: port lookup for discovered servers
       # clang-tools # форматер для protobuf; включить при необходимости
@@ -306,7 +310,8 @@ let
                   return
                 end
                 for _, arg in ipairs(vim.v.argv) do
-                  if arg == "-c" or arg == "-S" or arg:match("^%+") then
+                  -- --headless: herdr-nvim daemon и скриптовые запуски без UI.
+                  if arg == "-c" or arg == "-S" or arg == "--headless" or arg:match("^%+") then
                     return
                   end
                 end
@@ -720,6 +725,15 @@ let
             return ok and opencode.statusline() or ""
           end
         '')
+        # lua
+        (''
+          function()
+            local ok, out = pcall(function()
+              return require("herdr-nvim").statusline()
+            end)
+            return ok and out or ""
+          end
+        '')
       ];
     };
     telescope = {
@@ -762,7 +776,8 @@ let
       whichKey = {
         enable = true;
         register = {
-          "<leader>a" = "AI (opencode)";
+          "<leader>a" = "AI (herdr)";
+          "<leader>A" = "AI (opencode)";
           "<leader>b" = "Buffers";
           "<leader>c" = "Conflict (ours/theirs/base)";
           "<leader>d" = "Debug";
@@ -1392,7 +1407,7 @@ let
         lazy = false;
         keys = [
           {
-            key = "<leader>aa";
+            key = "<leader>Aa";
             mode = "n";
             lua = true;
             action = # lua
@@ -1400,7 +1415,7 @@ let
             desc = "Ask [opencode]";
           }
           {
-            key = "<leader>aa";
+            key = "<leader>Aa";
             mode = "x";
             lua = true;
             action = # lua
@@ -1408,7 +1423,7 @@ let
             desc = "Ask about this [opencode]";
           }
           {
-            key = "<leader>aA";
+            key = "<leader>AA";
             mode = "n";
             lua = true;
             action = # lua
@@ -1416,7 +1431,7 @@ let
             desc = "Ask about this [opencode]";
           }
           {
-            key = "<leader>aA";
+            key = "<leader>AA";
             mode = "x";
             lua = true;
             action = # lua
@@ -1424,7 +1439,7 @@ let
             desc = "Ask [opencode]";
           }
           {
-            key = "<leader>ax";
+            key = "<leader>Ax";
             mode = [
               "n"
               "x"
@@ -1435,7 +1450,7 @@ let
             desc = "Explain this [opencode]";
           }
           {
-            key = "<leader>as";
+            key = "<leader>As";
             mode = [
               "n"
               "x"
@@ -1446,7 +1461,7 @@ let
             desc = "Select prompt/command [opencode]";
           }
           {
-            key = "<leader>at";
+            key = "<leader>At";
             mode = "n";
             lua = true;
             action = # lua
@@ -1454,7 +1469,7 @@ let
             desc = "Toggle opencode terminal";
           }
           {
-            key = "<leader>an";
+            key = "<leader>An";
             mode = "n";
             lua = true;
             action = # lua
@@ -1462,7 +1477,7 @@ let
             desc = "New session [opencode]";
           }
           {
-            key = "<leader>ae";
+            key = "<leader>Ae";
             mode = "n";
             lua = true;
             action = # lua
@@ -1483,7 +1498,7 @@ let
             desc = "Select session [opencode]";
           }
           {
-            key = "<leader>ac";
+            key = "<leader>Ac";
             mode = "n";
             lua = true;
             action = # lua
@@ -1491,7 +1506,7 @@ let
             desc = "Compact session [opencode]";
           }
           {
-            key = "<leader>ai";
+            key = "<leader>Ai";
             mode = "n";
             lua = true;
             action = # lua
@@ -1499,7 +1514,7 @@ let
             desc = "Interrupt session [opencode]";
           }
           {
-            key = "<leader>au";
+            key = "<leader>Au";
             mode = "n";
             lua = true;
             action = # lua
@@ -1507,7 +1522,7 @@ let
             desc = "Undo session step [opencode]";
           }
           {
-            key = "<leader>aR";
+            key = "<leader>AR";
             mode = "n";
             lua = true;
             action = # lua
@@ -1515,7 +1530,7 @@ let
             desc = "Redo session step [opencode]";
           }
           {
-            key = "<leader>ag";
+            key = "<leader>Ag";
             mode = "n";
             lua = true;
             action = # lua
@@ -1560,6 +1575,128 @@ let
             desc = "Append line to opencode";
           }
         ];
+      };
+      "herdr-splits.nvim" = {
+        package = pkgs.vimUtils.buildVimPlugin {
+          pname = "herdr-splits.nvim";
+          version = "0.5.3";
+          src = pkgs.fetchFromGitHub {
+            owner = "lmilojevicc";
+            repo = "herdr-splits.nvim";
+            tag = "v0.5.3";
+            hash = "sha256-7rHAPSjd2n16FGOcqI/1KNHl1yCmMOVVwiJl/eEU9n8=";
+          };
+        };
+        # Outside a herdr pane <C-h/j/k/l> must stay plain wincmd.
+        enabled =
+          lib.generators.mkLuaInline # lua
+            ''function() return vim.env.HERDR_ENV == "1" end'';
+        lazy = false;
+        setupModule = "herdr-splits";
+        setupOpts = {
+          at_edge = "wrap";
+          nav_at_edge = "wrap";
+          unzoom_on_nav = true;
+          ignored_filetypes = [
+            "NvimTree"
+            "Trouble"
+            "aerial"
+            "dadbod-ui"
+            "dbout"
+            "dbui"
+            "qf"
+            "snacks_picker"
+            "yazi"
+          ];
+        };
+        keys = [
+          {
+            key = "<C-a>h";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").move_cursor_left() end'';
+            desc = "Navigate left [herdr]";
+          }
+          {
+            key = "<C-a>j";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").move_cursor_down() end'';
+            desc = "Navigate down [herdr]";
+          }
+          {
+            key = "<C-a>k";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").move_cursor_up() end'';
+            desc = "Navigate up [herdr]";
+          }
+          {
+            key = "<C-a>l";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").move_cursor_right() end'';
+            desc = "Navigate right [herdr]";
+          }
+          {
+            key = "<M-h>";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").resize_left() end'';
+            desc = "Resize left [herdr]";
+          }
+          {
+            key = "<M-j>";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").resize_down() end'';
+            desc = "Resize down [herdr]";
+          }
+          {
+            key = "<M-k>";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").resize_up() end'';
+            desc = "Resize up [herdr]";
+          }
+          {
+            key = "<M-l>";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("herdr-splits").resize_right() end'';
+            desc = "Resize right [herdr]";
+          }
+        ];
+      };
+      "herdr-nvim" = {
+        package = pkgs.vimUtils.buildVimPlugin {
+          pname = "herdr-nvim";
+          version = "0.2.1";
+          src = pkgs.fetchFromGitHub {
+            owner = "ChmaraX";
+            repo = "herdr-nvim";
+            tag = "v0.2.1";
+            hash = "sha256-7xnhtj2ngPe/QXMN8crT3mB+QuJ7PvPFwGuS9TMNPMQ=";
+          };
+        };
+        enabled =
+          lib.generators.mkLuaInline # lua
+            ''function() return vim.env.HERDR_ENV == "1" end'';
+        lazy = false;
+        setupModule = "herdr-nvim";
+        setupOpts = {
+          prefix = "<leader>a";
+          keymaps = true;
+          clear_after_send = true;
+        };
       };
       "nvim-dap-virtual-text" = {
         package = pkgs.vimPlugins.nvim-dap-virtual-text;

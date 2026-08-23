@@ -321,6 +321,7 @@
               homeModules.claude
               homeModules.development
               homeModules.git
+              homeModules.herdr
               homeModules.jetbrains
               homeModules.kitty
               homeModules.llamaCpp
