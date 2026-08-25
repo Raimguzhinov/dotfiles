@@ -595,12 +595,10 @@
 
       # Yubikey
       services.udev.packages = [ pkgs.yubikey-personalization ];
-      services.udev.extraRules = [
-        ''
-          KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
-          KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:E126:*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
-        ''
-      ];
+      services.udev.extraRules = ''
+        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:E126:*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+      '';
       services.pcscd.enable = true;
       services.yubikey-agent.enable = true;
       hardware.gpgSmartcards.enable = true;
