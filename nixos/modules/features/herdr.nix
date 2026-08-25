@@ -109,6 +109,19 @@ let
     "pi"
   ];
 
+  # -6 умеренно (peak -16 dB) | -12 заметно тише (-22) | -18 фоновый мягкий (-28)
+  doneSoundGainDb = -12;
+
+  mkQuietSound =
+    pkgs: name: gainDb:
+    pkgs.runCommand "herdr-quiet-${name}.mp3" { nativeBuildInputs = [ pkgs.ffmpeg-headless ]; } # bash
+      ''
+        ffmpeg -nostdin -loglevel error \
+          -i ${inputs.herdr}/assets/sounds/${name}.mp3 \
+          -af volume=${toString gainDb}dB \
+          -codec:a libmp3lame -q:a 2 "$out"
+      '';
+
   popup = key: command: description: {
     inherit key command description;
     type = "popup";
@@ -121,7 +134,7 @@ let
     type = "plugin_action";
   };
 
-  herdrSettings = {
+  herdrSettings = pkgs: {
     onboarding = false;
 
     keys = {
@@ -273,6 +286,8 @@ let
         delivery = "system";
         delay_seconds = 1;
       };
+
+      sound.done_path = "${mkQuietSound pkgs "done" doneSoundGainDb}";
     };
 
     experimental = {
@@ -317,7 +332,7 @@ in
     let
       herdr = mkHerdr pkgs inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr;
       toml = pkgs.formats.toml { };
-      configFile = toml.generate "herdr-config.toml" herdrSettings;
+      configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs);
       pluginRoots = linkedPlugins pkgs;
 
       sendPaths = pkgs.writeShellApplication {
