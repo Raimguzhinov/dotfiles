@@ -594,11 +594,19 @@
       };
 
       # Yubikey
-      services.udev.packages = [ pkgs.yubikey-personalization ];
-      services.udev.extraRules = ''
-        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
-        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:E126:*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
-      '';
+      services.udev.packages = [
+        pkgs.yubikey-personalization
+        # Entropy проверяет именно этот файл и маркеры внутри (v2)
+        (pkgs.writeTextFile {
+          name = "vial-udev-rules";
+          destination = "/etc/udev/rules.d/59-vial.rules";
+          text = ''
+            # Entropy Vial hidraw access v2
+            KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+            KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:E126:*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+          '';
+        })
+      ];
       services.pcscd.enable = true;
       services.yubikey-agent.enable = true;
       hardware.gpgSmartcards.enable = true;
