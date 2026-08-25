@@ -171,6 +171,12 @@
                 default-column-width.fixed = 1080;
                 default-window-height.fixed = 920;
               }
+              {
+                matches = [ { app-id = "^termfilechooser$"; } ];
+                open-floating = true;
+                default-column-width.fixed = 1280;
+                default-window-height.fixed = 800;
+              }
             ];
             debug = {
               honor-xdg-activation-with-invalid-serial = { };

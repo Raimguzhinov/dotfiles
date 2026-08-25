@@ -83,7 +83,6 @@ in
           baseUrl = "https://agent.ai.protei.ru/api";
           api = "openai-completions";
           apiKey = readSecret "work_ai/litellm_api_key";
-          compat.supportsDeveloperRole = false;
           models = [
             {
               id = "agent_proteya";
@@ -93,8 +92,8 @@ in
                 "text"
                 "image"
               ];
-              contextWindow = 131072;
-              maxTokens = 8192;
+              contextWindow = 262144; # old: 131072
+              maxTokens = 65536; # old: 8192
               samplingParams = {
                 temperature = 1.0;
                 top_p = 0.95;
@@ -102,6 +101,28 @@ in
                 min_p = 0.0;
                 presence_penalty = 0.0;
                 repetition_penalty = 1.0;
+              };
+              thinkingLevelMap = {
+                off = "none";
+                minimal = null;
+                low = "low";
+                medium = "medium";
+                high = null;
+                xhigh = "xhigh";
+                max = null;
+              };
+              compat = {
+                supportsDeveloperRole = false;
+                thinkingFormat = "chat-template";
+                chatTemplateKwargs = {
+                  enable_thinking = {
+                    "$var" = "thinking.enabled";
+                  };
+                  reasoning_effort = {
+                    "$var" = "thinking.effort";
+                    omitWhenOff = true;
+                  };
+                };
               };
             }
           ];

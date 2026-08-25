@@ -356,6 +356,8 @@
             # Camera access dialog must go to gtk — gnome backend requires GNOME shell
             # (unavailable in niri), causing silent denial without dialog
             "org.freedesktop.impl.portal.Access" = "gtk";
+            # yazi вместо GTK-диалога выбора файлов (см. tools.nix)
+            "org.freedesktop.impl.portal.FileChooser" = "termfilechooser";
           };
         };
         xdgOpenUsePortal = true;
@@ -363,6 +365,7 @@
           xdg-desktop-portal
           xdg-desktop-portal-gtk
           xdg-desktop-portal-gnome
+          xdg-desktop-portal-termfilechooser
         ];
       };
 
@@ -592,6 +595,12 @@
 
       # Yubikey
       services.udev.packages = [ pkgs.yubikey-personalization ];
+      services.udev.extraRules = [
+        ''
+          KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{serial}=="*vial:f64c2b3c*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+          KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:E126:*", MODE="0660", GROUP="users", TAG+="uaccess", TAG+="udev-acl"
+        ''
+      ];
       services.pcscd.enable = true;
       services.yubikey-agent.enable = true;
       hardware.gpgSmartcards.enable = true;
@@ -811,6 +820,7 @@
           niri-float-sticky.packages.${pkgs.stdenv.hostPlatform.system}.default
         ])
         ++ (with pkgs-unstable; [
+          ergohaven-entropy
           handy
         ])
         ++ (with pkgs.gst_all_1; [

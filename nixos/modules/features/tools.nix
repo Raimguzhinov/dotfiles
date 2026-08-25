@@ -3,9 +3,20 @@
   flake.homeModules.tools =
     {
       config,
+      lib,
       pkgs,
       ...
     }:
+    let
+      # Рецепты из https://yazi-rs.github.io/docs/tips, которых нет в
+      # pkgs.yaziPlugins
+      mkYaziPlugin =
+        name: lua:
+        pkgs.runCommand "${name}.yazi" { } ''
+          mkdir -p "$out"
+          install -m444 ${pkgs.writeText "${name}-main.lua" lua} "$out/main.lua"
+        '';
+    in
     {
       programs.zsh = {
         enable = true;
@@ -433,9 +444,41 @@
         enableZshIntegration = true;
         enableBashIntegration = true;
         shellWrapperName = "rr";
+        # Архиваторы для compress.yazi; ouch добирает форматы, которых нет в
+        # 7zz (rar, lz4, br, sz, bz3, lz).
+        extraPackages = with pkgs; [
+          bzip2
+          gnutar
+          gzip
+          lz4
+          (ouch.override { enableUnfree = true; })
+          xz
+          zip
+          zstd
+        ];
+        initLua = # lua
+          ''
+            require("zoxide"):setup {
+            	update_db = true,
+            }
+
+            Status:children_add(function()
+            	local h = cx.active.current.hovered
+            	if not h or ya.target_family() ~= "unix" then
+            		return ""
+            	end
+
+            	return ui.Line {
+            		ui.Span(ya.user_name(h.cha.uid) or tostring(h.cha.uid)):fg("magenta"),
+            		":",
+            		ui.Span(ya.group_name(h.cha.gid) or tostring(h.cha.gid)):fg("magenta"),
+            		" ",
+            	}
+            end, 500, Status.RIGHT)
+          '';
         settings = {
           mgr = {
-            show_hidden = true;
+            show_hidden = false;
           };
           plugin.prepend_fetchers = [
             {
@@ -449,18 +492,107 @@
               group = "git";
             }
           ];
+          opener."extract-ouch" = [
+            {
+              run = ''ouch decompress -y "$@"'';
+              desc = "Extract with ouch";
+              for = "unix";
+            }
+          ];
+          # Форматы, которые встроенный extract (7zz) не тянет
+          open.prepend_rules = [
+            {
+              url = "*.{rar,cbr,lz4,tlz4,br,sz,bz3,lz,tlz}";
+              use = [
+                "extract-ouch"
+                "reveal"
+              ];
+            }
+          ];
         };
         plugins = {
+          compress = pkgs.yaziPlugins.compress;
           git = {
             package = pkgs.yaziPlugins.git;
             setup = true;
             settings.order = 1500;
           };
           piper = pkgs.yaziPlugins.piper;
+          smart-paste = pkgs.yaziPlugins.smart-paste;
           starship = {
             package = pkgs.yaziPlugins.starship;
             setup = true;
           };
+
+          confirm-quit =
+            mkYaziPlugin "confirm-quit" # lua
+              ''
+                local count = ya.sync(function() return #cx.tabs end)
+
+                local function entry()
+                	if count() < 2 then
+                		return ya.emit("quit", {})
+                	end
+
+                	local yes = ya.confirm {
+                		pos = { "center", w = 62, h = 10 },
+                		title = "Quit?",
+                		body = ui.Text("There are multiple tabs open. Are you sure you want to quit?"):wrap(ui.Wrap.YES),
+                	}
+                	if yes then
+                		ya.emit("quit", {})
+                	end
+                end
+
+                return { entry = entry }
+              '';
+
+          parent-arrow =
+            mkYaziPlugin "parent-arrow" # lua
+              ''
+                --- @sync entry
+                local function entry(_, job)
+                	local parent = cx.active.parent
+                	if not parent then return end
+
+                	local target = parent.files[parent.cursor + 1 + job.args[1]]
+                	if target and target.cha.is_dir then
+                		ya.emit("cd", { target.url })
+                	end
+                end
+
+                return { entry = entry }
+              '';
+
+          smart-switch =
+            mkYaziPlugin "smart-switch" # lua
+              ''
+                --- @sync entry
+                local function entry(_, job)
+                	local cur = cx.active.current
+                	for _ = #cx.tabs, job.args[1] do
+                		ya.emit("tab_create", { cur.cwd })
+                		if cur.hovered then
+                			ya.emit("reveal", { cur.hovered.url })
+                		end
+                	end
+                	ya.emit("tab_switch", { job.args[1] })
+                end
+
+                return { entry = entry }
+              '';
+
+          smart-tab =
+            mkYaziPlugin "smart-tab" # lua
+              ''
+                --- @sync entry
+                return {
+                	entry = function()
+                		local h = cx.active.current.hovered
+                		ya.emit("tab_create", h and h.cha.is_dir and { h.url } or { current = true })
+                	end,
+                }
+              '';
         };
         keymap = {
           mgr.prepend_keymap = [
@@ -487,11 +619,163 @@
               desc = "Send paths to the herdr agent";
             }
             {
+              on = "p";
+              run = "plugin smart-paste";
+              desc = "Paste into the hovered directory or CWD";
+            }
+            {
+              on = [
+                "t"
+                "t"
+              ];
+              run = "plugin smart-tab";
+              desc = "Create a tab and enter the hovered directory";
+            }
+            {
+              on = "{";
+              run = "plugin parent-arrow -1";
+              desc = "Go to the previous sibling of the parent directory";
+            }
+            {
+              on = "}";
+              run = "plugin parent-arrow 1";
+              desc = "Go to the next sibling of the parent directory";
+            }
+            {
+              on = "<Tab>";
+              run = "tab_switch 1 --relative";
+              desc = "Next tab";
+            }
+            {
+              on = "<S-Tab>";
+              run = "tab_switch -1 --relative";
+              desc = "Previous tab";
+            }
+            {
+              on = "i";
+              run = "spot";
+              desc = "Show file info";
+            }
+            {
+              on = "q";
+              run = "plugin confirm-quit";
+              desc = "Quit (confirm when multiple tabs are open)";
+            }
+            {
+              on = "<C-g>";
+              run = ''shell -- rofi -show filebrowser -filebrowser-command "ya emit reveal" -filebrowser-directory "$(pwd)"'';
+              desc = "Grid view";
+            }
+            {
+              on = [
+                "g"
+                "r"
+              ];
+              run = ''shell -- ya emit cd "$(git rev-parse --show-toplevel)"'';
+              desc = "Go to the root of the current Git repository";
+            }
+            {
+              on = [
+                "C"
+                "z"
+              ];
+              run = "plugin compress zip";
+              desc = "Archive: zip";
+            }
+            {
+              on = [
+                "C"
+                "7"
+              ];
+              run = "plugin compress 7z";
+              desc = "Archive: 7z";
+            }
+            {
+              on = [
+                "C"
+                "g"
+              ];
+              run = "plugin compress tar.gz";
+              desc = "Archive: tar.gz";
+            }
+            {
+              on = [
+                "C"
+                "x"
+              ];
+              run = "plugin compress tar.xz";
+              desc = "Archive: tar.xz";
+            }
+            {
+              on = [
+                "C"
+                "s"
+              ];
+              run = "plugin compress tar.zst";
+              desc = "Archive: tar.zst";
+            }
+            {
+              on = [
+                "C"
+                "b"
+              ];
+              run = "plugin compress tar.bz2";
+              desc = "Archive: tar.bz2";
+            }
+            {
+              on = [
+                "C"
+                "t"
+              ];
+              run = "plugin compress tar";
+              desc = "Archive: tar (no compression)";
+            }
+            {
+              on = [
+                "C"
+                "p"
+              ];
+              run = "plugin compress '-p zip'";
+              desc = "Archive: zip with password";
+            }
+            {
+              on = [
+                "C"
+                "P"
+              ];
+              run = "plugin compress '-ph 7z'";
+              desc = "Archive: 7z with password + encrypted header";
+            }
+            {
+              on = [
+                "C"
+                "l"
+              ];
+              run = "plugin compress '-l zip'";
+              desc = "Archive: zip with compression level";
+            }
+            {
+              on = [
+                "g"
+                "w"
+              ];
+              run = "cd ~/Work";
+              desc = "Go to ~/Work";
+            }
+            {
+              on = [
+                "g"
+                "."
+              ];
+              run = "cd ~/dotfiles";
+              desc = "Go to ~/dotfiles";
+            }
+            {
               on = [
                 "g"
                 "s"
               ];
-              run = "cd /home/dias/Work/core/services";
+              run = "cd ~/Work/core/services";
               desc = "Go to local Protei services";
             }
             {
@@ -502,9 +786,64 @@
               run = "cd /var/lib/docker/volumes";
               desc = "Go to docker Protei services";
             }
-          ];
+          ]
+          ++ map (i: {
+            on = toString (i + 1);
+            run = "plugin smart-switch ${toString i}";
+            desc = "Switch to tab ${toString (i + 1)}, creating it if needed";
+          }) (lib.range 0 8);
         };
       };
+
+      # yazi как системный файловый диалог через
+      # xdg-desktop-portal-termfilechooser
+      xdg.configFile."xdg-desktop-portal-termfilechooser/config".text =
+        let
+          yaziWrapper = pkgs.writeShellApplication {
+            name = "termfilechooser-yazi-wrapper";
+            runtimeInputs = [
+              pkgs.coreutils
+              pkgs.kitty
+              pkgs.yazi
+            ];
+            # Порядок аргументов задаёт портал:
+            # multiple directory save path out loglevel.
+            # См. xdg-desktop-portal-termfilechooser(5).
+            text = # bash
+              ''
+                directory="$2"
+                out="$5"
+
+                if [ "''${6:-0}" -ge 4 ]; then
+                  set -x
+                fi
+
+                if [ "$directory" = 1 ]; then
+                  set -- --chooser-file="$out" --cwd-file="$out.1" "$4"
+                else
+                  set -- --chooser-file="$out" "$4"
+                fi
+
+                # Отмена выбора (`Q` в yazi) — не ошибка: портал трактует
+                # пустой out как cancel, поэтому код возврата игнорируем.
+                kitty --class=termfilechooser --title=termfilechooser yazi "$@" || true
+
+                if [ "$directory" = 1 ]; then
+                  if [ ! -s "$out" ] && [ -s "$out.1" ]; then
+                    cat "$out.1" > "$out"
+                  fi
+                  rm -f "$out.1"
+                fi
+              '';
+          };
+        in
+        ''
+          [filechooser]
+          cmd=${lib.getExe yaziWrapper}
+          default_dir=$HOME
+          open_mode=suggested
+          save_mode=suggested
+        '';
 
       programs.mc = {
         enable = true;
