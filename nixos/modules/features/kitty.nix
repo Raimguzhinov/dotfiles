@@ -1,7 +1,11 @@
 { ... }:
 {
   flake.homeModules.kitty =
-    { pkgs, ... }:
+    {
+      lib,
+      pkgs,
+      ...
+    }:
     {
       programs.kitty = {
         enable = true;
@@ -18,7 +22,7 @@
           enable_audio_bell = "no";
           visual_bell_duration = "0.0";
           window_alert_on_bell = "no";
-          shell = "${pkgs.zsh}/bin/zsh";
+          shell = "${lib.getExe pkgs.zsh}";
           scrollback_lines = 10000;
           bold_is_bright = "yes";
           background = "#181818";

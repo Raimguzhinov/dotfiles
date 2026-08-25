@@ -250,11 +250,11 @@
                   "Mod+Shift+Slash".action = show-hotkey-overlay;
                   "Mod+W".action = toggle-overview;
                   "Mod+Return" = {
-                    action = spawn "${pkgs.kitty}/bin/kitty";
+                    action = spawn "${lib.getExe pkgs.kitty}";
                     hotkey-overlay.title = "Open a Terminal: kitty";
                   };
                   "Mod+Shift+Return" = {
-                    action = spawn "${pkgs.kitty}/bin/kitty" "--class=herdr" "herdr";
+                    action = spawn "${lib.getExe pkgs.kitty}" "--class=herdr" "herdr";
                     hotkey-overlay.title = "Open a Terminal: herdr";
                   };
                   "Mod+A" = {
@@ -262,15 +262,15 @@
                     hotkey-overlay.title = "Run an Application: noctalia launcher";
                   };
                   "Mod+D" = {
-                    action = spawn "${pkgs.nwg-drawer}/bin/nwg-drawer";
+                    action = spawn "${lib.getExe pkgs.nwg-drawer}";
                     hotkey-overlay.title = "Open The Launcher";
                   };
                   "Mod+E" = {
-                    action = spawn "${pkgs.kitty}/bin/kitty" "--class=yazi" "yazi";
+                    action = spawn "${lib.getExe pkgs.kitty}" "--class=yazi" "yazi";
                     hotkey-overlay.title = "File manager: yazi";
                   };
                   "Mod+Shift+E" = {
-                    action = spawn "${pkgs.nautilus}/bin/nautilus" "--new-window";
+                    action = spawn "${lib.getExe pkgs.nautilus}" "--new-window";
                     hotkey-overlay.title = "File manager: nautilus";
                   };
                   "Mod+O" = {
@@ -299,11 +299,11 @@
                     hotkey-overlay.title = "Toggle sticky";
                   };
                   "Mod+Shift+Space" = {
-                    action = spawn "${pkgs-unstable.handy}/bin/handy" "--toggle-transcription";
+                    action = spawn "${lib.getExe pkgs-unstable.handy}" "--toggle-transcription";
                     hotkey-overlay.title = "Toggle transcription";
                   };
                   "Mod+Shift+P" = {
-                    action = spawn "${pkgs.tessen}/bin/tessen" "-p" "gopass" "-d" "rofi" "-a" "autotype";
+                    action = spawn "${lib.getExe pkgs.tessen}" "-p" "gopass" "-d" "rofi" "-a" "autotype";
                     hotkey-overlay.title = "Password Manager: tessen";
                   };
                   "Mod+Shift+C" = {

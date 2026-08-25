@@ -10,7 +10,11 @@ in
     };
 
   flake.nixosModules.pi =
-    { pkgs, ... }:
+    {
+      lib,
+      pkgs,
+      ...
+    }:
 
     let
       searxSecretFile = "/var/lib/searx-secret/env";
@@ -36,7 +40,7 @@ in
           script = /* bash */ ''
             if [[ ! -s ${searxSecretFile} ]]; then
               printf 'SEARXNG_SECRET=%s\n' \
-                "$(${pkgs.openssl}/bin/openssl rand -hex 32)" > ${searxSecretFile}
+                "$(${lib.getExe pkgs.openssl} rand -hex 32)" > ${searxSecretFile}
             fi
           '';
         };
@@ -229,7 +233,7 @@ in
           fi
 
           if [[ -f "$agent_dir/settings.json" ]]; then
-            "${pkgs.jq}/bin/jq" --slurpfile seed "${settingsSeedFile}" \
+            "${lib.getExe pkgs.jq}" --slurpfile seed "${settingsSeedFile}" \
               '(.packages // []) as $old | (. * $seed[0]) | .packages = (($old + $seed[0].packages) | unique)' \
               "$agent_dir/settings.json" > "$agent_dir/settings.json.tmp" \
               && mv "$agent_dir/settings.json.tmp" "$agent_dir/settings.json"

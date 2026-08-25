@@ -202,9 +202,9 @@
       #       ${pkgs.systemd}/bin/udevadm settle --timeout=10
       #       for attempt in $(seq 1 10); do
       #         ACTIVE_DEVICE=$(${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | \
-      #           ${pkgs.gnugrep}/bin/grep -B 3 "ENABLED" | \
-      #           ${pkgs.gnugrep}/bin/grep "device node name" | \
-      #           ${pkgs.gnugrep}/bin/grep -o "/dev/video[0-9]*" | head -1)
+      #           ${lib.getExe pkgs.gnugrep} -B 3 "ENABLED" | \
+      #           ${lib.getExe pkgs.gnugrep} "device node name" | \
+      #           ${lib.getExe pkgs.gnugrep} -o "/dev/video[0-9]*" | head -1)
       #         if [ -n "$ACTIVE_DEVICE" ]; then
       #           ln -sf "$ACTIVE_DEVICE" /dev/camera-active
       #           echo "Camera active device: $ACTIVE_DEVICE -> /dev/camera-active"
@@ -410,7 +410,7 @@
       #     ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
       #
       #     echo "[xps-camera-recover] topology after (if available):"
-      #     ${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | ${pkgs.gnugrep}/bin/grep -E "ENABLED|entity|pad|link|device node name" || true
+      #     ${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | ${lib.getExe pkgs.gnugrep} -E "ENABLED|entity|pad|link|device node name" || true
       #
       #     echo "[xps-camera-recover] devices after:"
       #     ${pkgs.coreutils}/bin/ls -la /dev/media* /dev/video* 2>/dev/null || true

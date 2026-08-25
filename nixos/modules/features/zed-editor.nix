@@ -3,6 +3,7 @@
   flake.homeModules.zed =
     {
       config,
+      lib,
       pkgs,
       ...
     }:
@@ -55,7 +56,7 @@
           agent_servers = {
             OpenCode = {
               type = "custom";
-              command = "${pkgs.opencode}/bin/opencode";
+              command = "${lib.getExe pkgs.opencode}";
               args = [ "acp" ];
             };
           };

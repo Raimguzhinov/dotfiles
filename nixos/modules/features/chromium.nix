@@ -1,7 +1,12 @@
 { ... }:
 {
   flake.homeModules.chromium =
-    { config, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       programs.chromium = {
         enable = true;
@@ -94,7 +99,7 @@
       '';
       home.file.".config/com.add0n.node/run.sh" = {
         source = pkgs.writeShellScript "native-client-runner" ''
-          ${pkgs.nodejs}/bin/node "$(dirname "$0")/host.js"
+          ${lib.getExe pkgs.nodejs} "$(dirname "$0")/host.js"
         '';
         executable = true;
       };

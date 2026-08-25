@@ -124,7 +124,7 @@
                     preferredRenderer = "webgl";
                     profiles.default = {
                       args = [ "--login" ];
-                      executable = "${pkgs.zsh}/bin/zsh";
+                      executable = "${lib.getExe pkgs.zsh}";
                       followTheme = true;
                       name = "";
                       platforms = {

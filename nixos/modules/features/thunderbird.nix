@@ -135,7 +135,7 @@
           authMethod = 3;
           realName = "Dias Raimguzhinov";
           address = "raimguzhinov@protei-lab.ru";
-          passwordCommand = "${pkgs.gopass}/bin/gopass show protei.ru/raimguzhinov email-password";
+          passwordCommand = "${lib.getExe pkgs.gopass} show protei.ru/raimguzhinov email-password";
         };
         "google-new" = mkProviderAccount "gmail" {
           realName = "Dias Raimguzhinov";
@@ -148,7 +148,7 @@
         "yandex" = mkProviderAccount "yandex" {
           realName = "Диас Раймгужинов";
           address = "diasraim@yandex.ru";
-          passwordCommand = "${pkgs.gopass}/bin/gopass show yandex.ru/diasraim@yandex.ru thunderbird";
+          passwordCommand = "${lib.getExe pkgs.gopass} show yandex.ru/diasraim@yandex.ru thunderbird";
         };
       };
     };

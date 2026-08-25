@@ -1,7 +1,12 @@
 { ... }:
 {
   flake.homeModules.git =
-    { pkgs, username, ... }:
+    {
+      lib,
+      pkgs,
+      username,
+      ...
+    }:
     {
       programs.git = {
         enable = true;
@@ -31,7 +36,7 @@
           merge.tool = "meld";
           mergetool.prompt = false;
           commit.gpgsign = true;
-          gpg.program = "${pkgs.gnupg}/bin/gpg";
+          gpg.program = "${lib.getExe pkgs.gnupg}";
           user.signingkey = "0x719B8382A9DBA991";
         };
         includes = [

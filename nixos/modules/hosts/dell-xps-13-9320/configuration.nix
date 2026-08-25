@@ -130,6 +130,125 @@
         users.${username} =
           { config, lib, ... }:
           let
+            yaziOpen = pkgs.writeShellApplication {
+              name = "yazi-open";
+              runtimeInputs = [
+                pkgs.coreutils
+                pkgs.findutils
+                pkgs.xdg-terminal-exec
+                config.programs.yazi.package
+              ];
+              text = # bash
+                ''
+                  target="''${1:-$HOME}"
+                  [ -d "$target" ] || target="$(dirname "$target")"
+
+                  key="$(printf '%s' "$target" | md5sum | cut -d' ' -f1)"
+                  lock="''${XDG_RUNTIME_DIR:-/tmp}/yazi-open.$key.lock"
+
+                  if [ -d "$lock" ] && [ -n "$(find "$lock" -maxdepth 0 -mmin +1)" ]; then
+                    rmdir "$lock" || true
+                  fi
+
+                  mkdir "$lock" 2>/dev/null || exit 0
+                  ( sleep 2; rmdir "$lock" 2>/dev/null || true ) &
+
+                  exec xdg-terminal-exec yazi "$target"
+                '';
+            };
+
+            yaziFileManager1 =
+              let
+                python = pkgs.python3.withPackages (ps: [ ps.pygobject3 ]);
+              in
+              pkgs.writeTextFile {
+                name = "yazi-filemanager1";
+                executable = true;
+                destination = "/bin/yazi-filemanager1";
+                meta.mainProgram = "yazi-filemanager1";
+                text = # python
+                  ''
+                    #!${python}/bin/python3
+                    import os
+                    import subprocess
+                    import sys
+                    from urllib.parse import unquote, urlparse
+
+                    import gi
+
+                    gi.require_version("Gio", "2.0")
+                    from gi.repository import Gio, GLib
+
+                    LAUNCHER = "${lib.getExe yaziOpen}"
+                    NAME = "org.freedesktop.FileManager1"
+                    OBJECT = "/org/freedesktop/FileManager1"
+
+                    IFACE_XML = (
+                        "<node><interface name='org.freedesktop.FileManager1'>"
+                        "<method name='ShowFolders'>"
+                        "<arg type='as' name='URIs' direction='in'/>"
+                        "<arg type='s' name='StartupId' direction='in'/>"
+                        "</method>"
+                        "<method name='ShowItems'>"
+                        "<arg type='as' name='URIs' direction='in'/>"
+                        "<arg type='s' name='StartupId' direction='in'/>"
+                        "</method>"
+                        "<method name='ShowItemProperties'>"
+                        "<arg type='as' name='URIs' direction='in'/>"
+                        "<arg type='s' name='StartupId' direction='in'/>"
+                        "</method>"
+                        "</interface></node>"
+                    )
+
+                    NODE = Gio.DBusNodeInfo.new_for_xml(IFACE_XML)
+
+
+                    def to_path(uri):
+                        parsed = urlparse(uri)
+                        if not parsed.scheme:
+                            return uri
+                        if parsed.scheme != "file":
+                            return None
+                        return unquote(parsed.path)
+
+
+                    def handle(conn, sender, path, iface, method, params, invocation):
+                        uris, _startup = params.unpack()
+                        targets = []
+                        for uri in uris:
+                            target = to_path(uri)
+                            if target is None:
+                                continue
+                            if method != "ShowFolders":
+                                target = os.path.dirname(target.rstrip("/")) or "/"
+                            if target not in targets:
+                                targets.append(target)
+                        for target in targets:
+                            subprocess.Popen([LAUNCHER, target], start_new_session=True)
+                        invocation.return_value(None)
+
+
+                    def on_acquired(conn, name):
+                        conn.register_object(OBJECT, NODE.interfaces[0], handle, None, None)
+
+
+                    def on_lost(conn, name):
+                        print("could not own " + name, file=sys.stderr, flush=True)
+                        sys.exit(1)
+
+
+                    Gio.bus_own_name(
+                        Gio.BusType.SESSION,
+                        NAME,
+                        Gio.BusNameOwnerFlags.NONE,
+                        on_acquired,
+                        None,
+                        on_lost,
+                    )
+                    GLib.MainLoop().run()
+                  '';
+              };
+
             yaziMimeTypes = [
               "inode/directory"
               "x-directory/normal"
@@ -267,7 +386,7 @@
 
                   export PATH="$PATH:/usr/local/bin"
 
-                  ${pkgs.gopass-jsonapi}/bin/gopass-jsonapi listen
+                  ${lib.getExe pkgs.gopass-jsonapi} listen
 
                   exit $?
                 '';
@@ -278,9 +397,8 @@
                 name = "Yazi";
                 genericName = "File Manager";
                 comment = "Blazing fast terminal file manager";
-                exec = "${lib.getExe config.programs.yazi.package} %f";
+                exec = "${lib.getExe yaziOpen} %f";
                 icon = "yazi";
-                terminal = true;
                 categories = [
                   "System"
                   "FileTools"
@@ -306,6 +424,21 @@
                 mimeType = nvimMimeTypes;
                 settings.Keywords = "Text;editor;";
               };
+            };
+
+            systemd.user.services.yazi-filemanager1 = {
+              Unit = {
+                Description = "FileManager1 D-Bus service backed by yazi";
+                PartOf = [ "graphical-session.target" ];
+                After = [ "graphical-session.target" ];
+              };
+              Service = {
+                Type = "simple";
+                ExecStart = lib.getExe yaziFileManager1;
+                Restart = "on-failure";
+                RestartSec = 2;
+              };
+              Install.WantedBy = [ "graphical-session.target" ];
             };
 
             xdg.mimeApps = {

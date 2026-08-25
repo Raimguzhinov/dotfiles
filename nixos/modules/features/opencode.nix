@@ -27,7 +27,7 @@ let
               printf '%s\n' "''${arg#@}" >> "$OPENCODE_NVIM_HANDOFF"
             done
 
-            ${pkgs.curl}/bin/curl -sS -m 5 -X POST \
+            ${pkgs.lib.getExe pkgs.curl} -sS -m 5 -X POST \
               -H 'Content-Type: application/json' \
               -d '{"type":"tui.command.execute","properties":{"command":"app.exit"}}' \
               "$OPENCODE_NVIM_SERVER/tui/publish" > /dev/null
@@ -189,7 +189,7 @@ in
             pkgs.stdenv.cc.cc
           ]
         }"
-        export GIT_SSH_COMMAND="${pkgs.openssh}/bin/ssh -o ConnectTimeout=3 -o BatchMode=yes"
+        export GIT_SSH_COMMAND="${lib.getExe pkgs.openssh} -o ConnectTimeout=3 -o BatchMode=yes"
         exec bash "$@"
       '';
 
@@ -373,21 +373,21 @@ in
           log() { printf '[opencode] %s\n' "$*" >&2; }
 
           # Clone / pull llm-toolkit (skip on network failure)
-          export GIT_SSH_COMMAND="${pkgs.openssh}/bin/ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5"
+          export GIT_SSH_COMMAND="${lib.getExe pkgs.openssh} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5"
           export GIT_TERMINAL_PROMPT=0
 
           toolkit_available="0"
 
           if [[ ! -d "$toolkit_dir/.git" ]]; then
             log "Cloning llm-toolkit to $toolkit_dir"
-            if "${pkgs.coreutils}/bin/timeout" 30s "${pkgs.git}/bin/git" clone "${toolkitRepoUrl}" "$toolkit_dir" 2>/dev/null; then
+            if "${pkgs.coreutils}/bin/timeout" 30s "${lib.getExe pkgs.git}" clone "${toolkitRepoUrl}" "$toolkit_dir" 2>/dev/null; then
               toolkit_available="1"
             else
               log "WARNING: git clone failed (no network/auth?). Skipping toolkit update."
             fi
           else
             log "Updating llm-toolkit"
-            if "${pkgs.coreutils}/bin/timeout" 20s "${pkgs.git}/bin/git" -C "$toolkit_dir" pull --rebase 2>/dev/null; then
+            if "${pkgs.coreutils}/bin/timeout" 20s "${lib.getExe pkgs.git}" -C "$toolkit_dir" pull --rebase 2>/dev/null; then
               toolkit_available="1"
             else
               log "WARNING: git pull failed. Using existing checkout."
@@ -415,7 +415,7 @@ in
           if [[ "$toolkit_available" == "1" ]]; then
             log "Running install.sh"
             rm -rf "$toolkit_dir/.venv"
-            "${pkgs.uv}/bin/uv" venv --python "${pkgs.python3}/bin/python3" "$toolkit_dir/.venv"
+            "${lib.getExe pkgs.uv}" venv --python "${pkgs.python3}/bin/python3" "$toolkit_dir/.venv"
             install_log="$toolkit_dir/.install.log"
             if "${installWrapper}/bin/run-install" "$toolkit_dir/scripts/install.sh" >"$install_log" 2>&1; then
               log "install.sh succeeded"
@@ -429,7 +429,7 @@ in
 
           # Post-process: remove enabled_providers (repo restricts to ["Protei"])
           if [[ -f "$opencode_dir/opencode.json" ]]; then
-            "${pkgs.jq}/bin/jq" 'del(.enabled_providers)' "$opencode_dir/opencode.json" \
+            "${lib.getExe pkgs.jq}" 'del(.enabled_providers)' "$opencode_dir/opencode.json" \
               > "$opencode_dir/opencode.json.tmp" && \
               mv "$opencode_dir/opencode.json.tmp" "$opencode_dir/opencode.json"
             log "Removed enabled_providers restriction"

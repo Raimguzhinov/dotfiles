@@ -435,7 +435,7 @@
       home.packages = [
         pkgs.dragon-drop
         (pkgs.writeShellScriptBin "rr" ''
-          exec ${pkgs.yazi}/bin/yazi "$@"
+          exec ${lib.getExe pkgs.yazi} "$@"
         '')
       ];
 
@@ -607,7 +607,7 @@
                 "c"
                 "y"
               ];
-              run = "shell -- ${pkgs.dragon-drop}/bin/dragon-drop -x -i -T %h";
+              run = "shell -- ${lib.getExe pkgs.dragon-drop} -x -i -T %h";
               desc = "Drag and drop";
             }
             {

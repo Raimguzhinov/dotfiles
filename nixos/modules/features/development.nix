@@ -1,7 +1,12 @@
 { ... }:
 {
   flake.homeModules.development =
-    { config, pkgs, ... }:
+    {
+      config,
+      lib,
+      pkgs,
+      ...
+    }:
     {
       programs.direnv = {
         enable = true;
@@ -34,7 +39,7 @@
               ''
                 svc_root=$(cat ${config.sops.secrets."product/services_root".path})
                 echo "docker cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") ."
-                ${pkgs.docker}/bin/docker cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") .
+                ${lib.getExe pkgs.docker} cp $(basename "$PWD"):$svc_root/$(basename "$PWD")/$(basename "$PWD") .
               '';
           ssh-setup-dlv =
             pkgs.writeShellScriptBin "ssh-setup-dlv" # bash
@@ -125,7 +130,7 @@
                              echo 'alias clr=clear' >> ~/.bashrc && \
                              echo 'alias rr=yazi' >> ~/.bashrc && \
                              cat > ~/.vimrc" <<< "$VIMRC_CONTENT"
-                scp ${pkgs.yazi}/bin/yazi "$HOST":~/
+                scp ${lib.getExe pkgs.yazi} "$HOST":~/
                 ssh -t "$HOST" "echo 'alias nvim=vim' | sudo tee -a /root/.bashrc > /dev/null && \
                                 echo 'alias clr=clear' | sudo tee -a /root/.bashrc > /dev/null && \
                                 echo 'alias rr=yazi' | sudo tee -a /root/.bashrc > /dev/null && \
