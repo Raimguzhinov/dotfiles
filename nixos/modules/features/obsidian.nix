@@ -374,8 +374,5 @@
       );
 
       xdg.mimeApps.enable = true;
-      xdg.mimeApps.defaultApplications = {
-        "text/markdown" = [ "obsidian.desktop" ];
-      };
     };
 }

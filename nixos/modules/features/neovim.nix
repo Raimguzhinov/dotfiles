@@ -1737,12 +1737,16 @@ in
 
   flake.homeModules.neovim =
     {
+      config,
+      lib,
       pkgs,
       hostname,
       username,
       ...
     }:
     {
+      home.sessionVariables.VISUAL = lib.getExe config.programs.nvf.finalPackage;
+
       programs.nvf = {
         enable = true;
         defaultEditor = true;

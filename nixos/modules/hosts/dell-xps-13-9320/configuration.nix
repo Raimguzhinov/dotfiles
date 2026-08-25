@@ -129,6 +129,98 @@
           };
         users.${username} =
           { config, lib, ... }:
+          let
+            yaziMimeTypes = [
+              "inode/directory"
+              "x-directory/normal"
+            ];
+            nvimMimeTypes = [
+              "text/plain"
+              "application/json"
+              "application/schema+json"
+              "application/ld+json"
+              "application/toml"
+              "application/yaml"
+              "application/xml"
+              "application/xml-dtd"
+              "application/sql"
+              "text/x-systemd-unit"
+              "application/x-desktop"
+              "text/markdown"
+              "text/x-rst"
+              "text/x-tex"
+              "text/x-bibtex"
+              "text/x-typst"
+              "text/org"
+              "text/troff"
+              "application/x-shellscript"
+              "application/x-csh"
+              "application/x-fishscript"
+              "application/x-awk"
+              "application/x-m4"
+              "text/x-python"
+              "text/x-python3"
+              "application/x-perl"
+              "application/x-ruby"
+              "application/x-php"
+              "text/x-lua"
+              "text/x-csrc"
+              "text/x-chdr"
+              "text/x-c++src"
+              "text/x-c++hdr"
+              "text/x-objcsrc"
+              "text/x-objc++src"
+              "text/x-java"
+              "text/x-go"
+              "text/rust"
+              "text/javascript"
+              "text/x-scala"
+              "text/x-kotlin"
+              "text/x-haskell"
+              "text/x-literate-haskell"
+              "text/x-elixir"
+              "text/x-erlang"
+              "text/x-ocaml"
+              "text/x-crystal"
+              "text/x-nim"
+              "text/x-vala"
+              "text/x-fortran"
+              "text/x-pascal"
+              "text/x-adasrc"
+              "text/x-common-lisp"
+              "text/x-scheme"
+              "text/x-emacs-lisp"
+              "text/tcl"
+              "text/julia"
+              "text/x-verilog"
+              "text/x-vhdl"
+              "text/x-qml"
+              "application/vnd.dart"
+              "application/x-gdscript"
+              "application/vnd.coffeescript"
+              "text/css"
+              "text/x-scss"
+              "text/x-sass"
+              "text/x-makefile"
+              "text/x-cmake"
+              "text/x-meson"
+              "text/x-rpm-spec"
+              "text/x-patch"
+              "text/x-gettext-translation"
+              "text/x-gettext-translation-template"
+              "text/x-devicetree-source"
+              "text/x-iptables"
+              "text/vnd.graphviz"
+              "text/x-readme"
+              "text/x-changelog"
+              "text/x-copying"
+              "text/x-authors"
+              "text/x-credits"
+              "text/x-install"
+              "text/x-todo-txt"
+              "text/x-log"
+            ];
+          in
           {
             programs.home-manager.enable = true;
             home.username = username;
@@ -181,6 +273,41 @@
                 '';
             };
 
+            xdg.desktopEntries = {
+              yazi = {
+                name = "Yazi";
+                genericName = "File Manager";
+                comment = "Blazing fast terminal file manager";
+                exec = "${lib.getExe config.programs.yazi.package} %f";
+                icon = "yazi";
+                terminal = true;
+                categories = [
+                  "System"
+                  "FileTools"
+                  "FileManager"
+                ];
+                mimeType = yaziMimeTypes;
+                settings.Keywords = "File;Manager;Explorer;Browser;";
+              };
+
+              nvim = {
+                name = "Neovim";
+                genericName = "Text Editor";
+                comment = "Edit text files";
+                exec = "${lib.getExe config.programs.nvf.finalPackage} %F";
+                icon = "nvim";
+                terminal = true;
+                startupNotify = false;
+                categories = [
+                  "Utility"
+                  "TextEditor"
+                  "Development"
+                ];
+                mimeType = nvimMimeTypes;
+                settings.Keywords = "Text;editor;";
+              };
+            };
+
             xdg.mimeApps = {
               enable = true;
               defaultApplications = {
@@ -189,7 +316,9 @@
                 "x-scheme-handler/https" = "zen-beta.desktop";
                 "x-scheme-handler/about" = "zen-beta.desktop";
                 "x-scheme-handler/unknown" = "zen-beta.desktop";
-              };
+              }
+              // lib.genAttrs yaziMimeTypes (_: [ "yazi.desktop" ])
+              // lib.genAttrs nvimMimeTypes (_: [ "nvim.desktop" ]);
             };
 
             xdg.userDirs = {
