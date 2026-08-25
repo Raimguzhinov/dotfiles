@@ -20,6 +20,15 @@
             type = "http";
             url = "https://mcp.grep.app";
           };
+          searxng = {
+            type = "stdio";
+            command = "npx";
+            args = [
+              "-y"
+              "mcp-searxng"
+            ];
+            env.SEARXNG_URL = "http://127.0.0.1:8899";
+          };
         };
       };
     };
