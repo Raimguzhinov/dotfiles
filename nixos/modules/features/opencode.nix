@@ -193,13 +193,116 @@ in
         exec bash "$@"
       '';
 
+      mcpServers = [
+        "context7"
+        "gh_grep"
+        "gitlab"
+        "logzone"
+        "rag"
+        "searxng"
+        "youtrack"
+      ];
+
+      mcpPermissions = lib.listToAttrs (map (name: lib.nameValuePair "${name}_*" "allow") mcpServers);
+
+      thinkingVariants = {
+        off.chat_template_kwargs.enable_thinking = false;
+        low.chat_template_kwargs = {
+          enable_thinking = true;
+          reasoning_effort = "low";
+        };
+        medium.chat_template_kwargs = {
+          enable_thinking = true;
+          reasoning_effort = "medium";
+        };
+        xhigh.chat_template_kwargs = {
+          enable_thinking = true;
+          reasoning_effort = "xhigh";
+        };
+      };
+
       # --- Pre-seed: only Nix-specific overrides on top of repo config ---
-      # merge_config.py does deep_merge(repo_template, existing) where existing wins.
+      # merge_config.py does deep_merge(repo_template, existing) where the repo
+      # template wins on scalars; only keys it does not define survive from here.
       nixPreseedConfig = {
         "$schema" = "https://opencode.ai/config.json";
         share = "disabled";
+        default_agent = "plan";
+        small_model = "Protei/Small";
+
+        permission = mcpPermissions // {
+          "*" = "ask";
+          todowrite = "allow";
+          glob = "allow";
+          grep = "allow";
+          list = "allow";
+          edit = "allow";
+          webfetch = "ask";
+          websearch = "deny";
+          doom_loop = "deny";
+          read = {
+            "*" = "allow";
+            "*.env" = "ask";
+            "*.env.*" = "ask";
+            "*.env.example" = "allow";
+            "~/.config/opencode/*" = "allow";
+          };
+          write = {
+            "*" = "ask";
+            "opencode.json" = "deny";
+            "opencode.jsonc" = "deny";
+          };
+          bash = {
+            "*" = "ask";
+            "ip *" = "allow";
+            "date *" = "allow";
+            "ls *" = "allow";
+            "sort *" = "allow";
+            "tail *" = "allow";
+            "git log *" = "allow";
+            "git diff *" = "allow";
+          };
+          external_directory = {
+            "*" = "ask";
+            "~/.config/opencode/*" = "allow";
+          };
+        };
 
         provider = {
+          Protei.models.Coding.variants = thinkingVariants;
+          Protei.models.Strict.variants = thinkingVariants;
+
+          Protei.models.Small = {
+            name = "Protei Small";
+            id = "agent_proteya_slow";
+            description = "Быстрая модель для мелких задач (заголовки, саммари)";
+            status = "active";
+            tool_call = true;
+            attachment = true;
+            reasoning = true;
+            temperature = true;
+            limit = {
+              context = 131072;
+              output = 8192;
+            };
+            modalities = {
+              input = [
+                "text"
+                "image"
+              ];
+              output = [ "text" ];
+            };
+            options = {
+              temperature = 1.0;
+              topP = 0.95;
+              topK = 20;
+              minP = 0.0;
+              presencePenalty = 0.0;
+              repetitionPenalty = 1.0;
+            };
+            variants = thinkingVariants;
+          };
+
           llamaCpp = {
             npm = "@ai-sdk/openai-compatible";
             name = "Local llama.cpp";
@@ -406,7 +509,8 @@ in
           mkdir -p "$opencode_dir"
 
           # Pre-seed opencode.json with Nix custom overrides
-          # merge_config.py will deep_merge(repo_template, this) where this wins
+          # merge_config.py will deep_merge(repo_template, this); the template wins
+          # on conflicts, so anything it defines is forced back in the jq step below
           # --reflink=never avoids btrfs reflink to ro nix store which blocks writes
           cp --reflink=never "${nixPreseedJsonFile}" "$opencode_dir/opencode.json"
           log "Pre-seeded opencode.json with Nix overrides"
@@ -427,12 +531,22 @@ in
             log "Skipping install (no toolkit available)"
           fi
 
-          # Post-process: remove enabled_providers (repo restricts to ["Protei"])
+          # Post-process values the repo template owns, so pre-seeding cannot win:
+          #   - enabled_providers: repo restricts to ["Protei"]
+          #   - variants.high: Qwen3.8-27B's chat template raises on any
+          #     reasoning_effort outside (low, medium, xhigh)
+          #   - Coding/Strict context: repo ships 131072 and 231072, the model is
+          #     natively 262144
           if [[ -f "$opencode_dir/opencode.json" ]]; then
-            "${lib.getExe pkgs.jq}" 'del(.enabled_providers)' "$opencode_dir/opencode.json" \
+            "${lib.getExe pkgs.jq}" \
+              'del(.enabled_providers)
+               | del(.provider.Protei.models[]?.variants.high)
+               | .provider.Protei.models.Coding.limit = { context: 262144, output: 65536 }
+               | .provider.Protei.models.Strict.limit.context = 262144' \
+              "$opencode_dir/opencode.json" \
               > "$opencode_dir/opencode.json.tmp" && \
               mv "$opencode_dir/opencode.json.tmp" "$opencode_dir/opencode.json"
-            log "Removed enabled_providers restriction"
+            log "Applied Nix overrides on top of repo template"
           fi
 
           # Mirror opencode.json -> config.json (OpenCode reads both)

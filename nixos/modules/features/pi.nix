@@ -96,8 +96,8 @@ in
                 "text"
                 "image"
               ];
-              contextWindow = 262144; # old: 131072
-              maxTokens = 65536; # old: 8192
+              contextWindow = 262144;
+              maxTokens = 65536;
               samplingParams = {
                 temperature = 1.0;
                 top_p = 0.95;
