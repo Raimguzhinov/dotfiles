@@ -105,6 +105,7 @@ let
 
   syncedIntegrations = [
     "claude"
+    "codex"
     "opencode"
     "pi"
   ];

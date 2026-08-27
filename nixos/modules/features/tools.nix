@@ -86,6 +86,12 @@
           "тмшь" = "nvim";
           nvimdiff = "nvim -d";
           nvimgitdiff = ''nvim --cmd "set nomodelines" +DiffviewOpen'';
+          unicom-debug = lib.concatStringsSep " " [
+            "chromium"
+            "--user-data-dir=/tmp/chrome-tls-debug"
+            "--ssl-key-log-file=${config.home.homeDirectory}/.ssl-key.log"
+            "https://localhost:8443"
+          ];
         };
       };
 

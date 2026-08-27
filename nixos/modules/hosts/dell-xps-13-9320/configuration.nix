@@ -1111,6 +1111,7 @@
           chafa # terminal image viewer
           choose # cut → choose
           cliphist
+          codex
           ddgr
           docker-buildx
           docker-compose
