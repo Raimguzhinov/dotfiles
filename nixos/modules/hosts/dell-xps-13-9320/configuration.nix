@@ -1113,6 +1113,7 @@
           cliphist
           codex
           ddgr
+          dig
           docker-buildx
           docker-compose
           docker-init
@@ -1158,6 +1159,7 @@
           nurl # nix fetcher
           nwg-drawer
           onlyoffice-desktopeditors
+          openssl
           papers
           papirus-icon-theme
           pdfchain # pdftk GUI

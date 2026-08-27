@@ -71,6 +71,8 @@
           e = "exit";
           ll = "ls -l";
           la = "ls -la";
+          mv = "mv -iv";
+          cp = "cp -riv";
           clr = "clear";
           cat = "bat -p";
           "дф" = "ls -la";
@@ -79,13 +81,18 @@
           sudo = "sudo ";
           tree = "eza --tree";
           pass = "gopass";
+          fuck = "sudo !!";
           open = "xdg-open";
+          ping = "ping -c 5";
           dbui = "nvim +DBUI";
           http = "xh";
           https = "xhs";
+          mkdir = "mkdir -vp";
           "тмшь" = "nvim";
           nvimdiff = "nvim -d";
           nvimgitdiff = ''nvim --cmd "set nomodelines" +DiffviewOpen'';
+          genpass = "gopass generate -sc"; # 'genpass example.com/login [ field ]' with copy
+          "l." = "ls -d .* --color=auto";
           unicom-debug = lib.concatStringsSep " " [
             "chromium"
             "--user-data-dir=/tmp/chrome-tls-debug"
