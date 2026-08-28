@@ -94,12 +94,7 @@ let
   ];
 
   syncedPlugins = [
-    "Tyru5/herdr-floax"
-    "thanhdat77/herdr-navigator"
-    "Crokily/herdr-lazygit"
     "persiyanov/herdr-reviewr"
-    "sh1ma/herdr-auto-title"
-    "iurysza/termscope"
     "rmarganti/herdr-pluck"
   ];
 
@@ -112,6 +107,7 @@ let
 
   # -6 умеренно (peak -16 dB) | -12 заметно тише (-22) | -18 фоновый мягкий (-28)
   doneSoundGainDb = -12;
+  requestSoundGainDb = -18;
 
   mkQuietSound =
     pkgs: name: gainDb:
@@ -187,10 +183,7 @@ let
         "prefix+double_quote"
       ];
       close_pane = "prefix+x";
-      zoom = [
-        "prefix+z"
-        "prefix+f"
-      ];
+      zoom = "prefix+z";
       rename_pane = "prefix+shift+p";
       focus_pane_left = "prefix+left";
       focus_pane_down = "prefix+down";
@@ -221,10 +214,12 @@ let
         (pluginAction "alt+k" "herdr-splits.resize-up" "resize up (nvim/herdr)")
         (pluginAction "alt+l" "herdr-splits.resize-right" "resize right (nvim/herdr)")
         (pluginAction "prefix+e" "chmarax.herdr-nvim.toggle" "nvim sidebar")
-        (pluginAction "prefix+o" "chmarax.herdr-nvim.pick-file" "open file from agent output")
+        (pluginAction "prefix+y" "rmarganti.herdr-pluck.pluck" "yank from scrollback")
         (pluginAction "prefix+u" "persiyanov.reviewr.toggle" "review working tree")
+        (pluginAction "prefix+i" "chmarax.herdr-nvim.pick-file" "open file from agent output")
+        (pluginAction "prefix+o" "ray.file-explorer.open" "yazi pane")
+        (pluginAction "prefix+f" "rmarganti.herdr-pluck.open-url" "open url from scrollback")
         (pluginAction "prefix+slash" "jt.command-palette.open" "command palette")
-        (pluginAction "prefix+y" "ray.file-explorer.open" "yazi pane")
         (popup "prefix+t" ''exec "''${SHELL:-sh}"'' "scratch terminal")
         (popup "prefix+alt+g" "lazygit" "lazygit")
         (popup "prefix+alt+d" "lazydocker" "lazydocker")
@@ -289,7 +284,10 @@ let
         delay_seconds = 1;
       };
 
-      sound.done_path = "${mkQuietSound pkgs "done" doneSoundGainDb}";
+      sound = {
+        done_path = "${mkQuietSound pkgs "done" doneSoundGainDb}";
+        request_path = "${mkQuietSound pkgs "request" requestSoundGainDb}";
+      };
     };
 
     experimental = {

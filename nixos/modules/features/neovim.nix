@@ -760,10 +760,6 @@ let
           }
         ];
       };
-      breadcrumbs = {
-        enable = true;
-        lualine.winbar.enable = true;
-      };
       borders = {
         enable = true;
         globalStyle = "rounded";
@@ -784,6 +780,10 @@ let
       # window's winbar; keep lualine's breadcrumbs winbar off that window so
       # it doesn't overwrite them.
       disabledFiletypes.winbar = [ "dap-repl" ];
+      integrations.breadcrumbs = {
+        location = "winbar";
+        nvim-navic.enable = true;
+      };
       extraActiveSection.z = [
         # Deferred through pcall: lz.n loads opencode.nvim after lualine's setup.
         # lua

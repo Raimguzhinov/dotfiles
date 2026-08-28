@@ -1176,7 +1176,6 @@
           tig
           tlrc
           transmission_4-gtk
-          tuir
           unzip
           uv
           v4l-utils
