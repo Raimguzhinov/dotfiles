@@ -231,7 +231,7 @@ in
         small_model = "Protei/Small";
 
         permission = mcpPermissions // {
-          "*" = "ask";
+          # "*" = "ask";
           todowrite = "allow";
           glob = "allow";
           grep = "allow";

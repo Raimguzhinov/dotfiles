@@ -90,7 +90,9 @@
           mkdir = "mkdir -vp";
           "тмшь" = "nvim";
           nvimdiff = "nvim -d";
-          nvimgitdiff = ''nvim --cmd "set nomodelines" +DiffviewOpen'';
+          review = ''nvim "+DiffviewOpen origin/HEAD...HEAD"'';
+          bigreview = ''nvim "+DiffviewFileHistory --range=origin/HEAD...HEAD --right-only --no-merges"'';
+          inspectstash = ''nvim "+DiffviewFileHistory -g --range=stash"'';
           genpass = "gopass generate -sc"; # 'genpass example.com/login [ field ]' with copy
           "l." = "ls -d .* --color=auto";
           unicom-debug = lib.concatStringsSep " " [

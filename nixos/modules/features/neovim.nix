@@ -654,6 +654,60 @@ let
           };
           view.default.winbar_info = true;
           view.file_history.winbar_info = true;
+          default_args.DiffviewOpen = [ "--imply-local" ];
+          keymaps =
+            let
+              focusFiles = lib.generators.mkLuaInline ''require("diffview.actions").focus_files'';
+              toggleFiles = lib.generators.mkLuaInline ''require("diffview.actions").toggle_files'';
+              fileHistoryAtCursor =
+                lib.generators.mkLuaInline # lua
+                  ''
+                    function()
+                      local view = require("diffview.lib").get_current_view()
+                      if not view or not view.infer_cur_file then
+                        return
+                      end
+                      local file = view:infer_cur_file()
+                      if not file then
+                        return
+                      end
+                      vim.cmd("DiffviewFileHistory " .. vim.fn.fnameescape(file.absolute_path))
+                    end
+                  '';
+              panelKeys = [
+                [
+                  "n"
+                  "<leader>e"
+                  focusFiles
+                  {
+                    desc = "Focus the file panel [diffview]";
+                  }
+                ]
+                [
+                  "n"
+                  "<leader>eq"
+                  toggleFiles
+                  {
+                    desc = "Close the file panel [diffview]";
+                  }
+                ]
+              ];
+              historyKey = [
+                [
+                  "n"
+                  "<leader>gh"
+                  fileHistoryAtCursor
+                  {
+                    desc = "File history (entry under cursor) [diffview]";
+                  }
+                ]
+              ];
+            in
+            {
+              view = panelKeys;
+              file_panel = panelKeys ++ historyKey;
+              file_history_panel = panelKeys ++ historyKey;
+            };
           hooks =
             lib.generators.mkLuaInline # lua
               ''
@@ -662,6 +716,20 @@ let
                     require("lualine").hide({ place = { "winbar" }, unhide = false })
                     vim.schedule(function()
                       pcall(vim.cmd, "DiffviewRefresh")
+                      for _, tabnr in ipairs(vim.api.nvim_list_tabpages()) do
+                        local wins = vim.api.nvim_tabpage_list_wins(tabnr)
+                        if #wins == 1 then
+                          local buf = vim.api.nvim_win_get_buf(wins[1])
+                          if
+                            vim.bo[buf].buftype == ""
+                            and vim.api.nvim_buf_get_name(buf) == ""
+                            and not vim.bo[buf].modified
+                          then
+                            pcall(vim.cmd, "tabclose " .. vim.api.nvim_tabpage_get_number(tabnr))
+                            pcall(vim.cmd, "bwipeout " .. buf)
+                          end
+                        end
+                      end
                     end)
                   end,
                   view_enter = function()
@@ -743,6 +811,12 @@ let
         lspReferences = "gu";
         lspImplementations = "gi";
         lspTypeDefinitions = "gD";
+      };
+      setupOpts.pickers = {
+        lsp_definitions.jump_type = "tab";
+        lsp_references.jump_type = "tab";
+        lsp_implementations.jump_type = "tab";
+        lsp_type_definitions.jump_type = "tab";
       };
       extensions = [
         {

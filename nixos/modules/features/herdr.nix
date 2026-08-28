@@ -222,6 +222,7 @@ let
         (pluginAction "alt+l" "herdr-splits.resize-right" "resize right (nvim/herdr)")
         (pluginAction "prefix+e" "chmarax.herdr-nvim.toggle" "nvim sidebar")
         (pluginAction "prefix+o" "chmarax.herdr-nvim.pick-file" "open file from agent output")
+        (pluginAction "prefix+u" "persiyanov.reviewr.toggle" "review working tree")
         (pluginAction "prefix+slash" "jt.command-palette.open" "command palette")
         (pluginAction "prefix+y" "ray.file-explorer.open" "yazi pane")
         (popup "prefix+t" ''exec "''${SHELL:-sh}"'' "scratch terminal")
@@ -304,6 +305,29 @@ let
     };
     picker.max_files = 30;
   };
+
+  reviewrSettings = {
+    theme = "catppuccin";
+    default_scope = "uncommitted";
+    navigator_position = "bottom";
+    toggle_placement = "split";
+    toggle_direction = "right";
+    auto_open = false;
+    editor = "nvim +{line} {file}";
+    gitlab_host = "git.protei.ru";
+
+    keybindings = {
+      expand = [
+        "l"
+        "right"
+      ];
+      collapse = [
+        "h"
+        "left"
+      ];
+      comments = [ "L" ];
+    };
+  };
 in
 {
   perSystem =
@@ -379,6 +403,8 @@ in
           herdr
           pkgs.jq
           pkgs.git
+          pkgs.cargo
+          pkgs.rustc
         ];
         text = # bash
           ''
@@ -404,7 +430,7 @@ in
                 continue
               fi
               echo "herdr-plugins-sync: installing $src"
-              herdr plugin install --yes "$src" || echo "herdr-plugins-sync: FAILED $src" >&2
+              herdr plugin install "$src" --yes || echo "herdr-plugins-sync: FAILED $src" >&2
             done
 
             for name in "''${integrations[@]}"; do
@@ -427,6 +453,9 @@ in
       xdg.configFile."herdr-nvim/config.toml".source = toml.generate "herdr-nvim-config.toml" (
         herdrNvimSettings "${config.programs.nvf.finalPackage}/bin/nvim"
       );
+
+      xdg.configFile."herdr/plugins/config/persiyanov.reviewr/config.toml".source =
+        toml.generate "herdr-reviewr-config.toml" reviewrSettings;
 
       programs.zsh.shellAliases = {
         hd = "herdr";
