@@ -2,14 +2,13 @@
 {
   flake.homeModules.claude =
     {
-      config,
-      pkgs,
+      pkgs-unstable,
       ...
     }:
     {
       programs.claude-code = {
         enable = true;
-        package = pkgs.claude-code;
+        package = pkgs-unstable.claude-code;
 
         mcpServers = {
           context7 = {
