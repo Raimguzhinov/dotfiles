@@ -114,14 +114,8 @@
       # This is intentionally minimal: no PCI unbind/bind and no PipeWire restarts.
       systemd.services.xps-mic-route = {
         description = "XPS 9320: force rt714 mic routing";
-        wantedBy = [
-          "multi-user.target"
-          "post-resume.target"
-        ];
-        after = [
-          "sound.target"
-          "post-resume.service"
-        ];
+        wantedBy = [ "multi-user.target" ];
+        after = [ "sound.target" ];
         serviceConfig = {
           Type = "oneshot";
           TimeoutStartSec = 30;
@@ -189,158 +183,183 @@
         options v4l2loopback video_nr=40 card_label="libcamera Virtual" exclusive_caps=1
       '';
 
-      # Finds the active ipu6 capture device and creates /dev/camera-active symlink
-      # systemd.services.camera-setup = {
-      #   description = "Setup camera device symlink";
-      #   wantedBy = [ "multi-user.target" ];
-      #   serviceConfig = {
-      #     Type = "oneshot";
-      #     Restart = "on-failure";
-      #     RestartSec = 5;
-      #     RemainAfterExit = true;
-      #     ExecStart = pkgs.writeShellScript "camera-setup" ''
-      #       ${pkgs.systemd}/bin/udevadm settle --timeout=10
-      #       for attempt in $(seq 1 10); do
-      #         ACTIVE_DEVICE=$(${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | \
-      #           ${lib.getExe pkgs.gnugrep} -B 3 "ENABLED" | \
-      #           ${lib.getExe pkgs.gnugrep} "device node name" | \
-      #           ${lib.getExe pkgs.gnugrep} -o "/dev/video[0-9]*" | head -1)
-      #         if [ -n "$ACTIVE_DEVICE" ]; then
-      #           ln -sf "$ACTIVE_DEVICE" /dev/camera-active
-      #           echo "Camera active device: $ACTIVE_DEVICE -> /dev/camera-active"
-      #           exit 0
-      #         else
-      #           echo "Attempt $attempt: No active camera found, waiting..."
-      #           sleep 2
-      #         fi
-      #       done
-      #       echo "ERROR: No active camera found after 10 attempts"
-      #       exit 1
-      #     '';
-      #   };
-      # };
+      # Finds the active ipu6 capture device and creates /dev/camera-active symlink.
+      # Historically-confirmed-working approach for this exact laptop (commit
+      # 7759967, April 2026) — restored after the icamerasrc/HAL/libcamera
+      # detours in this file's history all failed to reach a working image.
+      systemd.services.camera-setup = {
+        description = "Setup camera device symlink";
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          Restart = "on-failure";
+          RestartSec = 5;
+          RemainAfterExit = true;
+          ExecStart = pkgs.writeShellScript "camera-setup" ''
+            ${pkgs.systemd}/bin/udevadm settle --timeout=10
+            for attempt in $(seq 1 10); do
+              ACTIVE_DEVICE=$(${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | \
+                ${lib.getExe pkgs.gnugrep} -B 3 "ENABLED" | \
+                ${lib.getExe pkgs.gnugrep} "device node name" | \
+                ${lib.getExe pkgs.gnugrep} -o "/dev/video[0-9]*" | head -1)
+              if [ -n "$ACTIVE_DEVICE" ]; then
+                ln -sf "$ACTIVE_DEVICE" /dev/camera-active
+                echo "Camera active device: $ACTIVE_DEVICE -> /dev/camera-active"
+                exit 0
+              else
+                echo "Attempt $attempt: No active camera found, waiting..."
+                sleep 2
+              fi
+            done
+            echo "ERROR: No active camera found after 10 attempts"
+            exit 1
+          '';
+        };
+      };
 
-      # Bridge libcamera → v4l2loopback for legacy apps. Manual start/stop only.
-      # systemd.services.camera-bridge = {
-      #   description = "libcamera → v4l2loopback bridge (legacy)";
-      #   after = [
-      #     "camera-setup.service"
-      #     "systemd-modules-load.service"
-      #   ];
-      #   requires = [
-      #     "camera-setup.service"
-      #     "systemd-modules-load.service"
-      #   ];
-      #   path =
-      #     with pkgs;
-      #     (with gst_all_1; [
-      #       gstreamer
-      #       gst-plugins-base
-      #       gst-plugins-good
-      #       gst-plugins-bad
-      #       gst-plugins-ugly
-      #       gst-libav
-      #       gst-vaapi
-      #     ])
-      #     ++ [ libcamera ];
-      #   environment = {
-      #     GST_PLUGIN_SYSTEM_PATH_1_0 = lib.concatStringsSep ":" [
-      #       "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0"
-      #       "${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0"
-      #       "${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0"
-      #       "${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0"
-      #       "${pkgs.libcamera}/lib/gstreamer-1.0"
-      #       "/run/current-system/sw/lib/gstreamer-1.0"
-      #     ];
-      #   };
-      #   serviceConfig = {
-      #     Type = "simple";
-      #     Restart = "on-failure";
-      #     RestartSec = 5;
-      #     KillMode = "control-group";
-      #     TimeoutStopSec = 5;
-      #     ExecStartPre = pkgs.writeShellScript "camera-bridge-pre" ''
-      #       # Ensure the loopback node exists (this module is not auto-loaded).
-      #       # `video_nr=40` is configured via `boot.extraModprobeConfig` above.
-      #       ${pkgs.kmod}/bin/modprobe v4l2loopback 2>/dev/null || true
-      #
-      #       attempt=0
-      #       while [ $attempt -lt 30 ]; do
-      #         if [ -L /dev/camera-active ] && [ -e /dev/camera-active ]; then
-      #           echo "Found /dev/camera-active -> $(readlink /dev/camera-active)"
-      #           break
-      #         fi
-      #         attempt=$((attempt + 1))
-      #         echo "Waiting for /dev/camera-active... ($attempt/30)"
-      #         sleep 1
-      #       done
-      #       [ -L /dev/camera-active ] || { echo "ERROR: /dev/camera-active not found"; exit 1; }
-      #       attempt=0
-      #       while [ $attempt -lt 30 ]; do
-      #         [ -c /dev/video40 ] && { echo "Found /dev/video40"; break; }
-      #         attempt=$((attempt + 1))
-      #         echo "Waiting for /dev/video40... ($attempt/30)"
-      #         sleep 1
-      #       done
-      #       [ -c /dev/video40 ] || { echo "ERROR: /dev/video40 not found"; exit 1; }
-      #     '';
-      #     ExecStart = pkgs.writeShellScript "camera-bridge" ''
-      #       echo "Starting bridge -> /dev/video40"
-      #       exec ${lib.getExe' pkgs.gst_all_1.gstreamer "gst-launch-1.0"} -v \
-      #         libcamerasrc ! \
-      #         videoconvert ! \
-      #         video/x-raw,format=YUY2 ! \
-      #         v4l2sink device=/dev/video40 sync=false
-      #     '';
-      #   };
-      # };
+      # Bridge libcamera → v4l2loopback for legacy apps (Zen/Chromium go through
+      # the PipeWire portal instead and don't need this). Toggle with
+      # cam-on/cam-off/cam-toggle (modules/features/niri.nix) or Mod+Shift+C.
+      systemd.services.camera-bridge = {
+        description = "libcamera → v4l2loopback bridge (legacy)";
+        after = [
+          "camera-setup.service"
+          "systemd-modules-load.service"
+        ];
+        requires = [
+          "camera-setup.service"
+          "systemd-modules-load.service"
+        ];
+        path =
+          with pkgs;
+          (with gst_all_1; [
+            gstreamer
+            gst-plugins-base
+            gst-plugins-good
+            gst-plugins-bad
+            gst-plugins-ugly
+            gst-libav
+            gst-vaapi
+          ])
+          ++ [ libcamera ];
+        environment = {
+          GST_PLUGIN_SYSTEM_PATH_1_0 = lib.concatStringsSep ":" [
+            "${pkgs.gst_all_1.gstreamer.out}/lib/gstreamer-1.0"
+            "${pkgs.gst_all_1.gst-plugins-base}/lib/gstreamer-1.0"
+            "${pkgs.gst_all_1.gst-plugins-good}/lib/gstreamer-1.0"
+            "${pkgs.gst_all_1.gst-plugins-bad}/lib/gstreamer-1.0"
+            "${pkgs.libcamera}/lib/gstreamer-1.0"
+            "/run/current-system/sw/lib/gstreamer-1.0"
+          ];
+        };
+        serviceConfig = {
+          Type = "simple";
+          Restart = "on-failure";
+          RestartSec = 5;
+          KillMode = "control-group";
+          TimeoutStopSec = 5;
+          ExecStartPre = pkgs.writeShellScript "camera-bridge-pre" ''
+            # Ensure the loopback node exists (this module is not auto-loaded).
+            # `video_nr=40` is configured via `boot.extraModprobeConfig` above.
+            ${pkgs.kmod}/bin/modprobe v4l2loopback 2>/dev/null || true
+
+            attempt=0
+            while [ $attempt -lt 30 ]; do
+              if [ -L /dev/camera-active ] && [ -e /dev/camera-active ]; then
+                echo "Found /dev/camera-active -> $(readlink /dev/camera-active)"
+                break
+              fi
+              attempt=$((attempt + 1))
+              echo "Waiting for /dev/camera-active... ($attempt/30)"
+              sleep 1
+            done
+            [ -L /dev/camera-active ] || { echo "ERROR: /dev/camera-active not found"; exit 1; }
+            attempt=0
+            while [ $attempt -lt 30 ]; do
+              [ -c /dev/video40 ] && { echo "Found /dev/video40"; break; }
+              attempt=$((attempt + 1))
+              echo "Waiting for /dev/video40... ($attempt/30)"
+              sleep 1
+            done
+            [ -c /dev/video40 ] || { echo "ERROR: /dev/video40 not found"; exit 1; }
+          '';
+          ExecStart = pkgs.writeShellScript "camera-bridge" ''
+            echo "Starting bridge -> /dev/video40"
+            exec ${lib.getExe' pkgs.gst_all_1.gstreamer "gst-launch-1.0"} -v \
+              libcamerasrc ! \
+              videoconvert ! \
+              video/x-raw,format=YUY2 ! \
+              v4l2sink device=/dev/video40 sync=false
+          '';
+        };
+      };
 
       # Post-resume: rebind the IPU6 PCI device so the kernel driver re-probes
-      # and rebuilds the media/V4L2 graph.  Same pattern as the SOF audio rebind
-      # fix above (powerManagement.resumeCommands), which works reliably for S4.
-      # After rebind, restart camera-setup to recreate /dev/camera-active and
-      # camera-bridge so libcamerasrc gets a fresh pipeline.
-      # systemd.services.xps-camera-post-resume = {
-      #   description = "XPS 9320: rebind IPU6 + restart camera after resume";
-      #   wantedBy = [ "post-resume.target" ];
-      #   after = [ "post-resume.service" ];
-      #   serviceConfig = {
-      #     Type = "oneshot";
-      #     TimeoutStartSec = 30;
-      #   };
-      #   script = ''
-      #     set -eu
-      #
-      #     # Stop the bridge so nothing is holding /dev/video* nodes.
-      #     ${pkgs.systemd}/bin/systemctl stop camera-bridge.service 2>/dev/null || true
-      #
-      #     # Find the IPU6 PCI device and rebind its driver.
-      #     for addr in /sys/bus/pci/devices/0000:00:05.0; do
-      #       [ -d "$addr" ] || continue
-      #       drv=$(readlink -f "$addr/driver" 2>/dev/null || true)
-      #       drvname=''${drv##*/}
-      #       [ -n "$drvname" ] || continue
-      #       echo "Rebinding PCI device ''${addr##*/} from driver $drvname"
-      #       echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/unbind || true
-      #       sleep 1
-      #       echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/bind || true
-      #     done
-      #
-      #     sleep 2
-      #
-      #     # Recreate /dev/camera-active and restart the bridge.
-      #     ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
-      #     ${pkgs.systemd}/bin/systemctl restart camera-bridge.service 2>/dev/null || true
-      #   '';
-      # };
+      # and rebuilds the media/V4L2 graph, then restart camera-setup/-bridge so
+      # libcamerasrc gets a fresh pipeline. Scoped to the IPU6 PCI device only —
+      # does NOT touch ivsc_csi/mei_vsc/i2c_designware, which sit on a shared
+      # I2C controller with the touchpad and previously wedged it when reloaded.
+      # Triggered via powerManagement.resumeCommands below, not WantedBy — this
+      # host used to wire post-resume services to a "post-resume.target" that
+      # doesn't actually exist on NixOS/systemd (systemctl confirms: not-found),
+      # so none of them ever ran. resumeCommands hooks the real mechanism
+      # (sleep-actions.service's preStop, https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/config/power-management.nix).
+      systemd.services.xps-camera-post-resume = {
+        description = "XPS 9320: rebind IPU6 + restart camera after resume";
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 30;
+        };
+        script = ''
+          set -eu
+
+          ${pkgs.systemd}/bin/systemctl stop camera-bridge.service 2>/dev/null || true
+
+          for addr in /sys/bus/pci/devices/0000:00:05.0; do
+            [ -d "$addr" ] || continue
+            drv=$(readlink -f "$addr/driver" 2>/dev/null || true)
+            drvname=''${drv##*/}
+            [ -n "$drvname" ] || continue
+            echo "Rebinding PCI device ''${addr##*/} from driver $drvname"
+            echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/unbind || true
+            sleep 1
+            echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/bind || true
+          done
+
+          sleep 2
+
+          ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
+          ${pkgs.systemd}/bin/systemctl restart camera-bridge.service 2>/dev/null || true
+        '';
+      };
+
+      # Post-resume: the ELAN i2c-hid touchpad sometimes comes back from sleep
+      # unresponsive / IRQ-storming with no data (i2c_hid_acpi: "IRQ triggered
+      # but there's no data"). Same fix nixos-hardware ships for the XPS 13
+      # 9300 (same i2c-designware/i2c-hid code path) — scoped to exactly these
+      # four modules, nothing IPU6/IVSC-related.
+      # https://github.com/NixOS/nixos-hardware/blob/master/dell/xps/sleep-resume/i2c-designware/default.nix
+      systemd.services.xps-i2c-designware-post-resume = {
+        description = "XPS 9320: reload i2c_designware/i2c_hid after resume";
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 10;
+        };
+        script = ''
+          set -eu
+          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_designware_platform 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_designware_core 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_hid_acpi 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_hid 2>/dev/null || true
+          ${pkgs.kmod}/bin/modprobe i2c_designware_platform 2>/dev/null || true
+        '';
+      };
 
       # Post-resume: restart fprintd + polkit agent to reduce race conditions.
       # This is especially helpful after hibernate/suspend where devices or D-Bus
       # activations may behave inconsistently.
       systemd.services.xps-auth-post-resume = {
         description = "XPS 9320: restart auth agents after resume";
-        wantedBy = [ "post-resume.target" ];
-        after = [ "post-resume.service" ];
         serviceConfig = {
           Type = "oneshot";
           TimeoutStartSec = 5;
@@ -358,73 +377,10 @@
         '';
       };
 
-      # Camera recover experiment (post-resume): unloading/reloading camera modules on resume
-      # is risky and can destabilize the kernel after S4. Keep it off by default.
-      # systemd.services.xps-camera-recover = {
-      #   enable = lib.mkDefault false;
-      #   description = "XPS 9320: best-effort camera recover after resume";
-      #   wantedBy = [ "post-resume.target" ];
-      #   after = [
-      #     "post-resume.service"
-      #     "systemd-modules-load.service"
-      #   ];
-      #   serviceConfig = {
-      #     Type = "oneshot";
-      #     TimeoutStartSec = 60;
-      #   };
-      #   script = ''
-      #     set -eu
-      #
-      #     echo "[xps-camera-recover] starting"
-      #
-      #     # Stop legacy bridge if running to free /dev/video40.
-      #     ${pkgs.systemd}/bin/systemctl stop camera-bridge.service 2>/dev/null || true
-      #
-      #     echo "[xps-camera-recover] devices before:"
-      #     ${pkgs.coreutils}/bin/ls -la /dev/media* /dev/video* 2>/dev/null || true
-      #
-      #     echo "[xps-camera-recover] trying to reload camera-related kernel modules (best-effort)"
-      #     # Unload (order matters). Some modules may be busy; treat that as signal and continue.
-      #     ${pkgs.kmod}/bin/modprobe -r intel_ipu6_psys 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe -r intel_ipu6_isys 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe -r intel_ipu6 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe -r ivsc_csi 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe -r ivsc_ace 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe -r mei_vsc 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe -r mei_vsc_hw 2>/dev/null || true
-      #
-      #     ${pkgs.coreutils}/bin/sleep 1
-      #
-      #     # Load back.
-      #     ${pkgs.kmod}/bin/modprobe mei_vsc_hw 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe mei_vsc 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe ivsc_ace 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe ivsc_csi 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe intel_ipu6 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe intel_ipu6_isys 2>/dev/null || true
-      #     ${pkgs.kmod}/bin/modprobe intel_ipu6_psys 2>/dev/null || true
-      #
-      #     ${pkgs.coreutils}/bin/sleep 2
-      #
-      #     # Recreate /dev/camera-active (if possible).
-      #     ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
-      #
-      #     echo "[xps-camera-recover] topology after (if available):"
-      #     ${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | ${lib.getExe pkgs.gnugrep} -E "ENABLED|entity|pad|link|device node name" || true
-      #
-      #     echo "[xps-camera-recover] devices after:"
-      #     ${pkgs.coreutils}/bin/ls -la /dev/media* /dev/video* 2>/dev/null || true
-      #
-      #     echo "[xps-camera-recover] done"
-      #   '';
-      # };
-
       # Post-resume: restore ALSA state after S4.
       # This fixes the common case where SoundWire capture controls reset on resume.
       systemd.services.xps-alsa-restore-post-resume = {
         description = "XPS 9320: restore ALSA state after resume";
-        wantedBy = [ "post-resume.target" ];
-        after = [ "post-resume.service" ];
         serviceConfig = {
           Type = "oneshot";
           TimeoutStartSec = 20;
@@ -434,6 +390,18 @@
           ${pkgs.alsa-utils}/bin/alsactl restore -gU || true
         '';
       };
+
+      # The actual resume hook (see comment above xps-camera-post-resume for
+      # why this replaces the old WantedBy="post-resume.target" pattern).
+      # --no-block: fire all four in parallel, don't hold up resume on them.
+      powerManagement.resumeCommands = ''
+        ${pkgs.systemd}/bin/systemctl start --no-block \
+          xps-i2c-designware-post-resume.service \
+          xps-camera-post-resume.service \
+          xps-auth-post-resume.service \
+          xps-alsa-restore-post-resume.service \
+          xps-mic-route.service
+      '';
 
       # Old approach: force-routing with amixer at boot.
       # Keeping it removed in favor of alsactl restore (persistence + post-resume restore).
