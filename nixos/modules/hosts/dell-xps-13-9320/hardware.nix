@@ -172,15 +172,44 @@
       # On modern kernels (incl. 6.19.x) this logic is already upstream, so we intentionally
       # avoid kernel patching here to keep the kernel cacheable and updates fast.
 
+      # Root cause of the camera never linking into /dev/media0 (confirmed by
+      # reading drivers/media/pci/intel/ipu-bridge.c directly): at PCI probe
+      # time, ipu_bridge does a ONE-SHOT lookup of an already-registered MEI
+      # client device named "intel_vsc-92335fcf-3203-4472-af93-7b4453ac29da"
+      # (child of the "intel_vsc" platform device mei_vsc creates) to build
+      # the sensor<->IVSC fwnode graph; if it's missing, ipu_bridge silently
+      # builds the sensor without the IVSC link and never retries.
+      #
+      # Neither a modprobe softdep nor an explicit boot.kernelModules order
+      # fixed this (both tested on real reboots, confirmed via journalctl
+      # timestamps) -- because it isn't a module *load* race at all. That MEI
+      # client device is created asynchronously by the mei bus's own rescan,
+      # gated on a real firmware handshake over this board's USB-attached
+      # LJCA/VSC bridge, which consistently takes ~12s -- completely
+      # independent of when any module's code happens to load. intel_ipu6
+      # probes in milliseconds and simply can't wait for that.
+      #
+      # Fix: block intel_ipu6 from auto-probing at all via its usual PCI
+      # trigger, and instead load it from a udev rule that fires on the
+      # single event that actually matters -- the MEI client device itself
+      # appearing. No kernel version or source change.
       boot.kernelModules = [
         "kvm-intel"
         "dell-privacy"
+        "mei_vsc_hw"
+        "mei_vsc"
+        "ivsc_ace"
+        "ivsc_csi"
       ];
       boot.extraModulePackages = with config.boot.kernelPackages; [ v4l2loopback ];
       # Legacy support: loopback device for apps that can't use PipeWire portal (OBS, ffplay, etc.)
       # Bridge is started manually: systemctl start camera-bridge
       boot.extraModprobeConfig = ''
+        blacklist intel_ipu6
         options v4l2loopback video_nr=40 card_label="libcamera Virtual" exclusive_caps=1
+      '';
+      services.udev.extraRules = ''
+        SUBSYSTEM=="mei", KERNEL=="intel_vsc-92335fcf-3203-4472-af93-7b4453ac29da", RUN+="${pkgs.kmod}/bin/modprobe intel_ipu6", RUN+="${pkgs.kmod}/bin/modprobe intel_ipu6_isys"
       '';
 
       # Finds the active ipu6 capture device and creates /dev/camera-active symlink.
@@ -197,6 +226,12 @@
           RemainAfterExit = true;
           ExecStart = pkgs.writeShellScript "camera-setup" ''
             ${pkgs.systemd}/bin/udevadm settle --timeout=10
+            # Nothing enables the CSI2->ISYS-Capture link on its own -- only
+            # an actual libcamera consumer does, as a side effect of camera
+            # enumeration. camera-bridge (which would normally be that
+            # consumer) needs this service to succeed first, so without this
+            # priming call the two services deadlock waiting on each other.
+            ${pkgs.libcamera}/bin/cam -l >/dev/null 2>&1 || true
             for attempt in $(seq 1 10); do
               ACTIVE_DEVICE=$(${pkgs.v4l-utils}/bin/media-ctl --print-topology 2>/dev/null | \
                 ${lib.getExe pkgs.gnugrep} -B 3 "ENABLED" | \
@@ -294,66 +329,18 @@
         };
       };
 
-      # Post-resume: rebind the IPU6 PCI device so the kernel driver re-probes
-      # and rebuilds the media/V4L2 graph, then restart camera-setup/-bridge so
-      # libcamerasrc gets a fresh pipeline. Scoped to the IPU6 PCI device only —
-      # does NOT touch ivsc_csi/mei_vsc/i2c_designware, which sit on a shared
-      # I2C controller with the touchpad and previously wedged it when reloaded.
-      # Triggered via powerManagement.resumeCommands below, not WantedBy — this
-      # host used to wire post-resume services to a "post-resume.target" that
-      # doesn't actually exist on NixOS/systemd (systemctl confirms: not-found),
-      # so none of them ever ran. resumeCommands hooks the real mechanism
-      # (sleep-actions.service's preStop, https://github.com/NixOS/nixpkgs/blob/master/nixos/modules/config/power-management.nix).
-      systemd.services.xps-camera-post-resume = {
-        description = "XPS 9320: rebind IPU6 + restart camera after resume";
-        serviceConfig = {
-          Type = "oneshot";
-          TimeoutStartSec = 30;
-        };
-        script = ''
-          set -eu
-
-          ${pkgs.systemd}/bin/systemctl stop camera-bridge.service 2>/dev/null || true
-
-          for addr in /sys/bus/pci/devices/0000:00:05.0; do
-            [ -d "$addr" ] || continue
-            drv=$(readlink -f "$addr/driver" 2>/dev/null || true)
-            drvname=''${drv##*/}
-            [ -n "$drvname" ] || continue
-            echo "Rebinding PCI device ''${addr##*/} from driver $drvname"
-            echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/unbind || true
-            sleep 1
-            echo -n "''${addr##*/}" > /sys/bus/pci/drivers/"$drvname"/bind || true
-          done
-
-          sleep 2
-
-          ${pkgs.systemd}/bin/systemctl restart camera-setup.service 2>/dev/null || true
-          ${pkgs.systemd}/bin/systemctl restart camera-bridge.service 2>/dev/null || true
-        '';
-      };
-
-      # Post-resume: the ELAN i2c-hid touchpad sometimes comes back from sleep
-      # unresponsive / IRQ-storming with no data (i2c_hid_acpi: "IRQ triggered
-      # but there's no data"). Same fix nixos-hardware ships for the XPS 13
-      # 9300 (same i2c-designware/i2c-hid code path) — scoped to exactly these
-      # four modules, nothing IPU6/IVSC-related.
-      # https://github.com/NixOS/nixos-hardware/blob/master/dell/xps/sleep-resume/i2c-designware/default.nix
-      systemd.services.xps-i2c-designware-post-resume = {
-        description = "XPS 9320: reload i2c_designware/i2c_hid after resume";
-        serviceConfig = {
-          Type = "oneshot";
-          TimeoutStartSec = 10;
-        };
-        script = ''
-          set -eu
-          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_designware_platform 2>/dev/null || true
-          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_designware_core 2>/dev/null || true
-          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_hid_acpi 2>/dev/null || true
-          ${pkgs.kmod}/bin/modprobe -r --wait 500 i2c_hid 2>/dev/null || true
-          ${pkgs.kmod}/bin/modprobe i2c_designware_platform 2>/dev/null || true
-        '';
-      };
+      # NOTE: a post-resume PCI unbind/rebind of the IPU6 device and a
+      # post-resume i2c_designware/i2c_hid reload were both tried here and
+      # both removed. The IPU6 rebind hung for the full 30s timeout and got
+      # force-killed mid-unbind (confirmed in journalctl: "start operation
+      # timed out. Terminating."), which is exactly the kind of half-finished
+      # PCI-level operation that can wedge whatever shares its power/clock
+      # domain — the touchpad (i2c_designware.0/.1) broke every time this ran.
+      # Do not resurrect either without a way to bound the PCI rebind's
+      # runtime (it can't currently be trusted not to hang) and without
+      # confirming, on this exact machine, that reloading i2c_designware is
+      # not itself a contributing cause. Cold-boot camera-setup/camera-bridge
+      # above are unaffected — they only read existing state.
 
       # Post-resume: restart fprintd + polkit agent to reduce race conditions.
       # This is especially helpful after hibernate/suspend where devices or D-Bus
@@ -396,8 +383,6 @@
       # --no-block: fire all four in parallel, don't hold up resume on them.
       powerManagement.resumeCommands = ''
         ${pkgs.systemd}/bin/systemctl start --no-block \
-          xps-i2c-designware-post-resume.service \
-          xps-camera-post-resume.service \
           xps-auth-post-resume.service \
           xps-alsa-restore-post-resume.service \
           xps-mic-route.service
