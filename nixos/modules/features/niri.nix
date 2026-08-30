@@ -27,6 +27,7 @@
     {
       xdg.configFile."soteria/config.toml".text = ''
         helper_path = "/run/wrappers/bin/polkit-agent-helper-1"
+        socket_path = "/run/polkit/agent-helper.socket"
       '';
 
       xdg.terminal-exec = {
