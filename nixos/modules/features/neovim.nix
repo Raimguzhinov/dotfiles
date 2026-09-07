@@ -527,6 +527,7 @@ let
       };
       json = {
         enable = true;
+        format.enable = false;
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.json;
       };
       bash = {
