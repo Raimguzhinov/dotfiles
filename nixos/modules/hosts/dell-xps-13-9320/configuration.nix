@@ -926,10 +926,24 @@
       # Password store
       services.gnome.gnome-keyring.enable = true;
 
+      # Tailscale
+      networking.nftables.enable = true;
+      services.tailscale = {
+        enable = true;
+        openFirewall = true;
+      };
+      systemd.services.tailscaled.environment.TS_DEBUG_FIREWALL_MODE = "nftables";
+
       # VPN
       networking.networkmanager.plugins = with pkgs; [
         networkmanager-openvpn
         networkmanager-sstp
+      ];
+      # NM не должен управлять мостом/тапами libvirt — иначе дергает virbr0 при
+      # resume/hibernate и ломает NAT/DHCP (nixpkgs#425874).
+      networking.networkmanager.unmanaged = [
+        "interface-name:virbr*"
+        "interface-name:vnet*"
       ];
       programs.amnezia-vpn = {
         enable = true;
@@ -1049,7 +1063,6 @@
       };
       systemd.services.libvirtd.postStart = ''
         ${pkgs.libvirt}/bin/virsh net-autostart default
-        ${pkgs.libvirt}/bin/virsh net-start default || true
       '';
       users.groups.libvirtd.members = [ username ];
       # services.qemuGuest.enable = true;
@@ -1057,6 +1070,10 @@
       services.spice-autorandr.enable = true;
 
       # Open ports in the firewall.
+      networking.firewall.trustedInterfaces = [
+        config.services.tailscale.interfaceName
+        "virbr0"
+      ];
       networking.firewall.allowedTCPPorts = [
         8081
         8082
