@@ -579,6 +579,7 @@
               inputs.nvf.homeManagerModules.default
               inputs.zen-browser.homeModules.beta
               homeModules.chromium
+              homeModules.clashVerge
               homeModules.claude
               homeModules.development
               homeModules.git
