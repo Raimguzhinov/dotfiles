@@ -439,12 +439,19 @@
                 url = "https://git.nixos.netcraze.pro/";
                 position = 410;
               };
+              "Nextcloud" = {
+                id = "d91fd267-30d7-48dc-8b77-b4e1ab1808c3";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://nextcloud.nixos.netcraze.pro/";
+                position = 411;
+              };
               "Backup" = {
                 id = "e5ab51b1-6bca-4d28-ba2e-bc9c5ce83462";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://backup.nixos.netcraze.pro/";
-                position = 411;
+                position = 412;
               };
             };
             search = {
