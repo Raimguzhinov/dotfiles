@@ -69,6 +69,38 @@
             echo "Camera bridge: started"
           fi
         '')
+
+        (pkgs.writeShellScriptBin "otp-snip" ''
+          set -euo pipefail
+
+          notify() {
+            ${pkgs.libnotify}/bin/notify-send -a gopass "$@"
+          }
+
+          secret=$(${lib.getExe pkgs.gopass} ls --flat | rofi -dmenu -i -p "OTP → секрет") || exit 0
+          [ -n "$secret" ] || exit 0
+
+          sleep 0.5
+
+          status=0
+          output=$(${lib.getExe pkgs.gopass} --yes otp --snip --clip "$secret" 2>&1) || status=$?
+
+          if [ "$status" -ne 0 ]; then
+            notify -u critical "gopass OTP" "$(printf '%s' "$output" | tail -n1)"
+            exit 1
+          fi
+
+          if ! printf '%s' "$output" | ${pkgs.gnugrep}/bin/grep -q "Found an otpauth://"; then
+            notify -u critical "gopass OTP" "otpauth QR-код на экране не найден"
+            exit 1
+          fi
+
+          ${lib.getExe pkgs.gopass} show -n -f "$secret" \
+            | ${pkgs.gnused}/bin/sed 's|^otpauth: \(otpauth://\)|\1|' \
+            | ${lib.getExe pkgs.gopass} insert -f "$secret"
+
+          notify "gopass OTP" "QR добавлен в $secret, код в буфере обмена"
+        '')
       ];
 
       programs.niri = {
@@ -306,6 +338,10 @@
                   "Mod+Shift+P" = {
                     action = spawn "${lib.getExe pkgs.tessen}" "-p" "gopass" "-d" "rofi" "-a" "autotype";
                     hotkey-overlay.title = "Password Manager: tessen";
+                  };
+                  "Mod+Alt+P" = {
+                    action = spawn "otp-snip";
+                    hotkey-overlay.title = "Password Manager: scan OTP QR into gopass";
                   };
                   "Mod+Shift+C" = {
                     action = spawn "cam-toggle";
