@@ -48,6 +48,17 @@ in
         (pkgs.callPackage mkAiUsagebar { })
       ];
 
+      # Все *.toml из configDir мержатся по алфавиту, поэтому секреты едут
+      # отдельным файлом мимо /nix/store.
+      sops.templates."noctalia-secrets.toml" = {
+        path = "${config.xdg.configHome}/noctalia/secrets.toml";
+        content = # toml
+          ''
+            [plugin_settings."pozzoo/hassio"]
+            ha_token = "${config.sops.placeholder."homelab/homeassistant_token"}"
+          '';
+      };
+
       programs.noctalia = {
         enable = true;
         settings = {
@@ -102,12 +113,13 @@ in
                 "volume"
                 "network"
                 "bluetooth"
-                "git_companion"
                 "notes"
                 "timer"
               ];
               center = [
                 "ai_usage"
+                "git_companion"
+                "hassio"
                 "workspaces"
                 "active_window"
               ];
@@ -130,6 +142,7 @@ in
               "noctalia/world_clock"
 
               "felipeartur/ai-usagebar"
+              "pozzoo/hassio"
               "tphilippot/git_companion"
             ];
             auto_update = "all";
@@ -196,6 +209,15 @@ in
 
           widget.notes = {
             type = "noctalia/notes:notes";
+          };
+
+          widget.hassio = {
+            type = "pozzoo/hassio:status";
+            show_entity_count = false;
+          };
+
+          plugin_settings."pozzoo/hassio" = {
+            ha_url = "https://homeassistant.nixos.netcraze.pro";
           };
 
           # Бар-виджет плагина рисует ui.row и не влезает в вертикальный бар
