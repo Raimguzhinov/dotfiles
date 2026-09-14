@@ -933,6 +933,16 @@
         openFirewall = true;
       };
       systemd.services.tailscaled.environment.TS_DEBUG_FIREWALL_MODE = "nftables";
+      services.networkd-dispatcher = {
+        # TODO: надо ли это вообще
+        enable = true;
+        rules."50-tailscale-optimizations" = {
+          onState = [ "routable" ];
+          script = ''
+            ${pkgs.ethtool}/bin/ethtool -K eth0 rx-udp-gro-forwarding on rx-gro-list off
+          '';
+        };
+      };
 
       # VPN
       networking.networkmanager.plugins = with pkgs; [
