@@ -269,33 +269,47 @@
                 url = "http://localhost:22080";
                 position = 203;
               };
+              "Amnezia" = {
+                id = "19a42484-1174-4215-b27d-5033be52b877";
+                container = containers."Personal".id;
+                url = "https://m-1140ac3a59cf-3w5hsuiikq-ez.a.run.app/ru";
+                isEssential = true;
+                position = 101;
+              };
+              "Keymap Editor" = {
+                id = "5dd0715d-2a89-4ac5-9903-7e01d76c6926";
+                container = containers."Personal".id;
+                url = "https://nickcoutsos.github.io/keymap-editor/";
+                isEssential = true;
+                position = 102;
+              };
+              "GitHub [P]" = {
+                id = "ec908ef1-c2e6-4854-97f1-56f7c6624377";
+                container = containers."Personal".id;
+                url = "https://github.com";
+                isEssential = true;
+                position = 103;
+              };
               "YouTube" = {
                 id = "4de8d683-27cd-46fa-81be-916aba7cbbf9";
                 container = containers."Personal".id;
                 url = "https://youtube.com";
                 isEssential = true;
-                position = 101;
+                position = 104;
               };
               "ChatGPT" = {
                 id = "d16715d1-32ee-42ff-9702-82484d8a1e98";
                 container = containers."Personal".id;
                 url = "https://chatgpt.com";
                 isEssential = true;
-                position = 102;
+                position = 105;
               };
               "Netcraze" = {
                 id = "45920e9d-5d99-47d9-ad36-eceb174ca236";
                 container = containers."Personal".id;
                 url = "https://nixos.netcraze.pro";
                 isEssential = true;
-                position = 103;
-              };
-              "Amnezia" = {
-                id = "19a42484-1174-4215-b27d-5033be52b877";
-                container = containers."Personal".id;
-                url = "https://m-3-3w5hsuiikq-ma.a.run.app/ru";
-                isEssential = true;
-                position = 104;
+                position = 106;
               };
               "Nix awesome" = {
                 id = "d85a9026-1458-4db6-b115-346746bcc692";
@@ -305,33 +319,132 @@
                 editedTitle = true;
                 position = 200;
               };
+              "Json2Nix" = {
+                id = "43b91017-599b-4335-9b12-3721b87c72b1";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Nix awesome".id;
+                url = "https://stevebinary.github.io/json2nix/";
+                position = 201;
+              };
               "Vimjoyer" = {
                 id = "f2109d9f-ce16-47ab-959b-81536692d158";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Nix awesome".id;
                 url = "https://www.vimjoyer.com";
-                position = 201;
+                position = 202;
               };
               "Nix Packages" = {
                 id = "f8dd784e-11d7-430a-8f57-7b05ecdb4c77";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Nix awesome".id;
                 url = "https://search.nixos.org/packages";
-                position = 202;
+                position = 203;
               };
               "Nix Options" = {
                 id = "92931d60-fd40-4707-9512-a57b1a6a3919";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Nix awesome".id;
                 url = "https://search.nixos.org/options";
-                position = 203;
+                position = 204;
               };
               "Home Manager Options" = {
                 id = "2eed5614-3896-41a1-9d0a-a3283985359b";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Nix awesome".id;
                 url = "https://home-manager-options.extranix.com";
-                position = 204;
+                position = 205;
+              };
+              "Noctalia Plugins" = {
+                id = "fcf63444-1c3d-41e6-b817-e9912ead8a95";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Nix awesome".id;
+                url = "https://noctalia.dev/plugins";
+                position = 206;
+              };
+              "Homelab" = {
+                id = "34b04ba1-a70b-491c-9419-071f14395097";
+                workspace = spaces."nix".id;
+                isGroup = true;
+                isFolderCollapsed = false;
+                editedTitle = true;
+                position = 400;
+              };
+              "User Manual" = {
+                id = "39845829-9934-4048-8695-9405928dbfed";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://orangepi.net/wp-content/uploads/2026/01/OrangePi_4_Pro_A733_User-Manual_v1.4.pdf";
+                position = 401;
+              };
+              "DigitalOcean" = {
+                id = "bfe7ef60-f6c0-4de1-80d8-aa7e16f4fe9b";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://cloud.digitalocean.com";
+                position = 402;
+              };
+              "Cloudflare Dash" = {
+                id = "1897a9a9-928d-4daa-bf67-eea044257b02";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://dash.cloudflare.com/6d3b9e67b5853b81731bff6d2eb89908/home";
+                position = 403;
+              };
+              "FreeDNS" = {
+                id = "2b796cb2-7299-4e33-ae8e-337aca74fb10";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://freedns.afraid.org/";
+                position = 404;
+              };
+              "Tailscale Console" = {
+                id = "6843d4fd-1523-40e9-aec2-e69c32dcacd3";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://console.tailscale.com/admin/machines";
+                position = 405;
+              };
+              "Opencode remote" = {
+                id = "d26d9789-6c53-4596-a035-9ba4d61dcd71";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://opencode.nixos.netcraze.pro";
+                position = 406;
+              };
+              "Jellyfin" = {
+                id = "88b7eaef-cb9b-4b1b-b365-f95571cfbd51";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://jellyfin.nixos.netcraze.pro/web/#/home";
+                position = 407;
+              };
+              "Home Assistant" = {
+                id = "d97c8bde-655d-4795-9b2c-776bae33fa67";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://homeassistant.nixos.netcraze.pro/home/overview";
+                position = 408;
+              };
+              "Pi-Hole" = {
+                id = "2a60cfb3-7e37-490e-9b7e-0c7f38667939";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "http://orangepi4pro:8811/admin/";
+                position = 409;
+              };
+              "Forgejo" = {
+                id = "21e8c894-b48f-434f-a1b3-30f118fe301f";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://git.nixos.netcraze.pro/";
+                position = 410;
+              };
+              "Backup" = {
+                id = "e5ab51b1-6bca-4d28-ba2e-bc9c5ce83462";
+                workspace = spaces."nix".id;
+                folderParentId = pins."Homelab".id;
+                url = "https://backup.nixos.netcraze.pro/";
+                position = 411;
               };
             };
             search = {
