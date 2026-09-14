@@ -837,7 +837,7 @@
           # nix store prefetch-file --hash-type sha256 https://github.com/Raimguzhinov.keys
           (builtins.fetchurl {
             url = "https://github.com/Raimguzhinov.keys";
-            sha256 = "sha256-E28I38AJMh0nynp6FCPf1WhOInZHHIe6D5GyBDyjMvA=";
+            sha256 = "sha256-QzT6y3xDYuPq9NmuqhWqeE9a9pGpgGFqxvrzsuzZ6Eo=";
           })
         ];
         extraGroups = [
