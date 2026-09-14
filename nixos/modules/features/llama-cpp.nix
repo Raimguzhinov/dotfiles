@@ -6,6 +6,7 @@
       config = {
         services.llama-cpp = {
           enable = true;
+          host = "0.0.0.0";
           port = 8085;
           package = pkgs-unstable.llama-cpp.override {
             blasSupport = true;
@@ -16,18 +17,15 @@
             openclSupport = false;
           };
           modelsPreset = {
-            "qwen3.5-4b-mtp" = {
-              hf-repo = "unsloth/Qwen3.5-4B-MTP-GGUF";
-              hf-file = "Qwen3.5-4B-Q4_K_M.gguf";
-              alias = "unsloth/Qwen3.5-4B-MTP";
-              temp = "0.6";
+            "granite-4.2-3b" = {
+              hf-repo = "ibm-granite/granite-4.2-3b-GGUF";
+              hf-file = "granite-4.2-3b-Q4_K_M.gguf";
+              alias = "ibm-granite/granite-4.2-3b";
+              ctx-size = "32768";
+              temp = "0.7";
               top-p = "0.95";
-              top-k = "20";
               jinja = "on";
-              presence-penalty = "0.0";
-              repeat-penalty = "1.0";
               flash-attn = "on";
-              spec-draft-n-max = "2";
             };
           };
           extraFlags = [
@@ -55,9 +53,5 @@
           openclSupport = false;
         })
       ];
-
-      programs.zsh.sessionVariables = {
-        LLAMA_SERVER_URL = "http://127.0.0.1:8085";
-      };
     };
 }

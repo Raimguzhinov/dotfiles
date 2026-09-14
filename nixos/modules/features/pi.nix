@@ -193,11 +193,27 @@ in
         theme = "dark";
         packages = [
           "npm:@upstash/context7-pi"
+          "npm:pi-llama-cpp"
           "npm:pi-mcp-adapter"
           "npm:pi-plan"
           "npm:pi-permission-system"
           "npm:pi-undo-redo"
         ];
+
+        llamaSettings = {
+          servers = [
+            {
+              url = "http://127.0.0.1:8085";
+              id = "llama-local";
+              name = "Local";
+            }
+          ];
+          reactToModelSelect = true;
+          autoloadOnMessage = true;
+          sortBy = "asc";
+          pollingTimeout = 120000;
+          serverTimeout = 2000;
+        };
       };
 
       toJsonFile = (pkgs.formats.json { }).generate;

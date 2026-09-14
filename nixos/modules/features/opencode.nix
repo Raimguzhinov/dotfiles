@@ -311,20 +311,25 @@ in
               apiKey = "local";
             };
             models = {
-              "qwen3.5-4b-mtp" = {
-                name = "Qwen3.5-4B MTP";
+              "granite-4.2-3b" = {
+                name = "Granite 4.2 3B";
                 description = "Локальная модель для offline-кодинга";
+                tool_call = true;
+                reasoning = true;
                 limit = {
-                  context = 16384;
+                  context = 32768;
                   output = 8192;
                 };
                 options = {
-                  temperature = 0.6;
+                  temperature = 0.7;
                   topP = 0.95;
-                  topK = 20;
-                  minP = 0.0;
-                  presencePenalty = 0.0;
-                  repetitionPenalty = 1.0;
+                };
+                variants = {
+                  off.chat_template_kwargs.enable_thinking = false;
+                  low.chat_template_kwargs = {
+                    enable_thinking = true;
+                    reasoning_effort = "low";
+                  };
                 };
               };
             };
@@ -368,7 +373,7 @@ in
       config = {
 
         home.packages = [
-          pkgs.opencode-desktop
+          pkgs-unstable.opencode-desktop
         ];
 
         programs.opencode = {
