@@ -21,12 +21,19 @@
           workEnvrc = pkgs.writeText "work-envrc" /* bash */ ''
             use flake ${shellsDir}#work
           '';
+          homelabEnvrc = pkgs.writeText "homelab-envrc" /* bash */ ''
+            use flake ${shellsDir}#homelab
+          '';
         in
         config.lib.dag.entryAfter [ "writeBoundary" ] /* bash */ ''
-          mkdir -p ~/Work
+          mkdir -p ~/Work ~/Homelab
 
           if ! diff -q ${workEnvrc} ~/Work/.envrc > /dev/null 2>&1; then
             install -m 644 ${workEnvrc} ~/Work/.envrc
+          fi
+
+          if ! diff -q ${homelabEnvrc} ~/Homelab/.envrc > /dev/null 2>&1; then
+            install -m 644 ${homelabEnvrc} ~/Homelab/.envrc
           fi
         '';
 

@@ -9,30 +9,51 @@
       ...
     }:
     let
-      inherit (lib) mkForce;
-
-      vaultTarget = "Documents/knowledge";
+      vaultTarget = "Homelab/knowledge-base";
 
       system = pkgs.stdenv.hostPlatform.system;
 
-      remotelySavePkg = inputs.obsidian-plugins.packages.${system}.remotely-save;
-      remotelySaveId =
-        let
-          manifest = builtins.fromJSON (builtins.readFile "${remotelySavePkg}/manifest.json");
-        in
-        manifest.id or manifest.name;
+      nextcloudSyncVersion = "1.0.6";
+      nextcloudSyncAsset =
+        name: hash:
+        pkgs.fetchurl {
+          url = "https://github.com/siosig/obsidian-nextcloudsync/releases/download/${nextcloudSyncVersion}/${name}";
+          inherit hash;
+        };
+      nextcloudSyncManifest = nextcloudSyncAsset "manifest.json" "sha256-zXGTxuGSATUOfttYqK33EXRByxEJZdC0yC5Sd1E1Nps=";
+      nextcloudSyncId = (builtins.fromJSON (builtins.readFile nextcloudSyncManifest)).id;
+      nextcloudSyncPkg =
+        pkgs.runCommandLocal "obsidian-nextcloud-sync-${nextcloudSyncVersion}"
+          {
+            passthru.manifestId = nextcloudSyncId;
+          }
+          ''
+            mkdir -p $out
+            cp ${nextcloudSyncAsset "main.js" "sha256-4OzMIFHYXN/cy6a/IKt/r0+Xg/ixc30ynmm2hFQG0Yc="} $out/main.js
+            cp ${nextcloudSyncManifest} $out/manifest.json
+            cp ${nextcloudSyncAsset "styles.css" "sha256-AI5y06XJcxgBj8IZ1PUrEn0XRVVeEL6boiO1E/prc1U="} $out/styles.css
+          '';
 
-      remotelySaveSettingsTemplateName = "obsidian-remotely_save-settings.json";
-    in
-    {
-      sops.templates.${remotelySaveSettingsTemplateName} = {
-        # Stored encrypted in `nixos/secrets.yaml` as `obsidian/remotely_save_settings`.
-        content = config.sops.placeholder."obsidian/remotely_save_settings";
-        mode = "0400";
+      nextcloudSyncSeed = (pkgs.formats.json { }).generate "obsidian-nextcloud-sync-data.json" {
+        serverUrl = "https://nextcloud.nixos.netcraze.pro/remote.php/dav/files/raimguzhinov/NAS";
+        username = "raimguzhinov";
       };
 
+      obsidianPkg = pkgs.symlinkJoin {
+        name = "obsidian-${pkgs.obsidian.version}";
+        paths = [ pkgs.obsidian ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/obsidian \
+            --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ pkgs.libsecret ]} \
+            --add-flags "--password-store=gnome-libsecret"
+        '';
+      };
+    in
+    {
       programs.obsidian = {
         enable = true;
+        package = obsidianPkg;
 
         defaultSettings = {
           app = {
@@ -356,11 +377,8 @@
                   };
                 }
                 {
-                  pkg = remotelySavePkg;
+                  pkg = nextcloudSyncPkg;
                   enable = true;
-                  # Do NOT put secrets here (it would end up in nix store). The real settings
-                  # are written via `home.file` below from a sops template.
-                  settings = { };
                 }
               ];
             };
@@ -368,10 +386,18 @@
         };
       };
 
-      # Remotely Save settings: write data.json from sops template (out-of-store).
-      home.file."${vaultTarget}/.obsidian/plugins/${remotelySaveId}/data.json".source = mkForce (
-        config.lib.file.mkOutOfStoreSymlink config.sops.templates.${remotelySaveSettingsTemplateName}.path
-      );
+      home.file = {
+        "${vaultTarget}/.obsidian/app.json".force = true;
+        "${vaultTarget}/.obsidian/community-plugins.json".force = true;
+      };
+
+      home.activation.obsidianNextcloudSync = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        data="${config.home.homeDirectory}/${vaultTarget}/.obsidian/plugins/${nextcloudSyncId}/data.json"
+        if [ ! -e "$data" ]; then
+          run mkdir -p "$(dirname "$data")"
+          run install -m600 ${nextcloudSyncSeed} "$data"
+        fi
+      '';
 
       xdg.mimeApps.enable = true;
     };

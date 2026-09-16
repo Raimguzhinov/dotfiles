@@ -53,7 +53,6 @@
         secrets."work_ai/litellm_api_key" = { };
         secrets."work_ai/mcp_sse_url" = { };
         secrets."work_ai/lightrag_url" = { };
-        secrets."obsidian/remotely_save_settings" = { };
         secrets."homelab/homeassistant_token" = { };
       };
 

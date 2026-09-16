@@ -1,5 +1,5 @@
 {
-  description = "Lightweight devshells for ~/Work (go + python)";
+  description = "Lightweight devshells for ~/Work (go + python) and ~/Homelab (go)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -21,6 +21,7 @@
 
       imports = [
         ../modules/devshells/go.nix
+        ../modules/devshells/homelab.nix
         ../modules/devshells/python.nix
         ../modules/devshells/nodejs.nix
       ];

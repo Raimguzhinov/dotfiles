@@ -1,128 +1,20 @@
 { ... }:
-let
-  makeJetbrainsPkgs =
-    pkgs: pkgs-jetbrains:
-
-    let
-      # tar c -C nixos/modules/features jetbrains-agent/ | xz -9 | base64 -w76 > nixos/modules/features/jetbrains-agent.b64
-      jetbrainsAgent =
-        pkgs.runCommandLocal "jetbrains-agent"
-          {
-            nativeBuildInputs = [ pkgs.xz ];
-          }
-          ''
-            mkdir -p $out
-            base64 -d ${pkgs.writeText "agent.b64" (builtins.readFile ./jetbrains-agent.b64)} \
-              | tar xJ --strip-components=1 -C $out
-          '';
-
-      commonVmopts =
-        xmx: # e.g. "4096m" or "1024m"
-        ''
-          -Xms128m
-          -Xmx${xmx}
-          -XX:ReservedCodeCacheSize=512m
-          -XX:+IgnoreUnrecognizedVMOptions
-          -XX:+UseG1GC
-          -XX:SoftRefLRUPolicyMSPerMB=50
-          -XX:CICompilerCount=2
-          -XX:+HeapDumpOnOutOfMemoryError
-          -XX:-OmitStackTraceInFastThrow
-          -ea
-          -Dsun.io.useCanonCaches=false
-          -Djdk.http.auth.tunneling.disabledSchemes=""
-          -Djdk.attach.allowAttachSelf=true
-          -Djdk.module.illegalAccess.silent=true
-          -Dkotlinx.coroutines.debug=off
-          -XX:ErrorFile=$USER_HOME/java_error_in_idea_%p.log
-          -XX:HeapDumpPath=$USER_HOME/java_error_in_idea.hprof
-
-          --add-opens=java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED
-          --add-opens=java.base/jdk.internal.org.objectweb.asm.tree=ALL-UNNAMED
-        '';
-
-      jaAgent =
-        toolkit: # "auto", "WLToolkit", or "XToolkit"
-        "-Dawt.toolkit.name=${toolkit}";
-      # ''
-      #   -javaagent:${jetbrainsAgent}/ja-netfilter.jar=jetbrains
-      #   -Dawt.toolkit.name=${toolkit}
-      # '';
-
-      # jdk = pkgs.jetbrains.jdk-21;
-      mkIde =
-        base: xmx:
-        let
-          auto = base.override {
-            vmopts = commonVmopts xmx + jaAgent "auto";
-            # inherit jdk;
-          };
-          wl = base.override {
-            vmopts = commonVmopts xmx + jaAgent "WLToolkit";
-            # inherit jdk;
-          };
-          x11 = base.override {
-            vmopts = commonVmopts xmx + jaAgent "XToolkit";
-            # inherit jdk;
-          };
-        in
-        {
-          inherit auto wl x11;
-        };
-
-      golandPkgs = mkIde pkgs-jetbrains.jetbrains.goland "4096m";
-      pycharmPkgs = mkIde pkgs-jetbrains.jetbrains.pycharm "4096m";
-      ideaPkgs = mkIde pkgs-jetbrains.jetbrains.idea "4096m";
-      clionPkgs = mkIde pkgs-jetbrains.jetbrains.clion "1024m";
-      datagrip = mkIde pkgs-jetbrains.jetbrains.datagrip "1024m";
-      phpstormPkgs = mkIde pkgs-jetbrains.jetbrains.phpstorm "1024m";
-      riderPkgs = mkIde pkgs-jetbrains.jetbrains.rider "1024m";
-      webstormPkgs = mkIde pkgs-jetbrains.jetbrains.webstorm "1024m";
-    in
-    {
-      # Exposed as flake packages/apps — nix run 'github:Raimguzhinov/dotfiles?dir=nixos#<name>'
-      goland = golandPkgs.auto;
-      goland-wl = golandPkgs.wl;
-      goland-x11 = golandPkgs.x11;
-      pycharm = pycharmPkgs.auto;
-      pycharm-wl = pycharmPkgs.wl;
-      pycharm-x11 = pycharmPkgs.x11;
-      idea = ideaPkgs.auto;
-      idea-wl = ideaPkgs.wl;
-      idea-x11 = ideaPkgs.x11;
-      clion = clionPkgs.auto;
-      clion-wl = clionPkgs.wl;
-      clion-x11 = clionPkgs.x11;
-      datagrip = datagrip.auto;
-      datagrip-wl = datagrip.wl;
-      datagrip-x11 = datagrip.x11;
-      phpstorm = phpstormPkgs.auto;
-      phpstorm-wl = phpstormPkgs.wl;
-      phpstorm-x11 = phpstormPkgs.x11;
-      rider = riderPkgs.auto;
-      rider-wl = riderPkgs.wl;
-      rider-x11 = riderPkgs.x11;
-      webstorm = webstormPkgs.auto;
-      webstorm-wl = webstormPkgs.wl;
-      webstorm-x11 = webstormPkgs.x11;
-    };
-in
 {
   perSystem =
-    { pkgs, pkgs-jetbrains, ... }:
+    { pkgs-unstable, ... }:
     {
-      packages = makeJetbrainsPkgs pkgs pkgs-jetbrains;
+      packages = {
+        inherit (pkgs-unstable.jetbrains) goland;
+        # inherit (pkgs-unstable.jetbrains) pycharm;
+      };
     };
 
   flake.homeModules.jetbrains =
-    { pkgs, pkgs-jetbrains, ... }:
-    let
-      jbPkgs = makeJetbrainsPkgs pkgs pkgs-jetbrains;
-    in
+    { pkgs-unstable, ... }:
     {
       home.packages = [
-        jbPkgs.goland-wl
-        jbPkgs.pycharm-wl
+        pkgs-unstable.jetbrains.goland
+        # pkgs-unstable.jetbrains.pycharm
       ];
       home.file.".ideavimrc".text = # vim
         ''

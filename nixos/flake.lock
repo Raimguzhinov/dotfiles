@@ -301,22 +301,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-jetbrains": {
-      "locked": {
-        "lastModified": 1777268161,
-        "narHash": "sha256-bxrdOn8SCOv8tN4JbTF/TXq7kjo9ag4M+C8yzzIRYbE=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1c3fe55ad329cbcb28471bb30f05c9827f724c76",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1c3fe55ad329cbcb28471bb30f05c9827f724c76",
-        "type": "github"
-      }
-    },
     "nixpkgs-lib": {
       "locked": {
         "lastModified": 1785031560,
@@ -513,7 +497,6 @@
         "nix-firefox-addons": "nix-firefox-addons",
         "nixpkgs": "nixpkgs_2",
         "nixpkgs-go21": "nixpkgs-go21",
-        "nixpkgs-jetbrains": "nixpkgs-jetbrains",
         "nixpkgs-protobuf23": "nixpkgs-protobuf23",
         "nixpkgs-protoc-gen-go-grpc1_3_0": "nixpkgs-protoc-gen-go-grpc1_3_0",
         "nixpkgs-protoc-gen-go1_36_1": "nixpkgs-protoc-gen-go1_36_1",

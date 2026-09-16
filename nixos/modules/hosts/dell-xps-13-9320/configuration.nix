@@ -107,10 +107,6 @@
         extraSpecialArgs = {
           inherit inputs;
           inherit pkgs-unstable;
-          pkgs-jetbrains = import inputs.nixpkgs-jetbrains {
-            system = pkgs.stdenv.hostPlatform.system;
-            config.allowUnfree = true;
-          };
           inherit username;
           inherit hostname;
         };
@@ -356,6 +352,7 @@
                 keypunch
                 nautilus
                 networkmanagerapplet
+                nextcloud-client
                 pfetch
                 pinta
                 spotify
@@ -590,6 +587,7 @@
               homeModules.neovim
               homeModules.niri
               homeModules.noctalia
+              homeModules.noodle
               homeModules.obsidian
               homeModules.opencode
               homeModules.pi
