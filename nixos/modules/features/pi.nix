@@ -21,6 +21,8 @@ in
     in
     {
       config = {
+        programs.nix-ld.enable = true;
+
         systemd.services.searx-secret = {
           requiredBy = [
             "searx-init.service"
@@ -193,6 +195,8 @@ in
         theme = "dark";
         packages = [
           "npm:@upstash/context7-pi"
+          "npm:@cortexkit/aft-pi"
+          "npm:@majorgilles/pi-grill-me"
           "npm:pi-llama-cpp"
           "npm:pi-mcp-adapter"
           "npm:pi-plan"
