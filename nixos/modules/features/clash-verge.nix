@@ -7,7 +7,6 @@
 
       homeDomains = [ "+.nixos.netcraze.pro" ];
       homeResolvers = [
-        "192.168.1.129"
         "https://dns.google/dns-query"
         "https://cloudflare-dns.com/dns-query"
         "https://dns.adguard-dns.com/dns-query"
