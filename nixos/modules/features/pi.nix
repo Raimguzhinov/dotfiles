@@ -220,11 +220,30 @@ in
         };
       };
 
+      permissionsPolicy = {
+        defaultPolicy = {
+          tools = "ask";
+          bash = "ask";
+          mcp = "ask";
+          skills = "ask";
+          special = "ask";
+        };
+        tools = {
+          "grill_*" = "allow";
+        };
+      };
+
+      keybindingsOverrides = {
+        "app.thinking.cycle" = "shift+ctrl+t";
+      };
+
       toJsonFile = (pkgs.formats.json { }).generate;
 
       modelsJsonFile = toJsonFile "pi-models.json" modelsConfig;
       mcpJsonFile = toJsonFile "pi-mcp.json" mcpConfig;
       settingsSeedFile = toJsonFile "pi-settings-seed.json" settingsSeed;
+      permissionsPolicyFile = toJsonFile "pi-permissions.json" permissionsPolicy;
+      keybindingsJsonFile = toJsonFile "pi-keybindings.json" keybindingsOverrides;
     in
     {
       config = {
@@ -244,6 +263,12 @@ in
 
           cp --reflink=never "${modelsJsonFile}" "$agent_dir/models.json"
           chmod 600 "$agent_dir/models.json"
+
+          cp --reflink=never "${permissionsPolicyFile}" "$agent_dir/pi-permissions.jsonc"
+          chmod 600 "$agent_dir/pi-permissions.jsonc"
+
+          cp --reflink=never "${keybindingsJsonFile}" "$agent_dir/keybindings.json"
+          chmod 600 "$agent_dir/keybindings.json"
 
           if ! cmp -s "${mcpJsonFile}" "$agent_dir/mcp.json"; then
             cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
