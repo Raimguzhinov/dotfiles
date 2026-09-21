@@ -131,6 +131,11 @@ let
     type = "plugin_action";
   };
 
+  shellCmd = key: command: description: {
+    inherit key command description;
+    type = "shell";
+  };
+
   herdrSettings = pkgs: {
     onboarding = false;
 
@@ -213,10 +218,10 @@ let
         (pluginAction "alt+j" "herdr-splits.resize-down" "resize down (nvim/herdr)")
         (pluginAction "alt+k" "herdr-splits.resize-up" "resize up (nvim/herdr)")
         (pluginAction "alt+l" "herdr-splits.resize-right" "resize right (nvim/herdr)")
-        (pluginAction "prefix+e" "chmarax.herdr-nvim.toggle" "nvim sidebar")
+        (shellCmd "prefix+e" "herdr-toggle-or-pick" "nvim sidebar (toggle/pick)")
         (pluginAction "prefix+y" "rmarganti.herdr-pluck.pluck" "yank from scrollback")
         (pluginAction "prefix+u" "persiyanov.reviewr.toggle" "review working tree")
-        (pluginAction "prefix+i" "chmarax.herdr-nvim.pick-file" "open file from agent output")
+        (shellCmd "prefix+i" "herdr-pick-file-fullscreen" "open file from agent output (new tab)")
         (pluginAction "prefix+o" "ray.file-explorer.open" "yazi pane")
         (pluginAction "prefix+f" "rmarganti.herdr-pluck.open-url" "open url from scrollback")
         (pluginAction "prefix+slash" "jt.command-palette.open" "command palette")
@@ -395,6 +400,67 @@ in
           '';
       };
 
+      pickFileFullscreen = pkgs.writeShellApplication {
+        name = "herdr-pick-file-fullscreen";
+        runtimeInputs = [
+          herdr
+          pkgs.jq
+        ];
+        text = # bash
+          ''
+            before="$(herdr pane list)"
+            tab="$(jq -r '.result.panes[] | select(.focused == true) | .tab_id' <<<"$before" | head -n1)"
+            if [[ -z "$tab" ]]; then
+              exit 0
+            fi
+            before_count="$(jq -r --arg t "$tab" '[.result.panes[] | select(.tab_id == $t)] | length' <<<"$before")"
+
+            herdr plugin action invoke pick-file --plugin chmarax.herdr-nvim >/dev/null
+
+            for _ in $(seq 1 200); do
+              sleep 0.3
+              after="$(herdr pane list)"
+              after_count="$(jq -r --arg t "$tab" '[.result.panes[] | select(.tab_id == $t)] | length' <<<"$after")"
+              if [[ "$after_count" != "$before_count" ]]; then
+                pane="$(jq -r --arg t "$tab" '.result.panes[] | select(.tab_id == $t and .focused == true) | .pane_id' <<<"$after")"
+                if [[ -n "$pane" ]]; then
+                  herdr pane move "$pane" --new-tab --focus >/dev/null
+                fi
+                exit 0
+              fi
+            done
+          '';
+      };
+
+      toggleOrPick = pkgs.writeShellApplication {
+        name = "herdr-toggle-or-pick";
+        runtimeInputs = [
+          herdr
+          pkgs.jq
+        ];
+        text = # bash
+          ''
+            tab="$(herdr pane list | jq -r '.result.panes[] | select(.focused == true) | .tab_id' | head -n1)"
+            if [[ -z "$tab" ]]; then
+              exit 0
+            fi
+
+            state_dir="''${HERDR_NVIM_STATE_DIR:-''${XDG_STATE_HOME:-$HOME/.local/state}/herdr-nvim}"
+            state_file="$state_dir/''${tab//:/_}.json"
+
+            sidebar_pane=""
+            if [[ -f "$state_file" ]]; then
+              sidebar_pane="$(jq -r '.sidebar_pane // empty' "$state_file" 2>/dev/null || true)"
+            fi
+
+            if [[ -n "$sidebar_pane" ]] && herdr pane get "$sidebar_pane" >/dev/null 2>&1; then
+              herdr plugin action invoke toggle --plugin chmarax.herdr-nvim >/dev/null
+            else
+              herdr plugin action invoke pick-file --plugin chmarax.herdr-nvim >/dev/null
+            fi
+          '';
+      };
+
       pluginsSync = pkgs.writeShellApplication {
         name = "herdr-plugins-sync";
         runtimeInputs = [
@@ -442,8 +508,10 @@ in
     {
       home.packages = [
         herdr
+        pickFileFullscreen
         pluginsSync
         sendPaths
+        toggleOrPick
       ];
 
       home.file.".claude/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
