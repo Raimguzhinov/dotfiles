@@ -20,15 +20,47 @@ let
       hmModules = ''${hmType}.getSubModules ++ builtins.catAttrs "${username}" ${host}.options.home-manager.users.definitions'';
     in
     {
-      lsp.servers.nixd.settings.nixd = {
-        nixpkgs.expr = "import ${flake}.inputs.nixpkgs { }";
-        formatting.command = [ (lib.getExe pkgs.nixfmt) ];
-        options = {
-          nixos.expr = "${host}.options";
-          home_manager.expr = "(${hmType}.substSubModules (${hmModules})).getSubOptions [ ]";
-          flake_parts.expr = "${flake}.debug.options";
-          flake_parts_persystem.expr = "${flake}.currentSystem.options";
+      lsp.servers.nixd = {
+        settings.nixd = {
+          nixpkgs.expr = "import ${flake}.inputs.nixpkgs { }";
+          formatting.command = [ (lib.getExe pkgs.nixfmt) ];
+          options = {
+            nixos.expr = "${host}.options";
+            home_manager.expr = "(${hmType}.substSubModules (${hmModules})).getSubOptions [ ]";
+            flake_parts.expr = "${flake}.debug.options";
+            flake_parts_persystem.expr = "${flake}.currentSystem.options";
+          };
         };
+        # nixd names a string's documentSymbol after its whole contents; strip
+        # those before navic renders them as breadcrumbs.
+        on_attach =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(client)
+                local orig_request = client.request
+                client.request = function(self, method, params, handler, ...)
+                  if method == "textDocument/documentSymbol" and handler then
+                    local function prune(syms)
+                      local out = {}
+                      for _, s in ipairs(syms or {}) do
+                        if s.kind ~= vim.lsp.protocol.SymbolKind.String then
+                          if s.children then
+                            s.children = prune(s.children)
+                          end
+                          out[#out + 1] = s
+                        end
+                      end
+                      return out
+                    end
+                    local wrapped = function(err, result, ctx, config)
+                      return handler(err, prune(result), ctx, config)
+                    end
+                    return orig_request(self, method, params, wrapped, ...)
+                  end
+                  return orig_request(self, method, params, handler, ...)
+                end
+              end
+            '';
       };
     };
 
@@ -131,8 +163,29 @@ let
       indentkeys = "0{,0},0),0],:,0#,!^F,o,O,e";
 
       wrap = true;
+      linebreak = true;
+      list = true;
+      listchars = "eol:¬,tab:>-,trail:~,extends:>,precedes:<,space: ";
       termguicolors = true;
       autoread = true;
+      grepprg = "${lib.getExe pkgs.ripgrep} --vimgrep --smart-case";
+      spelloptions = "camel";
+      title = true;
+      titlelen = 85;
+      titlestring = "%{expand('%:p:~')} %(%{&modified ? '[+]' : ''}%) - nvim";
+    };
+    diagnostics = {
+      enable = true;
+      config = {
+        underline = true;
+        virtual_text = false;
+        # Full multi-line message only for the line under the cursor; signs
+        # in the gutter still mark every other diagnostic without clutter.
+        virtual_lines.current_line = true;
+        signs = true;
+        severity_sort = true;
+        update_in_insert = false;
+      };
     };
     lsp = {
       enable = true;
@@ -247,6 +300,50 @@ let
                 vim.bo[event.buf].shiftwidth = 2
                 vim.bo[event.buf].softtabstop = 2
                 vim.bo[event.buf].expandtab = true
+              end
+            '';
+      }
+      {
+        # gofmt mandates real tabs; blank the tab glyph so only trailing
+        # whitespace/eol/etc. still get flagged here.
+        event = [ "FileType" ];
+        pattern = [ "go" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                vim.opt_local.listchars:append({ tab = "  " })
+              end
+            '';
+      }
+      {
+        event = [ "FileType" ];
+        pattern = [
+          "markdown"
+          "gitcommit"
+          "typst"
+          "text"
+        ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(event)
+                vim.opt_local.spell = true
+                vim.opt_local.spelllang = { "ru", "en" }
+              end
+            '';
+      }
+      {
+        # Scheduled: runs after lz.n's own FileType handler loads the plugin.
+        event = [ "FileType" ];
+        pattern = [ "markdown" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                vim.schedule(function()
+                  vim.cmd("TableModeEnable")
+                end)
               end
             '';
       }
@@ -551,6 +648,7 @@ let
           mdPackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown;
           mdInlinePackage = pkgs.vimPlugins.nvim-treesitter.builtGrammars.markdown_inline;
         };
+        extensions.render-markdown-nvim.enable = true;
       };
       typst = {
         enable = true;
@@ -773,8 +871,16 @@ let
           python = "140";
         };
       };
+      illuminate.enable = true;
     };
-    visuals.nvim-web-devicons.enable = true;
+    visuals = {
+      nvim-web-devicons.enable = true;
+      cinnamon-nvim = {
+        enable = true;
+        setupOpts.keymaps.basic = true;
+      };
+      nvim-scrollbar.enable = true;
+    };
     statusline.lualine = {
       enable = true;
       # nvim-dap-ui renders its play/step/stop controls in the dap-repl
@@ -814,10 +920,12 @@ let
         lspTypeDefinitions = "gD";
       };
       setupOpts.pickers = {
-        lsp_definitions.jump_type = "tab";
-        lsp_references.jump_type = "tab";
-        lsp_implementations.jump_type = "tab";
-        lsp_type_definitions.jump_type = "tab";
+        # A single, unambiguous match jumps in the current window instead of
+        # opening a new tab; the picker still opens normally for multiple matches.
+        lsp_definitions.jump_type = "edit";
+        lsp_references.jump_type = "edit";
+        lsp_implementations.jump_type = "edit";
+        lsp_type_definitions.jump_type = "edit";
       };
       extensions = [
         {
@@ -1237,6 +1345,24 @@ let
         action = "<cmd>Git<CR>";
         desc = "Git status [fugitive]";
       }
+      {
+        key = "+";
+        mode = [
+          "n"
+          "v"
+        ];
+        action = "<C-a>";
+        desc = "Increment number under cursor";
+      }
+      {
+        key = "-";
+        mode = [
+          "n"
+          "v"
+        ];
+        action = "<C-x>";
+        desc = "Decrement number under cursor";
+      }
     ];
     lazy.plugins = {
       vim-dadbod-ui = {
@@ -1262,6 +1388,13 @@ let
           "mysql"
           "plsql"
         ];
+      };
+      vim-table-mode = {
+        package = pkgs.vimPlugins.vim-table-mode;
+        lazy = true;
+        ft = [ "markdown" ];
+        after = # lua
+          ''vim.g.table_mode_corner = "|"'';
       };
       "overseer.nvim" = {
         package = pkgs.vimPlugins.overseer-nvim;
