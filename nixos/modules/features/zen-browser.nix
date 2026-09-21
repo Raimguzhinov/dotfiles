@@ -367,91 +367,77 @@
                 isGroup = true;
                 isFolderCollapsed = false;
                 editedTitle = true;
-                position = 400;
+                position = 330;
               };
               "User Manual" = {
                 id = "39845829-9934-4048-8695-9405928dbfed";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://orangepi.net/wp-content/uploads/2026/01/OrangePi_4_Pro_A733_User-Manual_v1.4.pdf";
-                position = 401;
+                position = 331;
               };
               "DigitalOcean" = {
                 id = "bfe7ef60-f6c0-4de1-80d8-aa7e16f4fe9b";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://cloud.digitalocean.com";
-                position = 402;
+                position = 332;
               };
               "Cloudflare Dash" = {
                 id = "1897a9a9-928d-4daa-bf67-eea044257b02";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://dash.cloudflare.com/6d3b9e67b5853b81731bff6d2eb89908/home";
-                position = 403;
+                position = 333;
               };
               "FreeDNS" = {
                 id = "2b796cb2-7299-4e33-ae8e-337aca74fb10";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://freedns.afraid.org/";
-                position = 404;
+                position = 334;
               };
               "Tailscale Console" = {
                 id = "6843d4fd-1523-40e9-aec2-e69c32dcacd3";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://console.tailscale.com/admin/machines";
-                position = 405;
-              };
-              "Opencode remote" = {
-                id = "d26d9789-6c53-4596-a035-9ba4d61dcd71";
-                workspace = spaces."nix".id;
-                folderParentId = pins."Homelab".id;
-                url = "https://opencode.nixos.netcraze.pro";
-                position = 406;
+                position = 335;
               };
               "Jellyfin" = {
                 id = "88b7eaef-cb9b-4b1b-b365-f95571cfbd51";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://jellyfin.nixos.netcraze.pro/web/#/home";
-                position = 407;
+                position = 336;
               };
               "Home Assistant" = {
                 id = "d97c8bde-655d-4795-9b2c-776bae33fa67";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://homeassistant.nixos.netcraze.pro/home/overview";
-                position = 408;
-              };
-              "Pi-Hole" = {
-                id = "2a60cfb3-7e37-490e-9b7e-0c7f38667939";
-                workspace = spaces."nix".id;
-                folderParentId = pins."Homelab".id;
-                url = "http://orangepi4pro:8811/admin/";
-                position = 409;
+                position = 337;
               };
               "Forgejo" = {
                 id = "21e8c894-b48f-434f-a1b3-30f118fe301f";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://git.nixos.netcraze.pro/";
-                position = 410;
+                position = 338;
               };
               "Nextcloud" = {
                 id = "d91fd267-30d7-48dc-8b77-b4e1ab1808c3";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
                 url = "https://nextcloud.nixos.netcraze.pro/";
-                position = 411;
+                position = 339;
               };
-              "Backup" = {
-                id = "e5ab51b1-6bca-4d28-ba2e-bc9c5ce83462";
+              "qBittorrent" = {
+                id = "2a60cfb3-7e37-490e-9b7e-0c7f38667929";
                 workspace = spaces."nix".id;
                 folderParentId = pins."Homelab".id;
-                url = "https://backup.nixos.netcraze.pro/";
-                position = 412;
+                url = "https://torrent.nixos.netcraze.pro";
+                position = 340;
               };
             };
             search = {
