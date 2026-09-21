@@ -490,6 +490,76 @@
             		" ",
             	}
             end, 500, Status.RIGHT)
+
+            local STACKED_MAX_WIDTH = 100
+            local STACKED_TOP_PERCENT = 40
+
+            local HRail = { _id = "hrail" }
+
+            function HRail:new(area)
+            	return setmetatable({ _area = area }, { __index = self })
+            end
+
+            function HRail:reflow()
+            	return { self }
+            end
+
+            function HRail:redraw()
+            	return { ui.Bar(ui.Edge.TOP):area(self._area):symbol("─"):style(th.mgr.border_style) }
+            end
+
+            function HRail:click(event, up) end
+
+            function HRail:scroll(event, step) end
+
+            function HRail:touch(event, step) end
+
+            local tab_layout = Tab.layout
+            local tab_build = Tab.build
+
+            function Tab:layout()
+            	if self._area.w >= STACKED_MAX_WIDTH then
+            		self._stacked = false
+            		return tab_layout(self)
+            	end
+
+            	self._stacked = true
+            	local rows = ui.Layout()
+            		:direction(ui.Layout.VERTICAL)
+            		:constraints({
+            			ui.Constraint.Percentage(STACKED_TOP_PERCENT),
+            			ui.Constraint.Percentage(100 - STACKED_TOP_PERCENT),
+            		})
+            		:split(self._area)
+
+            	local ratio = rt.mgr.ratio
+            	local top = ui.Layout()
+            		:direction(ui.Layout.HORIZONTAL)
+            		:constraints({
+            			ui.Constraint.Ratio(ratio.parent, ratio.parent + ratio.current),
+            			ui.Constraint.Ratio(ratio.current, ratio.parent + ratio.current),
+            		})
+            		:split(rows[1])
+
+            	self._chunks = { top[1], top[2], rows[2] }
+            end
+
+            function Tab:build()
+            	if not self._stacked then
+            		return tab_build(self)
+            	end
+
+            	local c = self._chunks
+            	local p = c[2].w > 0 and 0 or 1
+            	self._children = {
+            		Parent:new(c[1]:pad(ui.Pad(0, p, 0, 1)), self._tab),
+            		Current:new(c[2]:pad(ui.Pad.x(1)), self._tab),
+            		Preview:new(c[3]:pad(ui.Pad(1, 1, 0, 1)), self._tab),
+            		Rails:new({ c[1], c[2], ui.Rect { x = c[3].x, y = c[3].y, w = 0, h = 0 } }, self._tab),
+            		HRail:new(c[3] { h = math.min(1, c[3].h) }),
+            		Markers:new(c, self._tab),
+            	}
+            end
           '';
         settings = {
           mgr = {
