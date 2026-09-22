@@ -55,6 +55,59 @@
 
                     compdef _drestart drestart
 
+          zstyle ':completion:*:descriptions' format '%F{blue}-- %d --%f'
+          zstyle ':completion:*:messages' format '%F{yellow}-- %d --%f'
+          zstyle ':completion:*:warnings' format '%F{red}-- no matches --%f'
+
+          _hsplit() {
+            case $CURRENT in
+              2)
+                local -a directions
+                directions=(right down)
+                compadd -a directions
+                ;;
+              3) _command_names -e ;;
+              *) _files ;;
+            esac
+          }
+
+          compdef _hsplit hsplit
+
+          _htab() {
+            _message -e tab-label 'workspace tab label'
+          }
+
+          compdef _htab htab
+
+          _hagent() {
+            local -a kinds
+            kinds=(
+              pi claude codex gemini cursor devin agy cline omp mastracode
+              opencode copilot kimi kiro droid amp grok hermes kilo qodercli maki
+            )
+            case $CURRENT in
+              2) _message -e agent-name 'agent name' ;;
+              3) compadd -a kinds ;;
+              *) _files ;;
+            esac
+          }
+
+          compdef _hagent hagent
+
+          _hworktree() {
+            local -a branches
+            branches=(''${(f)"$(git branch --format='%(refname:short)' 2>/dev/null)"})
+            (( CURRENT <= 3 )) && compadd -a branches
+          }
+
+          compdef _hworktree hworktree
+
+          _hreload() {
+            compadd -- --dry-run
+          }
+
+          compdef _hreload hreload
+
         '';
         oh-my-zsh = {
           enable = true;

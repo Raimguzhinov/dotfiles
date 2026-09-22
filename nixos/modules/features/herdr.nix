@@ -86,11 +86,21 @@ let
       hash = "sha256-A43Dl365S/5w2wrttV1RnQ1g7YRJmsD3tb5EUUZcQQY=";
     };
 
+  mkHerdrOhMyZsh =
+    pkgs:
+    pkgs.fetchFromGitHub {
+      owner = "robbyrussell";
+      repo = "herdr-ohmyzsh";
+      rev = "bbc072ada531e6306276900a866a4b44a9b92e74";
+      hash = "sha256-75JYRXRfn5dFH88DBQqVRbW5OVL1eq3en0M19NpFKLE=";
+    };
+
   linkedPlugins = pkgs: [
     (mkHerdrSplits pkgs)
     (mkHerdrNvimPlugin pkgs)
     (mkHerdrYazi pkgs)
     (mkHerdrCommandPalette pkgs)
+    (mkHerdrOhMyZsh pkgs)
   ];
 
   syncedPlugins = [
@@ -225,6 +235,7 @@ let
         (pluginAction "prefix+o" "ray.file-explorer.open" "yazi pane")
         (pluginAction "prefix+f" "rmarganti.herdr-pluck.open-url" "open url from scrollback")
         (pluginAction "prefix+slash" "jt.command-palette.open" "command palette")
+        (pluginAction "prefix+shift+z" "ohmyzsh.shell.reload-all" "reload Oh My Zsh in idle panes")
         (popup "prefix+t" ''exec "''${SHELL:-sh}"'' "scratch terminal")
         (popup "prefix+alt+g" "lazygit" "lazygit")
         (popup "prefix+alt+d" "lazydocker" "lazydocker")
@@ -362,6 +373,8 @@ in
       toml = pkgs.formats.toml { };
       configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs);
       pluginRoots = linkedPlugins pkgs;
+      ohMyZshPlugin = mkHerdrOhMyZsh pkgs;
+      ohMyZshCustomDir = "${config.xdg.cacheHome}/oh-my-zsh/custom";
 
       sendPaths = pkgs.writeShellApplication {
         name = "herdr-send-paths";
@@ -516,6 +529,16 @@ in
 
       home.file.".claude/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
 
+      programs.zsh.oh-my-zsh = {
+        custom = ohMyZshCustomDir;
+        plugins = [ "herdr" ];
+      };
+
+      home.sessionVariables.HERDR_OMZ_REPORT = false;
+      home.sessionVariables.HERDR_OMZ_NOTIFY = false;
+      # home.sessionVariables.HERDR_OMZ_THRESHOLD = "60"; # require HERDR_OMZ_REPORT=true
+      home.sessionVariables.HERDR_OMZ_DEFAULT_AGENT = "pi";
+
       xdg.configFile."herdr-nvim/config.toml".source = toml.generate "herdr-nvim-config.toml" (
         herdrNvimSettings "${config.programs.nvf.finalPackage}/bin/nvim"
       );
@@ -544,6 +567,10 @@ in
             log "plugin link failed for $root"
           fi
         done
+
+        omz_custom_plugins="${ohMyZshCustomDir}/plugins"
+        mkdir -p "$omz_custom_plugins"
+        ln -sfn ${ohMyZshPlugin} "$omz_custom_plugins/herdr"
       '';
     };
 }

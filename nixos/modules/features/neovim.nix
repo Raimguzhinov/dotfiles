@@ -886,29 +886,57 @@ let
       # nvim-dap-ui renders its play/step/stop controls in the dap-repl
       # window's winbar; keep lualine's breadcrumbs winbar off that window so
       # it doesn't overwrite them.
-      disabledFiletypes.winbar = [ "dap-repl" ];
+      setupOpts.options.disabled_filetypes.winbar = [ "dap-repl" ];
       integrations.breadcrumbs = {
         location = "winbar";
         nvim-navic.enable = true;
       };
-      extraActiveSection.z = [
+      setupOpts.sections.lualine_z = [
+        {
+          "@1" = "";
+          draw_empty = true;
+          separator = {
+            left = "";
+            right = "";
+          };
+        }
+        {
+          "@1" = "progress";
+          separator = {
+            left = "";
+          };
+        }
+        [ "location" ]
+        {
+          "@1" = "fileformat";
+          color = {
+            fg = "black";
+          };
+          symbols = {
+            unix = "";
+            dos = "";
+            mac = "";
+          };
+        }
         # Deferred through pcall: lz.n loads opencode.nvim after lualine's setup.
-        # lua
-        (''
-          function()
-            local ok, opencode = pcall(require, "opencode")
-            return ok and opencode.statusline() or ""
-          end
-        '')
-        # lua
-        (''
-          function()
-            local ok, out = pcall(function()
-              return require("herdr-nvim").statusline()
-            end)
-            return ok and out or ""
-          end
-        '')
+        (lib.generators.mkLuaInline # lua
+          ''
+            function()
+              local ok, opencode = pcall(require, "opencode")
+              return ok and opencode.statusline() or ""
+            end
+          ''
+        )
+        (lib.generators.mkLuaInline # lua
+          ''
+            function()
+              local ok, out = pcall(function()
+                return require("herdr-nvim").statusline()
+              end)
+              return ok and out or ""
+            end
+          ''
+        )
       ];
     };
     telescope = {
