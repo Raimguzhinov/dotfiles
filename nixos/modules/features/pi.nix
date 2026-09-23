@@ -234,7 +234,7 @@ in
       };
 
       keybindingsOverrides = {
-        "app.thinking.cycle" = "shift+ctrl+t";
+        "app.thinking.cycle" = "alt+t";
       };
 
       aftConfig = {
@@ -262,16 +262,18 @@ in
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
         home.sessionVariables.PI_OFFLINE = "1";
 
-        home.file.".config/cortexkit/aft.jsonc".source = aftJsonFile;
-
         home.activation.setupPi = mkAfter /* bash */ ''
           set -euo pipefail
 
           agent_dir="${piAgentDir}"
+          cortexkit_dir="${config.home.homeDirectory}/.config/cortexkit"
 
           log() { printf '[pi] %s\n' "$*" >&2; }
 
-          mkdir -p "$agent_dir"
+          mkdir -p "$agent_dir" "$cortexkit_dir"
+
+          cp --reflink=never "${aftJsonFile}" "$cortexkit_dir/aft.jsonc"
+          chmod 644 "$cortexkit_dir/aft.jsonc"
 
           cp --reflink=never "${modelsJsonFile}" "$agent_dir/models.json"
           chmod 600 "$agent_dir/models.json"
