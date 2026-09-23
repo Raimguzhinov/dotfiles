@@ -1203,7 +1203,6 @@
           tig
           tlrc
           transmission_4-gtk
-          typst
           unzip
           uv
           v4l-utils
