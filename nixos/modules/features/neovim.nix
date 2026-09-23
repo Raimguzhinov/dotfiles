@@ -334,6 +334,20 @@ let
             '';
       }
       {
+        event = [ "FileType" ];
+        pattern = [ "typst" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function(event)
+                vim.keymap.set("n", "<leader>rp", "<cmd>TypstPreviewToggle<CR>", {
+                  buffer = event.buf,
+                  desc = "Toggle live preview [typst-preview]",
+                })
+              end
+            '';
+      }
+      {
         # Scheduled: runs after lz.n's own FileType handler loads the plugin.
         event = [ "FileType" ];
         pattern = [ "markdown" ];
@@ -653,6 +667,7 @@ let
       typst = {
         enable = true;
         treesitter.package = pkgs.vimPlugins.nvim-treesitter.builtGrammars.typst;
+        extensions.typst-concealer.enable = true;
       };
       lua = {
         enable = true;

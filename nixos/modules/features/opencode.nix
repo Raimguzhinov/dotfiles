@@ -200,6 +200,7 @@ in
         "logzone"
         "rag"
         "searxng"
+        "typst"
         "youtrack"
       ];
 
@@ -355,6 +356,17 @@ in
               "mcp-searxng"
             ];
             environment.SEARXNG_URL = "http://127.0.0.1:8899";
+            enabled = true;
+          };
+          typst = {
+            type = "local";
+            command = [
+              "docker"
+              "run"
+              "--rm"
+              "-i"
+              "ghcr.io/johannesbrandenburger/typst-mcp:latest"
+            ];
             enabled = true;
           };
         };

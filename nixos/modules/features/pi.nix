@@ -186,6 +186,15 @@ in
             url = "https://mcp.grep.app";
             auth = false;
           };
+          typst = {
+            command = "docker";
+            args = [
+              "run"
+              "--rm"
+              "-i"
+              "ghcr.io/johannesbrandenburger/typst-mcp:latest"
+            ];
+          };
         };
       };
 
