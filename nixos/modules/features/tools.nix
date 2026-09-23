@@ -502,7 +502,6 @@
 
       home.packages = [
         pkgs.dragon-drop
-        pkgs.typst
         (pkgs.writeShellScriptBin "rr" ''
           exec ${lib.getExe pkgs.yazi} "$@"
         '')
