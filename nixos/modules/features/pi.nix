@@ -61,6 +61,25 @@ in
               "html"
               "json"
             ];
+            # Эти движки captcha-блокируют/тихо отдают decoy с домашнего IP
+            # (journalctl -u searx.service); mcp-searxng может явно запросить
+            # их через engines=, так что одного disabled: true недостаточно.
+            use_default_settings.engines.remove = [
+              "google"
+              "startpage"
+              "duckduckgo"
+              "brave"
+              "mojeek"
+              "bing"
+            ];
+            # yandex по умолчанию выключен (disabled: true) — единственный
+            # оставшийся общий web-движок, не пойманный на бане с этого IP.
+            engines = [
+              {
+                name = "yandex";
+                disabled = false;
+              }
+            ];
           };
         };
       };
