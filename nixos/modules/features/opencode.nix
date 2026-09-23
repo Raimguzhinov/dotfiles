@@ -587,19 +587,10 @@ in
             ln -sf "$opencode_dir/opencode.json" "$opencode_dir/config.json"
           fi
 
-          if [[ ! -f "$opencode_dir/skills/bmad/SKILL.md" ]]; then
-            log "Installing BMad Method skills for opencode (global)"
-            export PATH="${
-              lib.makeBinPath [
-                pkgs.nodejs
-                pkgs.git
-                pkgs.coreutils
-              ]
-            }:$PATH"
-            if ! "${pkgs.coreutils}/bin/timeout" 240s npx --yes skills add bmad-code-org/BMAD-METHOD \
-              --skill bmad --skill bmod-core-tools --skill bmod-method --skill bmad-build \
-              --agent opencode --global --yes >/dev/null 2>&1; then
-              log "WARNING: BMad skills install failed (no network?)"
+          if [[ ! -d "${config.xdg.cacheHome}/opencode/packages/@cortexkit/aft-opencode@latest" ]]; then
+            log "Warming up @cortexkit/aft-opencode plugin cache (first-run bun install is slow and can hang a live TUI session)"
+            if ! "${pkgs.coreutils}/bin/timeout" 240s "${nvimHandoff.wrapped}/bin/opencode" run "warm up plugin cache" >/dev/null 2>&1; then
+              log "WARNING: aft-opencode plugin warm-up failed or timed out (no network / provider unreachable?)"
             fi
           fi
 
