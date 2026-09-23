@@ -744,7 +744,7 @@
         account required ${pkgs.pam}/lib/security/pam_unix.so
 
         # Authentication management.
-        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=3
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max-tries=5 timeout=30
         auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
         auth required ${pkgs.pam}/lib/security/pam_deny.so
 
@@ -765,7 +765,7 @@
         account required ${pkgs.pam}/lib/security/pam_unix.so
 
         # Authentication management.
-        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=15
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max-tries=3 timeout=15
         auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
         auth required ${pkgs.pam}/lib/security/pam_deny.so
 
@@ -783,8 +783,9 @@
       services.logind.settings.Login = {
         HandlePowerKey = "suspend-then-hibernate";
         HandlePowerKeyLongPress = "poweroff";
-        HandleLidSwitch = "hibernate";
-        HandleLidSwitchExternalPower = "hibernate";
+        HandleLidSwitch = "suspend-then-hibernate";
+        HandleLidSwitchExternalPower = "suspend-then-hibernate";
+        HibernateDelaySec = "5min";
       };
 
       # Enable sound with pipewire.

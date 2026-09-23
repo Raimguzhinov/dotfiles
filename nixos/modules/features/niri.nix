@@ -455,7 +455,7 @@
                 })
               ];
             switch-events = {
-              lid-close.action.spawn = noctalia "session lock-and-suspend";
+              lid-close.action.spawn = noctalia "session lock";
               tablet-mode-on.action.spawn = [
                 "bash"
                 "-c"
