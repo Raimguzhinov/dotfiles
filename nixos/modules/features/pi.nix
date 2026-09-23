@@ -69,6 +69,11 @@ in
               "startpage"
               "duckduckgo"
               "brave"
+              # brave.images/videos/news ссылаются на network: brave —
+              # без базового движка searxng падает с KeyError на старте
+              "brave.images"
+              "brave.videos"
+              "brave.news"
               "mojeek"
               "bing"
             ];
@@ -204,6 +209,16 @@ in
           gh_grep = {
             url = "https://mcp.grep.app";
             auth = false;
+          };
+          codebase_memory = {
+            command = "npx";
+            args = [
+              "-y"
+              "codebase-memory-mcp"
+            ];
+            env = {
+              CBM_ALLOWED_ROOT = config.home.homeDirectory;
+            };
           };
           typst = {
             command = "docker";
@@ -341,6 +356,25 @@ in
             }:$PATH"
             if ! "${pkgs.coreutils}/bin/timeout" 180s pi install npm:pi-mcp-adapter >/dev/null 2>&1; then
               log "WARNING: pi install npm:pi-mcp-adapter failed (no network?)"
+            fi
+          fi
+
+          if [[ ! -f "$agent_dir/skills/bmad/SKILL.md" ]]; then
+            log "Installing BMad Method skills for pi (global)"
+            export PATH="${
+              lib.makeBinPath [
+                pkgs.nodejs
+                pkgs.git
+                pkgs.coreutils
+              ]
+            }:$PATH"
+            # -a pi -g кладёт скиллы в ~/.pi/agent/skills — это ровно то место,
+            # которое pi сам сканирует глобально для любого проекта; набор
+            # --skill повторяет команду из README bmad-code-org/BMAD-METHOD
+            if ! "${pkgs.coreutils}/bin/timeout" 240s npx --yes skills add bmad-code-org/BMAD-METHOD \
+              --skill bmad --skill bmod-core-tools --skill bmod-method --skill bmad-build \
+              --agent pi --global --yes >/dev/null 2>&1; then
+              log "WARNING: BMad skills install failed (no network?)"
             fi
           fi
 
