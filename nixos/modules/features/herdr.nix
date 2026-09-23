@@ -2,6 +2,48 @@
 let
   herdrNvimVersion = "0.2.1";
   herdrSplitsVersion = "0.5.3";
+  herdrMirrorVersion = "0.4.3";
+
+  mkHerdrMirrorBin =
+    {
+      lib,
+      fetchFromGitHub,
+      rustPlatform,
+    }:
+    rustPlatform.buildRustPackage (finalAttrs: {
+      pname = "herdr-mirror";
+      version = herdrMirrorVersion;
+
+      src = fetchFromGitHub {
+        owner = "nikok6";
+        repo = "herdr-mirror";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-dZIu4TcMkVDrRvnvgRMh7+8PpNaWB/i2/UkH/h0ZRW4=";
+      };
+      cargoHash = "sha256-mXQ0oVf+GVDYcUVdovQFKAM/Bc2hWgcms6h8S/ebnFE=";
+
+      doCheck = false;
+
+      meta = {
+        description = "Herdr plugin that mirrors a remote herdr server's workspaces and agents locally";
+        homepage = "https://github.com/nikok6/herdr-mirror";
+        license = lib.licenses.mit;
+        mainProgram = "herdr-mirror";
+      };
+    });
+
+  mkHerdrMirrorPlugin =
+    pkgs:
+    let
+      bin = pkgs.callPackage mkHerdrMirrorBin { };
+    in
+    pkgs.runCommand "herdr-mirror-plugin-${herdrMirrorVersion}" { } # bash
+      ''
+        cp -r ${bin.src} "$out"
+        chmod -R u+w "$out"
+        mkdir -p "$out/target/release"
+        cp ${bin}/bin/herdr-mirror "$out/target/release/herdr-mirror"
+      '';
 
   mkHerdrNvimBin =
     {
@@ -98,6 +140,7 @@ let
   linkedPlugins = pkgs: [
     (mkHerdrSplits pkgs)
     (mkHerdrNvimPlugin pkgs)
+    (mkHerdrMirrorPlugin pkgs)
     (mkHerdrYazi pkgs)
     (mkHerdrCommandPalette pkgs)
     (mkHerdrOhMyZsh pkgs)
@@ -165,7 +208,6 @@ let
       toggle_sidebar = "prefix+b";
       open_notification_target = "prefix+shift+o";
 
-      new_workspace = "prefix+shift+n";
       rename_workspace = "prefix+shift+w";
       close_workspace = "prefix+shift+d";
       switch_workspace = "prefix+shift+1..9";
@@ -239,6 +281,17 @@ let
         (popup "prefix+t" ''exec "''${SHELL:-sh}"'' "scratch terminal")
         (popup "prefix+alt+g" "lazygit" "lazygit")
         (popup "prefix+alt+d" "lazydocker" "lazydocker")
+        (pluginAction "prefix+shift+m" "mirror.start" "mirror: start/resume")
+        (pluginAction "prefix+alt+s" "mirror.pause" "mirror: pause sync")
+        (pluginAction "prefix+shift+b" "mirror.restore" "mirror: restore closed")
+        (pluginAction "prefix+alt+shift+d" "mirror.teardown" "mirror: teardown (destructive)")
+        (pluginAction "prefix+alt+h" "mirror.hide" "mirror: hide host")
+        (pluginAction "prefix+alt+shift+h" "mirror.show" "mirror: show host")
+        (pluginAction "prefix+shift+n" "mirror.new-workspace-pick" "mirror: new workspace (pick host)")
+        (pluginAction "prefix+alt+n" "mirror.remote-new-workspace" "mirror: new workspace on remote")
+        (pluginAction "prefix+alt+c" "mirror.remote-new-tab" "mirror: new tab on remote")
+        (pluginAction "prefix+alt+v" "mirror.remote-split-right" "mirror: split right on remote")
+        (pluginAction "prefix+alt+minus" "mirror.remote-split-down" "mirror: split down on remote")
       ];
     };
 
@@ -347,6 +400,10 @@ let
       comments = [ "L" ];
     };
   };
+
+  herdrMirrorSettings = {
+    hosts."orangepi-ts".target = "orangepi-ts";
+  };
 in
 {
   perSystem =
@@ -375,6 +432,7 @@ in
     }:
     let
       herdr = mkHerdr pkgs inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr;
+      herdrMirrorBin = pkgs.callPackage mkHerdrMirrorBin { };
       toml = pkgs.formats.toml { };
       configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs);
       pluginRoots = linkedPlugins pkgs;
@@ -526,6 +584,7 @@ in
     {
       home.packages = [
         herdr
+        herdrMirrorBin
         pickFileFullscreen
         pluginsSync
         sendPaths
@@ -550,6 +609,9 @@ in
 
       xdg.configFile."herdr/plugins/config/persiyanov.reviewr/config.toml".source =
         toml.generate "herdr-reviewr-config.toml" reviewrSettings;
+
+      xdg.configFile."herdr-mirror/hosts.toml".source =
+        toml.generate "herdr-mirror-hosts.toml" herdrMirrorSettings;
 
       programs.zsh.shellAliases = {
         hd = "herdr";
@@ -576,6 +638,10 @@ in
         omz_custom_plugins="${ohMyZshCustomDir}/plugins"
         mkdir -p "$omz_custom_plugins"
         ln -sfn ${ohMyZshPlugin} "$omz_custom_plugins/herdr"
+
+        if ! ${pluginsSync}/bin/herdr-plugins-sync >/dev/null 2>&1; then
+          log "herdr-plugins-sync failed (offline or herdr unreachable?)"
+        fi
       '';
     };
 }
