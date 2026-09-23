@@ -194,6 +194,7 @@ in
       '';
 
       mcpServers = [
+        "codebase_memory"
         "context7"
         "gh_grep"
         "gitlab"
@@ -348,6 +349,16 @@ in
             url = "https://mcp.grep.app";
             enabled = true;
           };
+          codebase_memory = {
+            type = "local";
+            command = [
+              "npx"
+              "-y"
+              "codebase-memory-mcp"
+            ];
+            environment.CBM_ALLOWED_ROOT = config.home.homeDirectory;
+            enabled = true;
+          };
           searxng = {
             type = "local";
             command = [
@@ -372,7 +383,10 @@ in
         };
 
         # plugin is LIST_UNION_KEY: repo ["opencode-auto-resume"] + ours = union
-        plugin = [ "opencode-claude-auth@latest" ];
+        plugin = [
+          "opencode-claude-auth@latest"
+          "@cortexkit/aft-opencode@latest"
+        ];
       };
 
       nixPreseedJsonFile = pkgs.writeText "opencode-preseed.json" (builtins.toJSON nixPreseedConfig);
@@ -387,6 +401,8 @@ in
         home.packages = [
           pkgs-unstable.opencode-desktop
         ];
+
+        home.sessionVariables.ORT_DYLIB_PATH = "${pkgs.onnxruntime}/lib/libonnxruntime.so";
 
         programs.opencode = {
           enable = true;
@@ -569,6 +585,22 @@ in
           # Mirror opencode.json -> config.json (OpenCode reads both)
           if [[ -f "$opencode_dir/opencode.json" ]]; then
             ln -sf "$opencode_dir/opencode.json" "$opencode_dir/config.json"
+          fi
+
+          if [[ ! -f "$opencode_dir/skills/bmad/SKILL.md" ]]; then
+            log "Installing BMad Method skills for opencode (global)"
+            export PATH="${
+              lib.makeBinPath [
+                pkgs.nodejs
+                pkgs.git
+                pkgs.coreutils
+              ]
+            }:$PATH"
+            if ! "${pkgs.coreutils}/bin/timeout" 240s npx --yes skills add bmad-code-org/BMAD-METHOD \
+              --skill bmad --skill bmod-core-tools --skill bmod-method --skill bmad-build \
+              --agent opencode --global --yes >/dev/null 2>&1; then
+              log "WARNING: BMad skills install failed (no network?)"
+            fi
           fi
 
           log "opencode setup complete"
