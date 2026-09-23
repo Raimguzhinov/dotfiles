@@ -356,6 +356,7 @@
                 pfetch
                 pinta
                 spotify
+                typescript-language-server
               ]);
 
             xdg.configFile."gopass/config".text = ''
