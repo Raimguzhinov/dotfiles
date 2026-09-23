@@ -237,6 +237,12 @@ in
         "app.thinking.cycle" = "shift+ctrl+t";
       };
 
+      aftConfig = {
+        experimental_search_index = true;
+        experimental_semantic_search = true;
+        format_on_edit = true;
+      };
+
       toJsonFile = (pkgs.formats.json { }).generate;
 
       modelsJsonFile = toJsonFile "pi-models.json" modelsConfig;
@@ -244,6 +250,7 @@ in
       settingsSeedFile = toJsonFile "pi-settings-seed.json" settingsSeed;
       permissionsPolicyFile = toJsonFile "pi-permissions.json" permissionsPolicy;
       keybindingsJsonFile = toJsonFile "pi-keybindings.json" keybindingsOverrides;
+      aftJsonFile = toJsonFile "aft.jsonc" aftConfig;
     in
     {
       config = {
@@ -251,6 +258,11 @@ in
         home.packages = [
           pkgs-unstable.pi-coding-agent
         ];
+
+        # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
+        home.sessionVariables.PI_OFFLINE = "1";
+
+        home.file.".config/cortexkit/aft.jsonc".source = aftJsonFile;
 
         home.activation.setupPi = mkAfter /* bash */ ''
           set -euo pipefail

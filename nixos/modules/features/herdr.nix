@@ -251,6 +251,11 @@ let
 
     session.resume_agents_on_restore = true;
 
+    update = {
+      version_check = false;
+      manifest_check = false;
+    };
+
     worktrees.directory = "~/Work/herdr-worktrees";
 
     ui = {
