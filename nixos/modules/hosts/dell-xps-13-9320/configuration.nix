@@ -946,10 +946,7 @@
       };
 
       # VPN
-      networking.networkmanager.plugins = with pkgs; [
-        networkmanager-openvpn
-        networkmanager-sstp
-      ];
+      networking.networkmanager.plugins = with pkgs; [ networkmanager-openvpn ];
       # NM не должен управлять мостом/тапами libvirt — иначе дергает virbr0 при
       # resume/hibernate и ломает NAT/DHCP (nixpkgs#425874).
       networking.networkmanager.unmanaged = [

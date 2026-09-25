@@ -237,13 +237,14 @@ in
         defaultModel = "agent_proteya";
         theme = "dark";
         packages = [
-          "npm:@upstash/context7-pi"
           "npm:@cortexkit/aft-pi"
           "npm:@majorgilles/pi-grill-me"
+          "npm:@upstash/context7-pi"
           "npm:pi-llama-cpp"
           "npm:pi-mcp-adapter"
-          "npm:pi-plan"
           "npm:pi-permission-system"
+          "npm:pi-plan"
+          "npm:pi-subagents"
           "npm:pi-undo-redo"
         ];
 

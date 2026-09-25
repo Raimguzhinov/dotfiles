@@ -894,7 +894,6 @@ let
         enable = true;
         setupOpts.keymaps.basic = true;
       };
-      nvim-scrollbar.enable = true;
     };
     statusline.lualine = {
       enable = true;
