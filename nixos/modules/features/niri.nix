@@ -104,7 +104,6 @@
       ];
 
       programs.niri = {
-        package = pkgs.niri-unstable;
         settings =
           let
             noctalia =

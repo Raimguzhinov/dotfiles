@@ -87,6 +87,7 @@
       # Niri
       niri-flake.cache.enable = false;
       programs.niri.enable = true;
+      programs.niri.package = pkgs.niri-unstable;
       hardware.graphics = {
         enable = true;
         extraPackages = with pkgs; [
@@ -973,6 +974,7 @@
       # Power
       services.tuned.enable = true;
       services.upower.enable = true;
+      services.upower.criticalPowerAction = "Hibernate";
       services.fwupd.enable = true;
 
       services.fstrim.enable = true; # SSD TRIM (weekly)

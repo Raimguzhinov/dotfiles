@@ -130,6 +130,61 @@ nixos/
 
 - `xps-auth-post-resume` перезапускает `fprintd` и `polkit-soteria` после resume
   для снижения race-condition.
+- `xps-touchpad-reset-post-resume` делает unbind/bind `i2c-VEN_04F3:00` в
+  драйвере `i2c_hid_acpi` (полный probe = HID RESET тачпада Elan).
+- Все post-resume сервисы запускаются из `powerManagement.resumeCommands`
+  (скрипт `ExecStop` у `sleep-actions.service`), а не через
+  `post-resume.target` — такого таргета нет.
+
+### Тачпад (Elan `VEN_04F3:00 04F3:31D1`, haptic)
+
+Цепочка: `i2c_designware.1` (встроен в ядро, `=y`) → `i2c-VEN_04F3:00` →
+`i2c_hid_acpi` → `hid-multitouch` (класс `MT_CLS_WIN_8`). Узлы: `… Mouse`,
+`… Touchpad`, `… UNKNOWN`. Давление не отдаёт, клик генерирует прошивка.
+
+Известные проблемы и фиксы (сентябрь 2026):
+
+| Симптом | Причина | Фикс |
+|---|---|---|
+| После resume курсор сам уезжает, в `dmesg` флуд `i2c_designware.1: spurious STOP detected` | Elan после некоторых resume в полуинициализированном состоянии; `i2c_hid` не делает HID RESET на resume (нет `I2C_HID_QUIRK_RESET_ON_RESUME` для Elan) | `xps-touchpad-reset-post-resume` |
+| После сна «нужен лишний палец» (1 палец — ничего, 2 — курсор), само проходит | libinput #1319: протухший `is_tool_palm` у слота после закрытия fd (крышка → `tp_suspend(SUSPEND_LID)`) | патч libinput в overlay (см. ниже) |
+| Раз в день «зажата кнопка» (движение = выделение/drag) | не доказано; главная гипотеза — второй путь тачпада через PS/2 (`DLL0af3` на i8042 AUX) | `boot.blacklistedKernelModules = [ "psmouse" ]` |
+
+- `services.upower.criticalPowerAction = "Hibernate"`: дефолтный
+  `HybridSleep` при 2% оставлял машину в s2idle на пустой батарее
+  (один из триггеров сбоя тачпада, плюс hybrid-sleep 25.09 потерял сессию).
+- **Не использовать** `modprobe -r i2c_designware_*` (скрипт nixos-hardware
+  `sleep-resume/i2c-designware`): модуль встроен, `modprobe -r` для него
+  no-op, а `i2c_hid_acpi` после этого никто не загружает — тачпад мёртв до
+  ребута. Именно это «ломало тачпад» в старой попытке.
+- `tap = false`, `dwt = false` в niri — tap-and-drag/drag-lock к залипанию
+  кнопки отношения не имеют.
+
+Диагностика в момент сбоя — навык `.claude/skills/xps-touchpad-debug`
+(локальный, `.claude` в gitignore). Ключевое: сравнить состояние ядра
+(`EVIOCGMTSLOTS`/`EVIOCGKEY` на `/dev/input/eventN`) со свежим
+`libinput debug-events` и с поведением niri — это сразу делит баг на
+прошивка/ядро/libinput композитора.
+
+### Временные upstream-патчи (удалить, когда придут из nixpkgs)
+
+- **libinput `d0e6d43a` («touchpad: sync the slot's tool type when syncing
+  touch state», issue #1319, MR !1505)** — в `nixos/modules/overlays.nix`
+  подмешивается только в `niri-unstable` (единственный niri в системе,
+  без массовой пересборки). Фикс есть в libinput ≥ 1.31.901 / 1.32.0.
+  При `nixos-rebuild` overlay сам выдаёт `warning: overlays.nix: libinput …
+  already contains d0e6d43a`, как только в nixpkgs libinput ≥ 1.31.901.
+  Ручная проверка:
+  `nix eval --raw ~/dotfiles/nixos#nixosConfigurations.raimguzhinov.pkgs.libinput.version`.
+  Увидел warning — удалить `let libinput = …` и оверрайд `niri-unstable`
+  из overlay (оставить только `doCheck = false` у `niri`).
+  Если `fetchpatch` перестанет применяться (патч уже внутри) — это тот же
+  сигнал.
+- niri: единственный пакет — `niri-unstable`, задаётся в NixOS
+  `programs.niri.package` (`configuration.nix`). NixOS-модуль niri-flake
+  через `mkForce` навязывает свой пакет в HM, поэтому `package` в HM
+  (`niri.nix`) не задавать — он игнорируется. Дефолт модуля — `niri-stable`,
+  без явного `programs.niri.package` незаметно откатится на него.
 
 ## Direnv / nix-direnv
 

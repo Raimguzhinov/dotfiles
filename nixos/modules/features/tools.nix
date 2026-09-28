@@ -29,6 +29,18 @@
           zle -N edit-command-line
           bindkey "^g" edit-command-line
 
+          fancy-ctrl-z() {
+            if [[ $#BUFFER -eq 0 ]]; then
+              BUFFER="fg"
+              zle accept-line
+            else
+              zle push-input
+              zle clear-screen
+            fi
+          }
+          zle -N fancy-ctrl-z
+          bindkey '^Z' fancy-ctrl-z
+
           # Post-install reminder until hardware-configuration.nix is committed
           if [[ -n "$(git -C ~/dotfiles status --porcelain nixos/hardware-configuration.nix 2>/dev/null)" ]]; then
             awk 'found && /^---/{exit} /^## После первой загрузки/{found=1} found' ~/dotfiles/README.md | glow -

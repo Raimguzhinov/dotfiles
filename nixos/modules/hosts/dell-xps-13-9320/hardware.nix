@@ -22,6 +22,7 @@
         "sd_mod"
       ];
       boot.initrd.kernelModules = [ ];
+      boot.blacklistedKernelModules = [ "psmouse" ];
 
       # Kernel pinning: keeps updates predictable and avoids surprise jumps.
       # Also helps Nix reuse binary caches (important for faster `nix flake update` cycles).
@@ -330,7 +331,7 @@
       };
 
       # NOTE: a post-resume PCI unbind/rebind of the IPU6 device and a
-      # post-resume i2c_designware/i2c_hid reload were both tried here and
+      # post-resume i2c_designware reload were both tried here and
       # both removed. The IPU6 rebind hung for the full 30s timeout and got
       # force-killed mid-unbind (confirmed in journalctl: "start operation
       # timed out. Terminating."), which is exactly the kind of half-finished
@@ -378,6 +379,25 @@
         '';
       };
 
+      systemd.services.xps-touchpad-reset-post-resume = {
+        description = "XPS 9320: reset Elan touchpad after resume";
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 15;
+        };
+        script = ''
+          set -eu
+          dev=i2c-VEN_04F3:00
+          drv=/sys/bus/i2c/drivers/i2c_hid_acpi
+          [ -e "/sys/bus/i2c/devices/$dev" ] || exit 0
+          if [ -e "$drv/$dev" ]; then
+            echo "$dev" > "$drv/unbind"
+            sleep 1
+          fi
+          echo "$dev" > "$drv/bind"
+        '';
+      };
+
       # The actual resume hook (see comment above xps-camera-post-resume for
       # why this replaces the old WantedBy="post-resume.target" pattern).
       # --no-block: fire all four in parallel, don't hold up resume on them.
@@ -385,6 +405,7 @@
         ${pkgs.systemd}/bin/systemctl start --no-block \
           xps-auth-post-resume.service \
           xps-alsa-restore-post-resume.service \
+          xps-touchpad-reset-post-resume.service \
           xps-mic-route.service
       '';
 
