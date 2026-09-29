@@ -48,11 +48,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1790701276,
-        "narHash": "sha256-v4G6hl8Eso0FDglgvAsauycl4x0WmtIJOdD3Cc3nudw=",
+        "lastModified": 1790712152,
+        "narHash": "sha256-exe/6twNeFdJa0nEM94A3CpBswFQx2ytZCRxLO3tLuw=",
         "owner": "Raimguzhinov",
         "repo": "ecdy",
-        "rev": "4c11ab98bbe913e9e2df93a7a9a8d27afe81b49a",
+        "rev": "db528a67624ff9db78e9faffe00a9dc7434cfe56",
         "type": "github"
       },
       "original": {

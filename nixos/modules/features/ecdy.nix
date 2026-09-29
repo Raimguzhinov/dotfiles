@@ -12,7 +12,7 @@
     programs.ecdy = {
       enable = true;
       settings = {
-        default_agent = "pi";
+        default_agent = "opencode";
         agents.pi.command = [ "pi-acp" ];
       };
     };

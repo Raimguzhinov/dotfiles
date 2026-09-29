@@ -70,9 +70,10 @@ let
             real="${opencode}/bin/opencode"
 
             if [ -n "''${1-}" ]; then
-              while read -r subcommand; do
+              mapfile -t known < ${subcommands}
+              for subcommand in "''${known[@]}"; do
                 [ "$1" = "$subcommand" ] && exec "$real" "$@"
-              done < ${subcommands}
+              done
             fi
 
             port=""
@@ -198,7 +199,6 @@ in
         "context7"
         "gh_grep"
         "gitlab"
-        "logzone"
         "rag"
         "searxng"
         "typst"
@@ -229,8 +229,7 @@ in
       nixPreseedConfig = {
         "$schema" = "https://opencode.ai/config.json";
         share = "disabled";
-        default_agent = "plan";
-        small_model = "Protei/Small";
+        default_agent = "build";
 
         permission = mcpPermissions // {
           # "*" = "ask";
@@ -573,6 +572,8 @@ in
           if [[ -f "$opencode_dir/opencode.json" ]]; then
             "${lib.getExe pkgs.jq}" \
               'del(.enabled_providers)
+               | .model = "opencode/muse-spark-1.3-contributor-free"
+               | .small_model = "opencode/mimo-v2.6-flash-free"
                | del(.provider.Protei.models[]?.variants.high)
                | .provider.Protei.models.Coding.limit = { context: 262144, output: 65536 }
                | .provider.Protei.models.Strict.limit.context = 262144' \
