@@ -1,12 +1,39 @@
 { ... }:
 let
   searxPort = 8899;
+
+  mkPiAcp =
+    {
+      lib,
+      buildNpmPackage,
+      fetchFromGitHub,
+    }:
+    buildNpmPackage (finalAttrs: {
+      pname = "pi-acp";
+      version = "0.0.34";
+
+      src = fetchFromGitHub {
+        owner = "svkozak";
+        repo = "pi-acp";
+        tag = "v${finalAttrs.version}";
+        hash = "sha256-QRwxOtTZOY+Np3PkAoy2o2PrUzEqjItM/372sCPlSMo=";
+      };
+      npmDepsHash = "sha256-BvLNtFfp1cMVjzWcMRSdhTqiJrTfbFoUbWkkPW9200o=";
+
+      meta = {
+        description = "ACP adapter for pi coding agent";
+        homepage = "https://github.com/svkozak/pi-acp";
+        license = lib.licenses.mit;
+        mainProgram = "pi-acp";
+      };
+    });
 in
 {
   perSystem =
-    { pkgs-unstable, ... }:
+    { pkgs, pkgs-unstable, ... }:
     {
       packages.pi = pkgs-unstable.pi-coding-agent;
+      packages.pi-acp = pkgs.callPackage mkPiAcp { };
     };
 
   flake.nixosModules.pi =
@@ -301,6 +328,7 @@ in
 
         home.packages = [
           pkgs-unstable.pi-coding-agent
+          (pkgs.callPackage mkPiAcp { })
         ];
 
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
@@ -345,20 +373,21 @@ in
             chmod 644 "$agent_dir/settings.json"
           fi
 
-          if [[ ! -d "$agent_dir/npm/node_modules/pi-mcp-adapter" ]]; then
-            log "Installing pi-mcp-adapter"
-            export PATH="${
-              lib.makeBinPath [
-                pkgs-unstable.pi-coding-agent
-                pkgs.nodejs
-                pkgs.git
-                pkgs.coreutils
-              ]
-            }:$PATH"
-            if ! "${pkgs.coreutils}/bin/timeout" 180s pi install npm:pi-mcp-adapter >/dev/null 2>&1; then
-              log "WARNING: pi install npm:pi-mcp-adapter failed (no network?)"
+          for pkg in ${lib.escapeShellArgs settingsSeed.packages}; do
+            if [[ ! -d "$agent_dir/npm/node_modules/''${pkg#npm:}" ]]; then
+              log "Installing $pkg"
+              if ! PATH="${
+                lib.makeBinPath [
+                  pkgs-unstable.pi-coding-agent
+                  pkgs.nodejs
+                  pkgs.git
+                  pkgs.coreutils
+                ]
+              }:$PATH" "${pkgs.coreutils}/bin/timeout" 180s pi install "$pkg" >/dev/null 2>&1; then
+                log "WARNING: pi install $pkg failed (no network?)"
+              fi
             fi
-          fi
+          done
 
           if [[ ! -f "$agent_dir/skills/bmad/SKILL.md" ]]; then
             log "Installing BMad Method skills for pi (global)"

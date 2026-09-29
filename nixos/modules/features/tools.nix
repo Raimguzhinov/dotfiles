@@ -180,10 +180,12 @@
         enable = true;
         enableBashIntegration = true;
         enableZshIntegration = true;
+        flags = [ "--disable-ai" ];
         settings = {
           keymap_mode = "auto";
           inline_height = 20;
           enter_accept = false;
+          history_filter = [ "^ecdy ask -- " ];
         };
       };
 

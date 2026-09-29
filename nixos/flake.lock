@@ -41,6 +41,26 @@
         "type": "github"
       }
     },
+    "ecdy": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790701276,
+        "narHash": "sha256-v4G6hl8Eso0FDglgvAsauycl4x0WmtIJOdD3Cc3nudw=",
+        "owner": "Raimguzhinov",
+        "repo": "ecdy",
+        "rev": "4c11ab98bbe913e9e2df93a7a9a8d27afe81b49a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Raimguzhinov",
+        "repo": "ecdy",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "locked": {
         "lastModified": 1767039857,
@@ -486,6 +506,7 @@
       "inputs": {
         "claude-code": "claude-code",
         "disko": "disko",
+        "ecdy": "ecdy",
         "flake-compat": "flake-compat",
         "flake-parts": "flake-parts",
         "flake-utils": "flake-utils",

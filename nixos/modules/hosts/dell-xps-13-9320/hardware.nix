@@ -211,6 +211,7 @@
       '';
       services.udev.extraRules = ''
         SUBSYSTEM=="mei", KERNEL=="intel_vsc-92335fcf-3203-4472-af93-7b4453ac29da", RUN+="${pkgs.kmod}/bin/modprobe intel_ipu6", RUN+="${pkgs.kmod}/bin/modprobe intel_ipu6_isys"
+        ACTION=="add|bind", SUBSYSTEM=="i2c", KERNEL=="i2c-VEN_04F3:00", ATTR{power/wakeup}="disabled"
       '';
 
       # Finds the active ipu6 capture device and creates /dev/camera-active symlink.

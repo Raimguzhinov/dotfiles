@@ -581,6 +581,7 @@
               homeModules.clashVerge
               homeModules.claude
               homeModules.development
+              homeModules.ecdy
               homeModules.git
               homeModules.herdr
               homeModules.jetbrains
