@@ -133,6 +133,8 @@ in
 
       piAgentDir = "${config.home.homeDirectory}/.pi/agent";
 
+      grillMePackage = "npm:@majorgilles/pi-grill-me";
+
       readSecret = name: "!cat ${config.sops.secrets.${name}.path}";
 
       modelsConfig = {
@@ -149,8 +151,8 @@ in
                 "text"
                 "image"
               ];
-              contextWindow = 262144;
-              maxTokens = 65536;
+              contextWindow = 131072;
+              maxTokens = 8192;
               samplingParams = {
                 temperature = 1.0;
                 top_p = 0.95;
@@ -171,6 +173,9 @@ in
               compat = {
                 supportsDeveloperRole = false;
                 thinkingFormat = "chat-template";
+                # TODO: если LiteLLM/vLLM Протея отвечает 400 — первым убрать это поле
+                thinkingTokenBudgetField = "thinking_token_budget";
+                sendSessionAffinityHeaders = true;
                 chatTemplateKwargs = {
                   enable_thinking = {
                     "$var" = "thinking.enabled";
@@ -187,6 +192,7 @@ in
       };
 
       mcpConfig = {
+        settings.namespaceProxyTools = false;
         mcpServers = {
           youtrack = {
             url = "https://youtrackmcp.ai.protei.ru/mcp";
@@ -247,15 +253,6 @@ in
               CBM_ALLOWED_ROOT = config.home.homeDirectory;
             };
           };
-          typst = {
-            command = "docker";
-            args = [
-              "run"
-              "--rm"
-              "-i"
-              "ghcr.io/johannesbrandenburger/typst-mcp:latest"
-            ];
-          };
         };
       };
 
@@ -263,15 +260,26 @@ in
         defaultProvider = "Protei";
         defaultModel = "agent_proteya";
         theme = "dark";
+        defaultThinkingLevel = "low";
+        thinkingBudgets = {
+          low = 2048;
+          medium = 4096;
+          high = 6144;
+        };
+        compaction = {
+          reserveTokens = 32768;
+          keepRecentTokens = 20000;
+        };
         packages = [
           "npm:@cortexkit/aft-pi"
-          "npm:@majorgilles/pi-grill-me"
           "npm:@upstash/context7-pi"
           "npm:pi-llama-cpp"
+          "npm:@juicesharp/rpiv-todo"
+          "npm:pi-cache-optimizer"
+          "npm:pi-checkpoint-compaction"
           "npm:pi-mcp-adapter"
           "npm:pi-permission-system"
           "npm:pi-plan"
-          "npm:pi-subagents"
           "npm:pi-undo-redo"
         ];
 
@@ -301,6 +309,17 @@ in
         };
         tools = {
           "grill_*" = "allow";
+          read = "allow";
+          grep = "allow";
+          find = "allow";
+          ls = "allow";
+          aft_outline = "allow";
+          aft_zoom = "allow";
+          aft_search = "allow";
+          resolve-library-id = "allow";
+          query-docs = "allow";
+          todo = "allow";
+          checkpoint_update = "allow";
         };
       };
 
@@ -309,9 +328,19 @@ in
       };
 
       aftConfig = {
-        experimental_search_index = true;
-        experimental_semantic_search = true;
         format_on_edit = true;
+        edit_mode = "hashline";
+        bash.background = false;
+        disabled_tools = [
+          "aft_inspect"
+          "aft_import"
+          "aft_conflicts"
+          "ast_grep_search"
+          "ast_grep_replace"
+          "aft_callgraph"
+          "aft_delete"
+          "aft_move"
+        ];
       };
 
       toJsonFile = (pkgs.formats.json { }).generate;
@@ -322,6 +351,131 @@ in
       permissionsPolicyFile = toJsonFile "pi-permissions.json" permissionsPolicy;
       keybindingsJsonFile = toJsonFile "pi-keybindings.json" keybindingsOverrides;
       aftJsonFile = toJsonFile "aft.jsonc" aftConfig;
+      checkpointNudgeFile = pkgs.writeText "checkpoint-nudge.ts" /* typescript */ ''
+        import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+        import { readFileSync } from "node:fs";
+        import { homedir } from "node:os";
+        import { join } from "node:path";
+
+        const DEFAULT_RESERVE_TOKENS = 16384;
+        const NOTICE_SHARE = 0.6;
+        const WARNING_SHARE = 0.8;
+
+        const CONTENT =
+          "GOAL (the user's actual intent), DECISIONS (choices made and why), STATE (key paths, variables, test status). " +
+          "For DONE and NEXT write one line pointing to the todo list instead of repeating it.";
+
+        const readCompaction = (file: string): Record<string, any> => {
+          try {
+            return JSON.parse(readFileSync(file, "utf8")).compaction ?? {};
+          } catch {
+            return {};
+          }
+        };
+
+        const reserveTokens = (ctx: ExtensionContext): number => {
+          const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
+          const global = readCompaction(join(agentDir, "settings.json"));
+          const project = readCompaction(join(ctx.cwd, ".pi", "settings.json"));
+          const key = ctx.model ? `''${ctx.model.provider}/''${ctx.model.id}` : "";
+          return (
+            project.modelOverrides?.[key]?.reserveTokens ??
+            global.modelOverrides?.[key]?.reserveTokens ??
+            project.reserveTokens ??
+            global.reserveTokens ??
+            DEFAULT_RESERVE_TOKENS
+          );
+        };
+
+        const k = (tokens: number) => `''${Math.round(tokens / 1000)}k`;
+
+        export default function (pi: ExtensionAPI) {
+          let stage = 0;
+          let checkpointedAt = -1;
+          let checkpointedThisTurn = false;
+          let forced = false;
+
+          const reset = () => {
+            stage = 0;
+            checkpointedAt = -1;
+            checkpointedThisTurn = false;
+            forced = false;
+          };
+
+          const nudge = (text: string) => ({
+            type: "custom_message" as const,
+            customType: "checkpoint-nudge",
+            display: true,
+            content: text,
+          });
+
+          const usage = (ctx: ExtensionContext) => {
+            const u = ctx.getContextUsage();
+            if (!u || u.tokens == null) return undefined;
+            const compactAt = u.contextWindow - reserveTokens(ctx);
+            if (compactAt <= 0) return undefined;
+            return { tokens: u.tokens, compactAt };
+          };
+
+          pi.on("session_start", reset);
+          pi.on("session_compact", reset);
+          pi.on("session_tree", reset);
+
+          pi.on("tool_result", (event) => {
+            if (event.toolName !== "checkpoint_update" || event.isError) return;
+            const text = event.content.map((c) => (c.type === "text" ? c.text : "")).join("");
+            if (!text.startsWith("checkpoint_update ignored")) checkpointedThisTurn = true;
+          });
+
+          pi.on("turn_end", (_event, ctx) => {
+            const u = usage(ctx);
+            const next = !u ? stage : u.tokens >= u.compactAt * WARNING_SHARE ? 2 : u.tokens >= u.compactAt * NOTICE_SHARE ? 1 : 0;
+            const advanced = next > stage;
+            if (advanced) stage = next;
+            if (checkpointedThisTurn) {
+              checkpointedAt = stage;
+              checkpointedThisTurn = false;
+              return;
+            }
+            if (!advanced || !u) return;
+            const where = `[context ''${k(u.tokens)} of ''${k(u.compactAt)} before compaction]`;
+            const text =
+              stage === 1
+                ? `''${where} At your next milestone call checkpoint_update with ''${CONTENT}`
+                : `''${where} Compaction is close. Before your next action call checkpoint_update with ''${CONTENT} Anything not in the checkpoint will be lost.`;
+            return { entries: [nudge(text)] };
+          });
+
+          pi.on("agent_before_settle", (event, ctx) => {
+            if (event.outcome !== "completed" || stage < 2 || checkpointedAt >= 2 || forced) return;
+            forced = true;
+            const u = usage(ctx);
+            const where = u ? `[context ''${k(u.tokens)} of ''${k(u.compactAt)} before compaction]` : "[context almost full]";
+            return {
+              entries: [nudge(`''${where} The checkpoint is not updated. Call checkpoint_update now with ''${CONTENT} Then stop.`)],
+              continue: true,
+            };
+          });
+        }
+      '';
+
+      appendSystemFile = pkgs.writeText "pi-append-system.md" /* markdown */ ''
+        The user is a senior developer. Be terse. Reply in the user's language. Work autonomously until the task is done or you are blocked.
+
+        For every task:
+        1. Locate: find the relevant code with grep, aft_search, aft_outline or aft_zoom. Read only the line ranges you need. Never guess file contents, APIs or paths.
+        2. Plan: if the change touches more than one file, first write a numbered plan of at most 5 steps.
+        3. Edit: make one small change at a time. Match the existing style. Do not add files, dependencies or refactors that were not asked for.
+        4. Verify: after editing, run the narrowest build, test or lint command. On failure, read the error, fix it and re-run. After 3 failed attempts, stop and report.
+        5. Report in at most 5 lines: what changed (path:line), how it was verified, what is left.
+
+        Rules:
+        - Make independent read-only tool calls in the same turn.
+        - If the request is ambiguous, ask one question before editing anything.
+        - Never claim success without a passing verify step; if nothing can be run, say so.
+        - Do not repeat file contents or tool output back to the user.
+        - If the same error appears twice in a row, stop and explain what you tried.
+      '';
     in
     {
       config = {
@@ -333,6 +487,8 @@ in
 
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
         home.sessionVariables.PI_OFFLINE = "1";
+
+        programs.zsh.shellAliases.pig = "pi -e ${grillMePackage}";
 
         home.activation.setupPi = mkAfter /* bash */ ''
           set -euo pipefail
@@ -356,6 +512,13 @@ in
           cp --reflink=never "${keybindingsJsonFile}" "$agent_dir/keybindings.json"
           chmod 600 "$agent_dir/keybindings.json"
 
+          cp --reflink=never "${appendSystemFile}" "$agent_dir/APPEND_SYSTEM.md"
+          chmod 644 "$agent_dir/APPEND_SYSTEM.md"
+
+          mkdir -p "$agent_dir/extensions"
+          cp --reflink=never "${checkpointNudgeFile}" "$agent_dir/extensions/checkpoint-nudge.ts"
+          chmod 644 "$agent_dir/extensions/checkpoint-nudge.ts"
+
           if ! cmp -s "${mcpJsonFile}" "$agent_dir/mcp.json"; then
             cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
             chmod 600 "$agent_dir/mcp.json"
@@ -364,8 +527,7 @@ in
           fi
 
           if [[ -f "$agent_dir/settings.json" ]]; then
-            "${lib.getExe pkgs.jq}" --slurpfile seed "${settingsSeedFile}" \
-              '(.packages // []) as $old | (. * $seed[0]) | .packages = (($old + $seed[0].packages) | unique)' \
+            "${lib.getExe pkgs.jq}" --slurpfile seed "${settingsSeedFile}" '. * $seed[0]' \
               "$agent_dir/settings.json" > "$agent_dir/settings.json.tmp" \
               && mv "$agent_dir/settings.json.tmp" "$agent_dir/settings.json"
           else
@@ -373,40 +535,35 @@ in
             chmod 644 "$agent_dir/settings.json"
           fi
 
-          for pkg in ${lib.escapeShellArgs settingsSeed.packages}; do
-            if [[ ! -d "$agent_dir/npm/node_modules/''${pkg#npm:}" ]]; then
-              log "Installing $pkg"
-              if ! PATH="${
-                lib.makeBinPath [
-                  pkgs-unstable.pi-coding-agent
-                  pkgs.nodejs
-                  pkgs.git
-                  pkgs.coreutils
-                ]
-              }:$PATH" "${pkgs.coreutils}/bin/timeout" 180s pi install "$pkg" >/dev/null 2>&1; then
-                log "WARNING: pi install $pkg failed (no network?)"
+          npm_dir="$agent_dir/npm"
+          wanted=(${
+            lib.escapeShellArgs (map (lib.removePrefix "npm:") (settingsSeed.packages ++ [ grillMePackage ]))
+          })
+          export PATH="${
+            lib.makeBinPath [
+              pkgs.nodejs
+              pkgs.git
+              pkgs.coreutils
+            ]
+          }:$PATH"
+
+          if [[ -f "$npm_dir/package.json" ]]; then
+            while read -r dep; do
+              if ! printf '%s\n' "''${wanted[@]}" | grep -qxF -- "$dep"; then
+                log "Removing $dep"
+                npm --prefix "$npm_dir" uninstall "$dep" --legacy-peer-deps >/dev/null 2>&1 \
+                  || log "WARNING: npm uninstall $dep failed"
               fi
+            done < <("${lib.getExe pkgs.jq}" -r '.dependencies // {} | keys[]' "$npm_dir/package.json")
+          fi
+
+          for dep in "''${wanted[@]}"; do
+            if [[ ! -d "$npm_dir/node_modules/$dep" ]]; then
+              log "Installing $dep"
+              "${pkgs.coreutils}/bin/timeout" 180s npm --prefix "$npm_dir" install "$dep" --legacy-peer-deps >/dev/null 2>&1 \
+                || log "WARNING: npm install $dep failed (no network?)"
             fi
           done
-
-          if [[ ! -f "$agent_dir/skills/bmad/SKILL.md" ]]; then
-            log "Installing BMad Method skills for pi (global)"
-            export PATH="${
-              lib.makeBinPath [
-                pkgs.nodejs
-                pkgs.git
-                pkgs.coreutils
-              ]
-            }:$PATH"
-            # -a pi -g кладёт скиллы в ~/.pi/agent/skills — это ровно то место,
-            # которое pi сам сканирует глобально для любого проекта; набор
-            # --skill повторяет команду из README bmad-code-org/BMAD-METHOD
-            if ! "${pkgs.coreutils}/bin/timeout" 240s npx --yes skills add bmad-code-org/BMAD-METHOD \
-              --skill bmad --skill bmod-core-tools --skill bmod-method --skill bmad-build \
-              --agent pi --global --yes >/dev/null 2>&1; then
-              log "WARNING: BMad skills install failed (no network?)"
-            fi
-          fi
 
           log "pi setup complete"
         '';

@@ -1,16 +1,7 @@
 { ... }:
 {
   flake.homeModules.claude =
-    {
-      config,
-      lib,
-      pkgs,
-      pkgs-unstable,
-      ...
-    }:
-    let
-      claudeAgentDir = "${config.home.homeDirectory}/.claude";
-    in
+    { config, pkgs-unstable, ... }:
     {
       programs.claude-code = {
         enable = true;
@@ -55,28 +46,5 @@
           };
         };
       };
-
-      home.activation.setupClaudeBmad = lib.mkAfter /* bash */ ''
-        set -euo pipefail
-
-        agent_dir="${claudeAgentDir}"
-        log() { printf '[claude] %s\n' "$*" >&2; }
-
-        if [[ ! -f "$agent_dir/skills/bmad/SKILL.md" ]]; then
-          log "Installing BMad Method skills for Claude Code (global)"
-          export PATH="${
-            lib.makeBinPath [
-              pkgs.nodejs
-              pkgs.git
-              pkgs.coreutils
-            ]
-          }:$PATH"
-          if ! "${pkgs.coreutils}/bin/timeout" 240s npx --yes skills add bmad-code-org/BMAD-METHOD \
-            --skill bmad --skill bmod-core-tools --skill bmod-method --skill bmad-build \
-            --agent claude-code --global --yes >/dev/null 2>&1; then
-            log "WARNING: BMad skills install failed (no network?)"
-          fi
-        fi
-      '';
     };
 }
