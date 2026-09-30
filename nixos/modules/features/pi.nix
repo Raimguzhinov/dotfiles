@@ -302,9 +302,9 @@ in
       permissionsPolicy = {
         defaultPolicy = {
           tools = "ask";
-          bash = "ask";
-          mcp = "ask";
-          skills = "ask";
+          bash = "allow";
+          mcp = "allow";
+          skills = "allow";
           special = "ask";
         };
         tools = {
@@ -351,6 +351,37 @@ in
       permissionsPolicyFile = toJsonFile "pi-permissions.json" permissionsPolicy;
       keybindingsJsonFile = toJsonFile "pi-keybindings.json" keybindingsOverrides;
       aftJsonFile = toJsonFile "aft.jsonc" aftConfig;
+      piVsCcExtensions =
+        pkgs.runCommand "pi-vs-cc-extensions"
+          {
+            src = pkgs.fetchFromGitHub {
+              owner = "disler";
+              repo = "pi-vs-claude-code";
+              rev = "0ed11f44932fdef29bd98467700019762298f50d";
+              hash = "sha256-n6v27jGRg1qCPQpflumGye7b4mz1U8xU06FVnfaglYA=";
+            };
+            nativeBuildInputs = [ pkgs.yq-go ];
+          }
+          /* bash */ ''
+            mkdir -p "$out"
+            yq -o=json "$src/.pi/damage-control-rules.yaml" > "$out/damage-control-rules.json"
+            substitute "$src/extensions/damage-control-continue.ts" "$out/damage-control.ts" \
+              --replace-fail 'import { parse as yamlParse } from "yaml";' 'const yamlParse = JSON.parse;' \
+              --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
+              --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
+              --replace-fail 'damage-control-rules.yaml' 'damage-control-rules.json'
+            substitute "$src/extensions/tool-counter.ts" "$out/tool-counter.ts" \
+              --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
+              --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
+              --replace-fail 'let tokIn = 0;' 'let tokIn = 0; let tokCache = 0;' \
+              --replace-fail 'tokIn += m.usage.input;' 'tokIn += m.usage.input; tokCache += m.usage.cacheRead ?? 0;' \
+              --replace-fail 'theme.fg("dim", " in ") +' 'theme.fg("dim", " in ") + theme.fg("success", `''${fmt(tokCache)}`) + theme.fg("dim", " cached ") +' \
+              --replace-fail 'return [line1, line2];' 'const statuses = [...footerData.getExtensionStatuses().values()].filter(Boolean).join(theme.fg("dim", " · ")); return statuses ? [line1, line2, truncateToWidth(" " + statuses, width, "")] : [line1, line2];'
+            substitute "$src/extensions/session-replay.ts" "$out/session-replay.ts" \
+              --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
+              --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' ""
+          '';
+
       checkpointNudgeFile = pkgs.writeText "checkpoint-nudge.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
         import { readFileSync } from "node:fs";
@@ -518,6 +549,13 @@ in
           mkdir -p "$agent_dir/extensions"
           cp --reflink=never "${checkpointNudgeFile}" "$agent_dir/extensions/checkpoint-nudge.ts"
           chmod 644 "$agent_dir/extensions/checkpoint-nudge.ts"
+
+          for ext in damage-control tool-counter session-replay; do
+            cp --reflink=never "${piVsCcExtensions}/$ext.ts" "$agent_dir/extensions/$ext.ts"
+            chmod 644 "$agent_dir/extensions/$ext.ts"
+          done
+          cp --reflink=never "${piVsCcExtensions}/damage-control-rules.json" "${config.home.homeDirectory}/.pi/damage-control-rules.json"
+          chmod 644 "${config.home.homeDirectory}/.pi/damage-control-rules.json"
 
           if ! cmp -s "${mcpJsonFile}" "$agent_dir/mcp.json"; then
             cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
