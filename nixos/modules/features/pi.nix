@@ -369,7 +369,10 @@ in
               --replace-fail 'import { parse as yamlParse } from "yaml";' 'const yamlParse = JSON.parse;' \
               --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
-              --replace-fail 'damage-control-rules.yaml' 'damage-control-rules.json'
+              --replace-fail 'damage-control-rules.yaml' 'damage-control-rules.json' \
+              --replace-fail 'const inputPaths: string[] = [];' 'const inputPaths: string[] = []; const deletedPaths: string[] = [];' \
+              --replace-fail 'inputPaths.push(event.input.path);' 'if (typeof event.input.path === "string") inputPaths.push(event.input.path); if (typeof event.input.patch === "string") { let section: string | null = null; for (const line of event.input.patch.split("\n")) { const header = line.match(/^\[(.+)#[0-9A-Fa-f]{4}\]\s*$/); if (header) { section = header[1]; inputPaths.push(section); continue; } const mv = line.match(/^\s*MV\s+["\x27]?([^\s"\x27]+)/); if (mv) { inputPaths.push(mv[1]); if (section) deletedPaths.push(section); } else if (section && /^\s*REM\s*$/.test(line)) deletedPaths.push(section); } }' \
+              --replace-fail 'for (const p of inputPaths) {' 'for (const p of deletedPaths) { const resolved = resolvePath(p, ctx.cwd); const ndp = rules.noDeletePaths.find((pattern) => isPathMatch(resolved, pattern, ctx.cwd)); if (ndp) { violationReason = `Deletion or move of protected path restricted: ''${ndp}`; break; } } for (const p of inputPaths) {'
             substitute "$src/extensions/tool-counter.ts" "$out/tool-counter.ts" \
               --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
