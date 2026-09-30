@@ -260,6 +260,8 @@ let
               '';
         };
 
+        vscode-json-language-server.init_options.provideFormatter = lib.mkForce false;
+
         sqls.on_attach = lib.mkForce null;
       };
     };

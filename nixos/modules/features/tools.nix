@@ -120,6 +120,13 @@
 
           compdef _hreload hreload
 
+          _uc-dev() {
+            (( $+commands[uc-dev] )) || return 1
+            source <(uc-dev completion zsh)
+            _uc-dev "$@"
+          }
+
+          compdef _uc-dev uc-dev
         '';
         oh-my-zsh = {
           enable = true;
