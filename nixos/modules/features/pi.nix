@@ -279,7 +279,7 @@ in
           "npm:pi-checkpoint-compaction"
           "npm:pi-mcp-adapter"
           "npm:pi-permission-system"
-          "npm:pi-plan"
+          "${piPlan}"
           "npm:pi-undo-redo"
         ];
 
@@ -381,6 +381,126 @@ in
               --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' ""
           '';
+
+      piPlan =
+        pkgs.runCommand "pi-plan"
+          {
+            src = pkgs.fetchurl {
+              url = "https://registry.npmjs.org/pi-plan/-/pi-plan-0.1.1.tgz";
+              hash = "sha256-aLu4Q64abvDSsa0w/041DG40eHuuuJH/eE9/CAwcT2o=";
+            };
+          }
+          /* bash */ ''
+            mkdir -p "$out"
+            tar xzf "$src" -C "$out" --strip-components=1
+            substituteInPlace "$out/extensions/plan/index.ts" \
+              --replace-fail 'const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];' 'let NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];' \
+              --replace-fail 'pi.setActiveTools(PLAN_MODE_TOOLS);' 'if (pi.getActiveTools().includes("edit")) NORMAL_MODE_TOOLS = pi.getActiveTools(); pi.setActiveTools(PLAN_MODE_TOOLS);' \
+              --replace-fail 'ctx.ui.theme.muted(' 'ctx.ui.theme.fg("muted", ' \
+              --replace-fail '`Execute the plan. Start with: ''${steps[0].text}`' '`Execute the plan. Start with: ''${steps[0].text}\nAfter completing a step, include a [DONE:n] tag in your response.`'
+          '';
+
+      scoutFile = pkgs.writeText "scout.ts" /* typescript */ ''
+        import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+
+        const SCOUT_TOOLS = ["read", "bash", "grep", "find", "ls", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "mcp"];
+
+        const scoutPrompt = (task: string) => `Scout the codebase for the task below before any planning. Do not modify anything.
+
+        Task: ''${task}
+
+        1. Locate the code the task touches: entry points, key types and functions, callers, data flow. Read only the line ranges you need.
+        2. Find existing patterns to copy and the tests that cover this area, with the exact command that runs them.
+        3. If the task uses external libraries, check their current API with context7.
+
+        Reply with a "## Scout" report of at most 40 lines:
+        - Entry points: path:line
+        - Relevant code: path:lines, why it matters
+        - Patterns to follow
+        - Tests: files and the run command
+        - Risks and open questions
+        Do not plan or propose changes yet.`;
+
+        const planPrompt = (task: string) => `Using the scout report above, plan: ''${task}
+
+        Plan test-first. For every behavior change, one step writes a failing test and the next step makes it pass. Put the exact test command in the steps. For a step that cannot be tested (config, docs, wiring), say how it will be verified instead.`;
+
+        const TDD =
+          "[TDD] For each plan step: write or extend the test first, run it and confirm it fails for the expected reason, " +
+          "then write the minimal code that makes it pass and run it again, then refactor with the tests green. " +
+          "Never weaken a test to make it pass. Show the failing and the passing run.";
+
+        type Entry = { type: string; customType?: string; data?: { mode?: string } };
+
+        const planEntries = (ctx: ExtensionContext) =>
+          (ctx.sessionManager.getBranch() as Entry[]).filter(
+            (e) => e.type === "custom" && (e.customType === "pi-plan" || e.customType === "scout"),
+          );
+
+        const planMode = (ctx: ExtensionContext) =>
+          planEntries(ctx).findLast((e) => e.customType === "pi-plan")?.data?.mode ?? "normal";
+
+        const scouted = (ctx: ExtensionContext) => {
+          for (const e of planEntries(ctx).reverse()) {
+            if (e.customType === "scout") return true;
+            if (e.data?.mode === "normal") return false;
+          }
+          return false;
+        };
+
+        export default function (pi: ExtensionAPI) {
+          let task: string | undefined;
+          let inPlan = false;
+          let restore: string[] = [];
+          let ok = false;
+
+          pi.registerCommand("scout", {
+            description: "Scout the code for a task, then plan it test-first in /plan",
+            handler: async (args, ctx) => {
+              const text = args.trim();
+              if (!text) return ctx.ui.notify("Usage: /scout <task>", "warning");
+              if (!ctx.isIdle()) return ctx.ui.notify("Wait for the agent to finish", "warning");
+              const mode = planMode(ctx);
+              if (mode === "execute") return ctx.ui.notify("A plan is executing", "warning");
+              task = text;
+              inPlan = mode === "plan";
+              pi.appendEntry("scout", { task });
+              if (!inPlan) {
+                restore = pi.getActiveTools();
+                const known = new Set(pi.getAllTools().map((t) => t.name));
+                pi.setActiveTools(SCOUT_TOOLS.filter((n) => known.has(n)));
+              }
+              pi.sendUserMessage(scoutPrompt(text));
+            },
+          });
+
+          pi.on("agent_end", (event) => {
+            if (!task) return;
+            const last = event.messages.findLast((m) => m.role === "assistant") as { stopReason?: string } | undefined;
+            ok = !!last && last.stopReason !== "aborted" && last.stopReason !== "error";
+          });
+
+          pi.on("agent_settled", () => {
+            if (!task) return;
+            const t = task;
+            task = undefined;
+            if (restore.length > 0) pi.setActiveTools(restore);
+            restore = [];
+            if (!ok) return;
+            if (!inPlan) pi.sendUserMessage("/plan", { expandPromptTemplates: true });
+            pi.sendUserMessage(planPrompt(t));
+          });
+
+          pi.on("context", (event, ctx) => {
+            if (planMode(ctx) !== "execute" || !scouted(ctx)) return;
+            const i = event.messages.findLastIndex((m) => (m as { customType?: string }).customType === "pi-plan-execute");
+            if (i < 0) return;
+            const messages = [...event.messages];
+            messages.splice(i + 1, 0, { ...messages[i], customType: "scout-tdd", content: TDD } as (typeof messages)[number]);
+            return { messages };
+          });
+        }
+      '';
 
       checkpointNudgeFile = pkgs.writeText "checkpoint-nudge.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -549,6 +669,8 @@ in
           mkdir -p "$agent_dir/extensions"
           cp --reflink=never "${checkpointNudgeFile}" "$agent_dir/extensions/checkpoint-nudge.ts"
           chmod 644 "$agent_dir/extensions/checkpoint-nudge.ts"
+          cp --reflink=never "${scoutFile}" "$agent_dir/extensions/scout.ts"
+          chmod 644 "$agent_dir/extensions/scout.ts"
 
           for ext in damage-control tool-counter session-replay; do
             cp --reflink=never "${piVsCcExtensions}/$ext.ts" "$agent_dir/extensions/$ext.ts"
@@ -575,7 +697,11 @@ in
 
           npm_dir="$agent_dir/npm"
           wanted=(${
-            lib.escapeShellArgs (map (lib.removePrefix "npm:") (settingsSeed.packages ++ [ grillMePackage ]))
+            lib.escapeShellArgs (
+              map (lib.removePrefix "npm:") (
+                lib.filter (lib.hasPrefix "npm:") (settingsSeed.packages ++ [ grillMePackage ])
+              )
+            )
           })
           export PATH="${
             lib.makeBinPath [
