@@ -5,6 +5,7 @@
       config,
       lib,
       pkgs,
+      pkgs-unstable,
       ...
     }:
     let
@@ -1040,6 +1041,7 @@
 
       programs.bat = {
         enable = true;
+        config.theme = "TwoDark";
         extraPackages = with pkgs.bat-extras; [
           batgrep
           batman
@@ -1051,7 +1053,52 @@
       programs.fd.enable = true;
       programs.fzf.enable = true;
       programs.ripgrep.enable = true;
-      programs.lazygit.enable = true;
+      programs.lazygit = {
+        enable = true;
+        package = pkgs-unstable.lazygit;
+        settings = {
+          gui = {
+            nerdFontsVersion = "3";
+            showNumstatInFilesView = true;
+            showRandomTip = false;
+            sidePanelWidth = 0.3; # для диффа в два столбца документация рекомендует 0.2
+            expandFocusedSidePanel = true;
+            expandedSidePanelWeight = 3;
+            shrinkSidePanelsToContent = true;
+            mainPanelSplitMode = "vertical";
+            portraitModeAutoMaxWidth = 110;
+            portraitModeAutoMinHeight = 30;
+          };
+          git.diffRenderers = [
+            {
+              name = "delta";
+              command = lib.concatStringsSep " " [
+                "delta --no-gitconfig --dark --paging=never --true-color=always"
+                "{{if gt .width 160}}--side-by-side{{end}}"
+                "--syntax-theme=TwoDark --tabs=4 --relative-paths"
+                ''--file-style="bold #abb2bf" --file-decoration-style="#3e4452 ul"''
+                ''--hunk-header-style="line-number syntax"''
+                ''--hunk-header-decoration-style="#3e4452 ul"''
+                ''--hunk-header-line-number-style="#61afef"''
+                "--line-numbers"
+                ''--line-numbers-left-format="{nm:>3} " --line-numbers-right-format="{np:>3} │ "''
+                ''--line-numbers-left-style="#5c6370" --line-numbers-right-style="#5c6370"''
+                ''--line-numbers-zero-style="#5c6370"''
+                ''--line-numbers-minus-style="#e06c75" --line-numbers-plus-style="#98c379"''
+                ''--minus-style="syntax #49282e" --minus-emph-style="syntax #753235"''
+                ''--plus-style="syntax #243d2f" --plus-emph-style="syntax #2b5c37"''
+              ];
+            }
+            {
+              type = "rawGit";
+              args = [ "--color-words" ];
+              name = "color-words";
+            }
+          ];
+          quitOnTopLevelReturn = true;
+          disableStartupPopups = true;
+        };
+      };
 
       programs.pgcli = {
         enable = true;

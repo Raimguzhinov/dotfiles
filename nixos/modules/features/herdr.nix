@@ -175,7 +175,7 @@ let
   popup = key: command: description: {
     inherit key command description;
     type = "popup";
-    width = "85%";
+    width = "90%";
     height = "85%";
   };
 
@@ -202,7 +202,7 @@ let
 
       workspace_picker = "prefix+w";
       goto = [
-        "prefix+g"
+        "prefix+alt+g"
         "prefix+s"
       ];
       toggle_sidebar = "prefix+b";
@@ -279,8 +279,8 @@ let
         (pluginAction "prefix+slash" "jt.command-palette.open" "command palette")
         (pluginAction "prefix+shift+z" "ohmyzsh.shell.reload-all" "reload Oh My Zsh in idle panes")
         (popup "prefix+t" ''exec "''${SHELL:-sh}"'' "scratch terminal")
-        (popup "prefix+alt+g" "lazygit" "lazygit")
-        (popup "prefix+alt+d" "lazydocker" "lazydocker")
+        (popup "prefix+g" "lazygit" "lazygit")
+        (popup "prefix+d" "lazydocker" "lazydocker")
         (pluginAction "prefix+shift+m" "mirror.start" "mirror: start/resume")
         (pluginAction "prefix+alt+s" "mirror.pause" "mirror: pause sync")
         (pluginAction "prefix+shift+b" "mirror.restore" "mirror: restore closed")
