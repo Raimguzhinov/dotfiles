@@ -192,13 +192,14 @@ in
       };
 
       mcpConfig = {
-        settings.namespaceProxyTools = false;
         mcpServers = {
           youtrack = {
+            description = "Protei YouTrack: search and read issues";
             url = "https://youtrackmcp.ai.protei.ru/mcp";
             headers."youtrack-token" = readSecret "youtrack/token";
           };
           gitlab = {
+            description = "Protei GitLab: projects, merge requests, pipelines";
             command = "uvx";
             args = [
               "--from"
@@ -211,6 +212,7 @@ in
             };
           };
           rag = {
+            description = "Protei knowledge base search (LightRAG)";
             command = "uvx";
             args = [
               "--from"
@@ -224,6 +226,7 @@ in
             };
           };
           searxng = {
+            description = "Web search and URL reading through local SearXNG";
             command = "npx";
             args = [
               "-y"
@@ -232,6 +235,7 @@ in
             env.SEARXNG_URL = "http://127.0.0.1:${toString searxPort}";
           };
           postgres = {
+            description = "Read-only queries to the local uc PostgreSQL database";
             command = "npx";
             args = [
               "-y"
@@ -240,10 +244,11 @@ in
             ];
           };
           gh_grep = {
+            description = "Search code across public GitHub repositories";
             url = "https://mcp.grep.app";
-            auth = false;
           };
           codebase_memory = {
+            description = "Code knowledge graph of indexed repositories";
             command = "npx";
             args = [
               "-y"
@@ -252,6 +257,11 @@ in
             env = {
               CBM_ALLOWED_ROOT = config.home.homeDirectory;
             };
+          };
+          uc-dev = {
+            command = "uc-dev";
+            args = [ "mcp" ];
+            env.UC_DEV_CORE = "${config.home.homeDirectory}/Work/core";
           };
         };
       };
@@ -270,33 +280,16 @@ in
           reserveTokens = 32768;
           keepRecentTokens = 20000;
         };
+        extensions = [ "self-compact/extensions/self-compact/self-compact.ts" ];
         packages = [
           "npm:@cortexkit/aft-pi"
           "npm:@upstash/context7-pi"
-          "npm:pi-llama-cpp"
           "npm:@juicesharp/rpiv-todo"
           "npm:pi-cache-optimizer"
-          "npm:pi-checkpoint-compaction"
-          "npm:pi-mcp-adapter"
           "npm:pi-permission-system"
           "${piPlan}"
           "npm:pi-undo-redo"
         ];
-
-        llamaSettings = {
-          servers = [
-            {
-              url = "http://127.0.0.1:8085";
-              id = "llama-local";
-              name = "Local";
-            }
-          ];
-          reactToModelSelect = true;
-          autoloadOnMessage = true;
-          sortBy = "asc";
-          pollingTimeout = 120000;
-          serverTimeout = 2000;
-        };
       };
 
       permissionsPolicy = {
@@ -319,7 +312,10 @@ in
           resolve-library-id = "allow";
           query-docs = "allow";
           todo = "allow";
-          checkpoint_update = "allow";
+          self_compact = "allow";
+          view_context = "allow";
+          codemode = "allow";
+          "mcp__*" = "allow";
         };
       };
 
@@ -379,7 +375,8 @@ in
               --replace-fail 'let tokIn = 0;' 'let tokIn = 0; let tokCache = 0;' \
               --replace-fail 'tokIn += m.usage.input;' 'tokIn += m.usage.input; tokCache += m.usage.cacheRead ?? 0;' \
               --replace-fail 'theme.fg("dim", " in ") +' 'theme.fg("dim", " in ") + theme.fg("success", `''${fmt(tokCache)}`) + theme.fg("dim", " cached ") +' \
-              --replace-fail 'return [line1, line2];' 'const statuses = [...footerData.getExtensionStatuses().values()].filter(Boolean).join(theme.fg("dim", " · ")); return statuses ? [line1, line2, truncateToWidth(" " + statuses, width, "")] : [line1, line2];'
+              --replace-fail 'const l1Left =' 'const sc = footerData.getExtensionStatuses().get("self-compact"); const l1Left = sc ? theme.fg("dim", ` ''${model} `) + sc :' \
+              --replace-fail 'return [line1, line2];' 'const statuses = [...footerData.getExtensionStatuses()].filter(([key, value]) => key !== "self-compact" && value).map(([, value]) => value).join(theme.fg("dim", " · ")); return statuses ? [line1, line2, truncateToWidth(" " + statuses, width, "")] : [line1, line2];'
             substitute "$src/extensions/session-replay.ts" "$out/session-replay.ts" \
               --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' ""
@@ -406,7 +403,7 @@ in
       scoutFile = pkgs.writeText "scout.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-        const SCOUT_TOOLS = ["read", "bash", "grep", "find", "ls", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "mcp"];
+        const SCOUT_TOOLS = ["read", "bash", "grep", "find", "ls", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "codemode"];
 
         const scoutPrompt = (task: string) => `Scout the codebase for the task below before any planning. Do not modify anything.
 
@@ -526,113 +523,35 @@ in
         }
       '';
 
-      checkpointNudgeFile = pkgs.writeText "checkpoint-nudge.ts" /* typescript */ ''
-        import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-        import { readFileSync } from "node:fs";
-        import { homedir } from "node:os";
-        import { join } from "node:path";
-
-        const DEFAULT_RESERVE_TOKENS = 16384;
-        const NOTICE_SHARE = 0.6;
-        const WARNING_SHARE = 0.8;
-
-        const CONTENT =
-          "GOAL (the user's actual intent), DECISIONS (choices made and why), STATE (key paths, variables, test status). " +
-          "For DONE and NEXT write one line pointing to the todo list instead of repeating it.";
-
-        const readCompaction = (file: string): Record<string, any> => {
-          try {
-            return JSON.parse(readFileSync(file, "utf8")).compaction ?? {};
-          } catch {
-            return {};
-          }
-        };
-
-        const reserveTokens = (ctx: ExtensionContext): number => {
-          const agentDir = process.env.PI_CODING_AGENT_DIR ?? join(homedir(), ".pi", "agent");
-          const global = readCompaction(join(agentDir, "settings.json"));
-          const project = readCompaction(join(ctx.cwd, ".pi", "settings.json"));
-          const key = ctx.model ? `''${ctx.model.provider}/''${ctx.model.id}` : "";
-          return (
-            project.modelOverrides?.[key]?.reserveTokens ??
-            global.modelOverrides?.[key]?.reserveTokens ??
-            project.reserveTokens ??
-            global.reserveTokens ??
-            DEFAULT_RESERVE_TOKENS
-          );
-        };
-
-        const k = (tokens: number) => `''${Math.round(tokens / 1000)}k`;
-
-        export default function (pi: ExtensionAPI) {
-          let stage = 0;
-          let checkpointedAt = -1;
-          let checkpointedThisTurn = false;
-          let forced = false;
-
-          const reset = () => {
-            stage = 0;
-            checkpointedAt = -1;
-            checkpointedThisTurn = false;
-            forced = false;
-          };
-
-          const nudge = (text: string) => ({
-            type: "custom_message" as const,
-            customType: "checkpoint-nudge",
-            display: true,
-            content: text,
-          });
-
-          const usage = (ctx: ExtensionContext) => {
-            const u = ctx.getContextUsage();
-            if (!u || u.tokens == null) return undefined;
-            const compactAt = u.contextWindow - reserveTokens(ctx);
-            if (compactAt <= 0) return undefined;
-            return { tokens: u.tokens, compactAt };
-          };
-
-          pi.on("session_start", reset);
-          pi.on("session_compact", reset);
-          pi.on("session_tree", reset);
-
-          pi.on("tool_result", (event) => {
-            if (event.toolName !== "checkpoint_update" || event.isError) return;
-            const text = event.content.map((c) => (c.type === "text" ? c.text : "")).join("");
-            if (!text.startsWith("checkpoint_update ignored")) checkpointedThisTurn = true;
-          });
-
-          pi.on("turn_end", (_event, ctx) => {
-            const u = usage(ctx);
-            const next = !u ? stage : u.tokens >= u.compactAt * WARNING_SHARE ? 2 : u.tokens >= u.compactAt * NOTICE_SHARE ? 1 : 0;
-            const advanced = next > stage;
-            if (advanced) stage = next;
-            if (checkpointedThisTurn) {
-              checkpointedAt = stage;
-              checkpointedThisTurn = false;
-              return;
-            }
-            if (!advanced || !u) return;
-            const where = `[context ''${k(u.tokens)} of ''${k(u.compactAt)} before compaction]`;
-            const text =
-              stage === 1
-                ? `''${where} At your next milestone call checkpoint_update with ''${CONTENT}`
-                : `''${where} Compaction is close. Before your next action call checkpoint_update with ''${CONTENT} Anything not in the checkpoint will be lost.`;
-            return { entries: [nudge(text)] };
-          });
-
-          pi.on("agent_before_settle", (event, ctx) => {
-            if (event.outcome !== "completed" || stage < 2 || checkpointedAt >= 2 || forced) return;
-            forced = true;
-            const u = usage(ctx);
-            const where = u ? `[context ''${k(u.tokens)} of ''${k(u.compactAt)} before compaction]` : "[context almost full]";
-            return {
-              entries: [nudge(`''${where} The checkpoint is not updated. Call checkpoint_update now with ''${CONTENT} Then stop.`)],
-              continue: true,
+      selfCompact =
+        pkgs.runCommand "pi-self-compact"
+          {
+            src = pkgs.fetchFromGitHub {
+              owner = "disler";
+              repo = "self-compact-pi-agent";
+              rev = "576fe4abda021849f5cde5b6f5796467ffa4bcbd";
+              hash = "sha256-AFx6WLMbSsWyFoJV9vVVya+8Q+e+xE56uBzeL3KzmbE=";
             };
-          });
-        }
-      '';
+          }
+          /* bash */ ''
+            app="$src/apps/self-compact"
+            mkdir -p "$out/extensions/self-compact" "$out/.pi"
+            cp -r "$app/.pi/self-compact" "$out/.pi/"
+            cp "$app"/extensions/self-compact/*.ts "$out/extensions/self-compact/"
+            chmod -R u+w "$out"
+            cd "$out/extensions/self-compact"
+            substituteInPlace defaults.ts \
+              --replace-fail '{ softAt: "10%", at: "20%", buffer: "10%" }' '{ softAt: "60000", at: "80000", buffer: "15000" }'
+            substituteInPlace self-compact.ts \
+              --replace-fail 'installFooter(ctx);' "" \
+              --replace-fail 'if (ctx.mode === "tui") R.requestRender?.();' "" \
+              --replace-fail 'else if (ctx.hasUI) ctx.ui.setStatus("self-compact"' 'if (ctx.hasUI) ctx.ui.setStatus("self-compact"'
+            substituteInPlace summary.ts \
+              --replace-fail 'instructions: string, budgetChars: number) {' 'instructions: string, budgetChars: number, system: string) {' \
+              --replace-fail 'const messages = context.messages.map(message => {' 'const messages = context.messages.map((message, index) => { if (message.role === "system" && index === 0) return { ...message, content: system };' \
+              --replace-fail 'historyInput(event.preparation.turnPrefixMessages)].sort(' 'historyInput(event.preparation.turnPrefixMessages), `# Conversation\n''${serializeConversation(convertToLlm(event.preparation.turnPrefixMessages))}\n\n# Instructions\n`].sort(' \
+              --replace-fail 'replaceInstructions(context, inputs, userInstructions, budgetChars);' 'replaceInstructions(context, inputs, userInstructions, budgetChars, system.text);'
+          '';
 
       appendSystemFile = pkgs.writeText "pi-append-system.md" /* markdown */ ''
         The user is a senior developer. Communication is plain, concise and actionable. Every answer exists to solve the problem.
@@ -716,7 +635,10 @@ in
         ];
 
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
-        home.sessionVariables.PI_OFFLINE = "1";
+        home.sessionVariables = {
+          PI_OFFLINE = "1";
+          LLAMA_BASE_URL = "http://127.0.0.1:8085";
+        };
 
         programs.zsh.shellAliases.pig = "pi -e ${piAgentDir}/npm/node_modules/${lib.removePrefix "npm:" grillMePackage}";
 
@@ -746,8 +668,9 @@ in
           chmod 644 "$agent_dir/APPEND_SYSTEM.md"
 
           mkdir -p "$agent_dir/extensions"
-          cp --reflink=never "${checkpointNudgeFile}" "$agent_dir/extensions/checkpoint-nudge.ts"
-          chmod 644 "$agent_dir/extensions/checkpoint-nudge.ts"
+          rm -f "$agent_dir/extensions/checkpoint-nudge.ts"
+          rm -rf "$agent_dir/self-compact"
+          cp -r --no-preserve=mode "${selfCompact}" "$agent_dir/self-compact"
           cp --reflink=never "${scoutFile}" "$agent_dir/extensions/scout.ts"
           chmod 644 "$agent_dir/extensions/scout.ts"
 
@@ -762,12 +685,8 @@ in
           cp --reflink=never "${piVsCcExtensions}/damage-control-rules.json" "${config.home.homeDirectory}/.pi/damage-control-rules.json"
           chmod 644 "${config.home.homeDirectory}/.pi/damage-control-rules.json"
 
-          if ! cmp -s "${mcpJsonFile}" "$agent_dir/mcp.json"; then
-            cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
-            chmod 600 "$agent_dir/mcp.json"
-            rm -f "$agent_dir/mcp-cache.json"
-            log "mcp.json changed, dropped metadata cache to re-probe servers"
-          fi
+          cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
+          chmod 600 "$agent_dir/mcp.json"
 
           if [[ -f "$agent_dir/settings.json" ]]; then
             "${lib.getExe pkgs.jq}" --slurpfile seed "${settingsSeedFile}" '. * $seed[0]' \
