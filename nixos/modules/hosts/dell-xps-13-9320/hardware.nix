@@ -401,29 +401,6 @@
         '';
       };
 
-      systemd.services.xps-touchpad-pci-reset = {
-        description = "XPS 9320: reset touchpad I2C controller via PCI remove/rescan";
-        path = [ pkgs.util-linux ];
-        serviceConfig = {
-          Type = "oneshot";
-          TimeoutStartSec = 120;
-        };
-        script = ''
-          set -u
-          exec 9>/run/xps-touchpad.lock
-          flock 9
-          pci=/sys/bus/pci/devices/0000:00:15.1
-          [ -e "$pci" ] && echo 1 > "$pci/remove"
-          sleep 1
-          for _ in $(seq 10); do
-            [ -e "$pci" ] || echo 1 > /sys/bus/pci/rescan
-            sleep 1
-            [ -e /sys/bus/i2c/devices/i2c-VEN_04F3:00/driver ] && exit 0
-          done
-          exit 1
-        '';
-      };
-
       systemd.services.xps-touchpad-watchdog = {
         description = "XPS 9320: recover hung touchpad I2C bus";
         wantedBy = [ "multi-user.target" ];
@@ -448,20 +425,16 @@
           }
 
           recover() {
-            for n in 1 2; do
-              echo "touchpad I2C bus hung, PCI reset attempt $n"
-              systemctl start xps-touchpad-pci-reset.service || echo "PCI reset failed"
-              if healthy; then
-                echo "touchpad recovered by PCI reset"
-                return 0
-              fi
-            done
+            if healthy; then
+              echo "touchpad I2C errors stopped on their own"
+              return 0
+            fi
             if [ -e "$run/hibernated" ]; then
               echo "touchpad still hung, hibernation already used this boot"
               return 1
             fi
             touch "$run/hibernated"
-            echo "touchpad still hung after PCI resets, hibernating"
+            echo "touchpad I2C bus hung, hibernating"
             systemctl hibernate
           }
 
