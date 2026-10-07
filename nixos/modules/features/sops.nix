@@ -54,6 +54,7 @@
         secrets."work_ai/mcp_sse_url" = { };
         secrets."work_ai/lightrag_url" = { };
         secrets."homelab/homeassistant_token" = { };
+        secrets."typesafe/api_key" = { };
       };
 
       programs.zsh.initContent = # bash
