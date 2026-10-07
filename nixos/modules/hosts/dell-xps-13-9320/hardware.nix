@@ -224,8 +224,6 @@
         wantedBy = [ "multi-user.target" ];
         serviceConfig = {
           Type = "oneshot";
-          Restart = "on-failure";
-          RestartSec = 5;
           RemainAfterExit = true;
           ExecStart = pkgs.writeShellScript "camera-setup" ''
             ${pkgs.systemd}/bin/udevadm settle --timeout=10
