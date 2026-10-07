@@ -592,6 +592,7 @@ in
       ];
 
       home.file.".claude/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
+      home.file.".pi/agent/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
 
       programs.zsh.oh-my-zsh = {
         custom = ohMyZshCustomDir;
