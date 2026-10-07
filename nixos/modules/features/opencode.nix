@@ -202,6 +202,7 @@ in
         "rag"
         "searxng"
         "typst"
+        "uc-dev"
         "youtrack"
       ];
 
@@ -377,6 +378,15 @@ in
               "-i"
               "ghcr.io/johannesbrandenburger/typst-mcp:latest"
             ];
+            enabled = true;
+          };
+          uc-dev = {
+            type = "local";
+            command = [
+              "uc-dev"
+              "mcp"
+            ];
+            environment.UC_DEV_CORE = "${config.home.homeDirectory}/Work/core";
             enabled = true;
           };
         };
