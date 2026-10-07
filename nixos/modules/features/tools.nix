@@ -1061,7 +1061,7 @@
             nerdFontsVersion = "3";
             showNumstatInFilesView = true;
             showRandomTip = false;
-            sidePanelWidth = 0.3; # для диффа в два столбца документация рекомендует 0.2
+            sidePanelWidth = 0.3;
             expandFocusedSidePanel = true;
             expandedSidePanelWeight = 3;
             shrinkSidePanelsToContent = true;
@@ -1074,7 +1074,7 @@
               name = "delta";
               command = lib.concatStringsSep " " [
                 "delta --no-gitconfig --dark --paging=never --true-color=always"
-                "{{if gt .width 160}}--side-by-side{{end}}"
+                "{{if gt .width 120}}--side-by-side{{end}}"
                 "--syntax-theme=TwoDark --tabs=4 --relative-paths"
                 ''--file-style="bold #abb2bf" --file-decoration-style="#3e4452 ul"''
                 ''--hunk-header-style="line-number syntax"''
