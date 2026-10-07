@@ -207,6 +207,7 @@
       # Bridge is started manually: systemctl start camera-bridge
       boot.extraModprobeConfig = ''
         blacklist intel_ipu6
+        softdep i2c_hid_acpi pre: hid_multitouch
         options v4l2loopback video_nr=40 card_label="libcamera Virtual" exclusive_caps=1
       '';
       services.udev.extraRules = ''
@@ -382,12 +383,15 @@
 
       systemd.services.xps-touchpad-reset-post-resume = {
         description = "XPS 9320: reset Elan touchpad after resume";
+        path = [ pkgs.util-linux ];
         serviceConfig = {
           Type = "oneshot";
-          TimeoutStartSec = 15;
+          TimeoutStartSec = 60;
         };
         script = ''
           set -eu
+          exec 9>/run/xps-touchpad.lock
+          flock 9
           dev=i2c-VEN_04F3:00
           drv=/sys/bus/i2c/drivers/i2c_hid_acpi
           [ -e "/sys/bus/i2c/devices/$dev" ] || exit 0
@@ -396,6 +400,83 @@
             sleep 1
           fi
           echo "$dev" > "$drv/bind"
+        '';
+      };
+
+      systemd.services.xps-touchpad-pci-reset = {
+        description = "XPS 9320: reset touchpad I2C controller via PCI remove/rescan";
+        path = [ pkgs.util-linux ];
+        serviceConfig = {
+          Type = "oneshot";
+          TimeoutStartSec = 120;
+        };
+        script = ''
+          set -u
+          exec 9>/run/xps-touchpad.lock
+          flock 9
+          pci=/sys/bus/pci/devices/0000:00:15.1
+          [ -e "$pci" ] && echo 1 > "$pci/remove"
+          sleep 1
+          for _ in $(seq 10); do
+            [ -e "$pci" ] || echo 1 > /sys/bus/pci/rescan
+            sleep 1
+            [ -e /sys/bus/i2c/devices/i2c-VEN_04F3:00/driver ] && exit 0
+          done
+          exit 1
+        '';
+      };
+
+      systemd.services.xps-touchpad-watchdog = {
+        description = "XPS 9320: recover hung touchpad I2C bus";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "systemd-journald.service" ];
+        serviceConfig = {
+          Restart = "always";
+          RestartSec = 5;
+        };
+        script = ''
+          set -u
+          pat='i2c-VEN_04F3:00: failed to'
+          run=/run/xps-touchpad-watchdog
+          mkdir -p "$run"
+          last=$(cat "$run/last" 2>/dev/null || echo 0)
+
+          healthy() {
+            sleep 1
+            since=$(date +%s)
+            sleep 4
+            ls /sys/bus/i2c/devices/i2c-VEN_04F3:00/0018:04F3:31D1.*/driver >/dev/null 2>&1 &&
+              ! journalctl -k -b --since "@$since" -o cat --no-pager | grep -qF "$pat"
+          }
+
+          recover() {
+            for n in 1 2; do
+              echo "touchpad I2C bus hung, PCI reset attempt $n"
+              systemctl start xps-touchpad-pci-reset.service || echo "PCI reset failed"
+              if healthy; then
+                echo "touchpad recovered by PCI reset"
+                return 0
+              fi
+            done
+            if [ -e "$run/hibernated" ]; then
+              echo "touchpad still hung, hibernation already used this boot"
+              return 1
+            fi
+            touch "$run/hibernated"
+            echo "touchpad still hung after PCI resets, hibernating"
+            systemctl hibernate
+          }
+
+          journalctl -k -b -f -n all -o short-unix --no-pager | while read -r ts rest; do
+            case "$rest" in *"$pat"*) ;; *) continue ;; esac
+            [ "''${ts%.*}" -gt "$last" ] || continue
+            if recover; then
+              last=$(date +%s)
+            else
+              last=$(($(date +%s) + 600))
+            fi
+            echo "$last" > "$run/last"
+          done
         '';
       };
 
