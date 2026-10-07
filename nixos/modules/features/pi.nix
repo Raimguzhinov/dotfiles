@@ -512,6 +512,20 @@ in
         hash = "sha256-bvdJjLudTd9YQF8ip30jIvi6MY3MAcw5GXVONx1DLuQ=";
       };
 
+      grillHintFile = pkgs.writeText "grill-hint.ts" /* typescript */ ''
+        import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+        export default function (pi: ExtensionAPI) {
+          if (process.argv.some((arg) => arg.includes("pi-grill-me"))) return;
+          pi.registerCommand("grill", {
+            description: "grill-me загружается только через алиас pig",
+            handler: async (_args, ctx) => {
+              ctx.ui.notify("grill-me в этой сессии не загружен. Выйди из pi, запусти pig и повтори /grill", "warning");
+            },
+          });
+        }
+      '';
+
       checkpointNudgeFile = pkgs.writeText "checkpoint-nudge.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
         import { readFileSync } from "node:fs";
@@ -704,7 +718,7 @@ in
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
         home.sessionVariables.PI_OFFLINE = "1";
 
-        programs.zsh.shellAliases.pig = "pi -e ${grillMePackage}";
+        programs.zsh.shellAliases.pig = "pi -e ${piAgentDir}/npm/node_modules/${lib.removePrefix "npm:" grillMePackage}";
 
         home.activation.setupPi = mkAfter /* bash */ ''
           set -euo pipefail
@@ -741,6 +755,8 @@ in
             cp --reflink=never "${piVsCcExtensions}/$ext.ts" "$agent_dir/extensions/$ext.ts"
             chmod 644 "$agent_dir/extensions/$ext.ts"
           done
+          cp --reflink=never "${grillHintFile}" "$agent_dir/extensions/grill-hint.ts"
+          chmod 644 "$agent_dir/extensions/grill-hint.ts"
           cp --reflink=never "${piReview}/review.ts" "$agent_dir/extensions/review.ts"
           chmod 644 "$agent_dir/extensions/review.ts"
           cp --reflink=never "${piVsCcExtensions}/damage-control-rules.json" "${config.home.homeDirectory}/.pi/damage-control-rules.json"
