@@ -1,114 +1,88 @@
-{ inputs, ... }:
+{ ... }:
 let
-  herdrNvimVersion = "0.2.1";
-  herdrSplitsVersion = "0.5.3";
-  herdrMirrorVersion = "0.4.3";
-
-  mkHerdrMirrorBin =
+  mkRustHerdrPlugin =
     {
-      lib,
-      fetchFromGitHub,
-      rustPlatform,
+      pkgs,
+      rustPlatform ? pkgs.rustPlatform,
+      pname,
+      version,
+      src,
+      cargoHash,
+      description,
     }:
-    rustPlatform.buildRustPackage (finalAttrs: {
-      pname = "herdr-mirror";
-      version = herdrMirrorVersion;
-
-      src = fetchFromGitHub {
-        owner = "nikok6";
-        repo = "herdr-mirror";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-dZIu4TcMkVDrRvnvgRMh7+8PpNaWB/i2/UkH/h0ZRW4=";
-      };
-      cargoHash = "sha256-mXQ0oVf+GVDYcUVdovQFKAM/Bc2hWgcms6h8S/ebnFE=";
-
-      doCheck = false;
-
-      meta = {
-        description = "Herdr plugin that mirrors a remote herdr server's workspaces and agents locally";
-        homepage = "https://github.com/nikok6/herdr-mirror";
-        license = lib.licenses.mit;
-        mainProgram = "herdr-mirror";
-      };
-    });
-
-  mkHerdrMirrorPlugin =
-    pkgs:
     let
-      bin = pkgs.callPackage mkHerdrMirrorBin { };
+      bin = rustPlatform.buildRustPackage {
+        inherit pname;
+        inherit version;
+        inherit src;
+        inherit cargoHash;
+
+        doCheck = false;
+
+        meta = {
+          inherit description;
+          homepage = "https://github.com/${src.owner}/${src.repo}";
+          license = pkgs.lib.licenses.mit;
+          mainProgram = pname;
+        };
+      };
     in
-    pkgs.runCommand "herdr-mirror-plugin-${herdrMirrorVersion}" { } # bash
+    pkgs.runCommand "${pname}-plugin-${version}" { } # bash
       ''
-        cp -r ${bin.src} "$out"
+        cp -r ${src} "$out"
         chmod -R u+w "$out"
-        mkdir -p "$out/target/release"
-        cp ${bin}/bin/herdr-mirror "$out/target/release/herdr-mirror"
+        mkdir -p "$out/bin"
+        cp ${pkgs.lib.getExe bin} "$out/bin/${pname}"
       '';
-
-  mkHerdrNvimBin =
-    {
-      lib,
-      fetchFromGitHub,
-      rustPlatform,
-    }:
-    rustPlatform.buildRustPackage (finalAttrs: {
-      pname = "herdr-nvim";
-      version = herdrNvimVersion;
-
-      src = fetchFromGitHub {
-        owner = "ChmaraX";
-        repo = "herdr-nvim";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-7xnhtj2ngPe/QXMN8crT3mB+QuJ7PvPFwGuS9TMNPMQ=";
-      };
-      cargoHash = "sha256-/p2rQYNREyzxs9r4shm+D7AK+DHR3oPSd/GJ+xMAeJU=";
-
-      doCheck = false;
-
-      meta = {
-        description = "Neovim sidebar and agent annotations for herdr";
-        homepage = "https://github.com/ChmaraX/herdr-nvim";
-        license = lib.licenses.mit;
-        mainProgram = "herdr-nvim";
-      };
-    });
-
-  mkHerdr =
-    pkgs: base:
-    pkgs.symlinkJoin {
-      name = "herdr-${base.version}";
-      paths = [ base ];
-      postBuild = # bash
-        ''
-          export HOME="$TMPDIR"
-          mkdir -p "$out/share/zsh/site-functions" "$out/share/herdr"
-          "$out/bin/herdr" completion zsh > "$out/share/zsh/site-functions/_herdr"
-          "$out/bin/herdr" --skill > "$out/share/herdr/SKILL.md"
-        '';
-      inherit (base) meta;
-    };
-
-  mkHerdrSplits =
-    pkgs:
-    pkgs.fetchFromGitHub {
-      owner = "lmilojevicc";
-      repo = "herdr-splits.nvim";
-      tag = "v${herdrSplitsVersion}";
-      hash = "sha256-7rHAPSjd2n16FGOcqI/1KNHl1yCmMOVVwiJl/eEU9n8=";
-    };
 
   mkHerdrNvimPlugin =
     pkgs:
-    let
-      bin = pkgs.callPackage mkHerdrNvimBin { };
-    in
-    pkgs.runCommand "herdr-nvim-plugin-${herdrNvimVersion}" { } # bash
-      ''
-        cp -r ${bin.src} "$out"
-        chmod -R u+w "$out"
-        mkdir -p "$out/bin"
-        cp ${bin}/bin/herdr-nvim "$out/bin/herdr-nvim"
-      '';
+    mkRustHerdrPlugin rec {
+      inherit pkgs;
+      pname = "herdr-nvim";
+      version = "1.1.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "ChmaraX";
+        repo = "herdr-nvim";
+        tag = "v${version}";
+        hash = "sha256-q44Qt73XzNNipwF3hHr3Hzg0EReC3tz2bKB/l4ZBqiE=";
+      };
+      cargoHash = "sha256-pImtQ1YiM47VvA8u9ER/lXtDVsZhQy38fkCbzmT/gc4=";
+      description = "Neovim sidebar and agent annotations for herdr";
+    };
+
+  mkHerdrReviewr =
+    pkgs: pkgs-unstable:
+    mkRustHerdrPlugin rec {
+      inherit pkgs;
+      inherit (pkgs-unstable) rustPlatform;
+      pname = "herdr-reviewr";
+      version = "0.46.0";
+      src = pkgs.fetchFromGitHub {
+        owner = "persiyanov";
+        repo = "herdr-reviewr";
+        tag = "v${version}";
+        hash = "sha256-KJNzp6e7Uy3E1teheD/dMpB5Zqw7dqxEGnjJqvJgYaE=";
+      };
+      cargoHash = "sha256-v7GFjRE2Zw6HWpD5Pl7Pd8+PNz7Lb05dvsnFJshFtLE=";
+      description = "Review agent-written diffs beside the chat in herdr";
+    };
+
+  mkHerdrPluck =
+    pkgs:
+    mkRustHerdrPlugin {
+      inherit pkgs;
+      pname = "herdr-pluck";
+      version = "0.3.1-unstable-2026-09-25";
+      src = pkgs.fetchFromGitHub {
+        owner = "rmarganti";
+        repo = "herdr-pluck";
+        rev = "1a6302384098f21835e2964637d39dddc989bc1d";
+        hash = "sha256-XK8Tky9kDW8TSudfYvXkqRMYUFnTORguVVYH4z7UrFM=";
+      };
+      cargoHash = "sha256-p6KhaqawJOSwt/JfZGSKXSxa2eU570wkXEAd3j1o92Y=";
+      description = "Inline keyboard hints for copying tokens or opening URLs from herdr panes";
+    };
 
   mkHerdrYazi =
     pkgs:
@@ -137,18 +111,14 @@ let
       hash = "sha256-75JYRXRfn5dFH88DBQqVRbW5OVL1eq3en0M19NpFKLE=";
     };
 
-  linkedPlugins = pkgs: [
-    (mkHerdrSplits pkgs)
+  linkedPlugins = pkgs: pkgs-unstable: [
+    pkgs-unstable.vimPlugins.herdr-splits-nvim
     (mkHerdrNvimPlugin pkgs)
-    (mkHerdrMirrorPlugin pkgs)
     (mkHerdrYazi pkgs)
     (mkHerdrCommandPalette pkgs)
     (mkHerdrOhMyZsh pkgs)
-  ];
-
-  syncedPlugins = [
-    "persiyanov/herdr-reviewr"
-    "rmarganti/herdr-pluck"
+    (mkHerdrReviewr pkgs pkgs-unstable)
+    (mkHerdrPluck pkgs)
   ];
 
   syncedIntegrations = [
@@ -163,11 +133,11 @@ let
   requestSoundGainDb = -18;
 
   mkQuietSound =
-    pkgs: name: gainDb:
+    pkgs: herdr: name: gainDb:
     pkgs.runCommand "herdr-quiet-${name}.mp3" { nativeBuildInputs = [ pkgs.ffmpeg-headless ]; } # bash
       ''
         ffmpeg -nostdin -loglevel error \
-          -i ${inputs.herdr}/assets/sounds/${name}.mp3 \
+          -i ${herdr.src}/assets/sounds/${name}.mp3 \
           -af volume=${toString gainDb}dB \
           -codec:a libmp3lame -q:a 2 "$out"
       '';
@@ -189,7 +159,7 @@ let
     type = "shell";
   };
 
-  herdrSettings = pkgs: {
+  herdrSettings = pkgs: herdr: {
     onboarding = false;
 
     keys = {
@@ -281,17 +251,6 @@ let
         (popup "prefix+t" ''exec "''${SHELL:-sh}"'' "scratch terminal")
         (popup "prefix+g" "lazygit" "lazygit")
         (popup "prefix+d" "lazydocker" "lazydocker")
-        (pluginAction "prefix+shift+m" "mirror.start" "mirror: start/resume")
-        (pluginAction "prefix+alt+s" "mirror.pause" "mirror: pause sync")
-        (pluginAction "prefix+shift+b" "mirror.restore" "mirror: restore closed")
-        (pluginAction "prefix+alt+shift+d" "mirror.teardown" "mirror: teardown (destructive)")
-        (pluginAction "prefix+alt+h" "mirror.hide" "mirror: hide host")
-        (pluginAction "prefix+alt+shift+h" "mirror.show" "mirror: show host")
-        (pluginAction "prefix+shift+n" "mirror.new-workspace-pick" "mirror: new workspace (pick host)")
-        (pluginAction "prefix+alt+n" "mirror.remote-new-workspace" "mirror: new workspace on remote")
-        (pluginAction "prefix+alt+c" "mirror.remote-new-tab" "mirror: new tab on remote")
-        (pluginAction "prefix+alt+v" "mirror.remote-split-right" "mirror: split right on remote")
-        (pluginAction "prefix+alt+minus" "mirror.remote-split-down" "mirror: split down on remote")
       ];
     };
 
@@ -359,8 +318,8 @@ let
       };
 
       sound = {
-        done_path = "${mkQuietSound pkgs "done" doneSoundGainDb}";
-        request_path = "${mkQuietSound pkgs "request" requestSoundGainDb}";
+        done_path = "${mkQuietSound pkgs herdr "done" doneSoundGainDb}";
+        request_path = "${mkQuietSound pkgs herdr "request" requestSoundGainDb}";
       };
     };
 
@@ -401,16 +360,12 @@ let
     };
   };
 
-  herdrMirrorSettings = {
-    hosts."orangepi-ts".target = "orangepi-ts";
-  };
 in
 {
   perSystem =
     {
-      inputs',
       lib,
-      pkgs,
+      pkgs-unstable,
       system,
       ...
     }:
@@ -420,7 +375,7 @@ in
         "aarch64-linux"
       ])
       {
-        packages.herdr = mkHerdr pkgs inputs'.herdr.packages.herdr;
+        packages.herdr = pkgs-unstable.herdr;
       };
 
   flake.homeModules.herdr =
@@ -428,14 +383,14 @@ in
       config,
       lib,
       pkgs,
+      pkgs-unstable,
       ...
     }:
     let
-      herdr = mkHerdr pkgs inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr;
-      herdrMirrorBin = pkgs.callPackage mkHerdrMirrorBin { };
+      inherit (pkgs-unstable) herdr;
       toml = pkgs.formats.toml { };
-      configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs);
-      pluginRoots = linkedPlugins pkgs;
+      configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs herdr);
+      pluginRoots = linkedPlugins pkgs pkgs-unstable;
       ohMyZshPlugin = mkHerdrOhMyZsh pkgs;
       ohMyZshCustomDir = "${config.xdg.cacheHome}/oh-my-zsh/custom";
 
@@ -541,14 +496,9 @@ in
         name = "herdr-plugins-sync";
         runtimeInputs = [
           herdr
-          pkgs.jq
-          pkgs.git
-          pkgs.cargo
-          pkgs.rustc
         ];
         text = # bash
           ''
-            declare -a plugins=(${lib.escapeShellArgs syncedPlugins})
             declare -a integrations=(${lib.escapeShellArgs syncedIntegrations})
 
             if [[ "''${1:-}" == "--list" ]]; then
@@ -556,22 +506,6 @@ in
               herdr integration status
               exit 0
             fi
-
-            installed="$(herdr plugin list --json 2>/dev/null || echo '{}')"
-
-            for src in "''${plugins[@]}"; do
-              owner="''${src%%/*}"
-              rest="''${src#*/}"
-              repo="''${rest%%/*}"
-              if jq -e --arg o "$owner" --arg r "$repo" \
-                '.result.plugins[]? | select(.source.owner == $o and .source.repo == $r)' \
-                <<<"$installed" >/dev/null 2>&1; then
-                echo "herdr-plugins-sync: $src already installed"
-                continue
-              fi
-              echo "herdr-plugins-sync: installing $src"
-              herdr plugin install "$src" --yes || echo "herdr-plugins-sync: FAILED $src" >&2
-            done
 
             for name in "''${integrations[@]}"; do
               herdr integration install "$name" || echo "herdr-plugins-sync: integration FAILED $name" >&2
@@ -584,16 +518,16 @@ in
     {
       home.packages = [
         herdr
-        herdrMirrorBin
         pickFileFullscreen
         pluginsSync
         sendPaths
         toggleOrPick
       ];
 
-      home.file.".claude/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
-      home.file.".pi/agent/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
-      xdg.configFile."opencode/skills/herdr/SKILL.md".source = "${herdr}/share/herdr/SKILL.md";
+      home.file.".claude/skills/herdr/SKILL.md".source = "${herdr}/share/skills/herdr/herdr/SKILL.md";
+      home.file.".pi/agent/skills/herdr/SKILL.md".source = "${herdr}/share/skills/herdr/herdr/SKILL.md";
+      xdg.configFile."opencode/skills/herdr/SKILL.md".source =
+        "${herdr}/share/skills/herdr/herdr/SKILL.md";
 
       programs.zsh.oh-my-zsh = {
         custom = ohMyZshCustomDir;
@@ -611,9 +545,6 @@ in
 
       xdg.configFile."herdr/plugins/config/persiyanov.reviewr/config.toml".source =
         toml.generate "herdr-reviewr-config.toml" reviewrSettings;
-
-      xdg.configFile."herdr-mirror/hosts.toml".source =
-        toml.generate "herdr-mirror-hosts.toml" herdrMirrorSettings;
 
       programs.zsh.shellAliases = {
         hd = "herdr";

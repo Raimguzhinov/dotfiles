@@ -76,7 +76,7 @@ let
   # объявляются здесь, в extraPackages, а не в home.packages: у
   # standalone-сборки нет ни HM, ни системы — обёрнутый nvim должен видеть
   # эти бинари в собственном PATH.
-  makeNvimSettings = pkgs: lib: {
+  makeNvimSettings = pkgs: pkgs-unstable: lib: {
     extraPackages = with pkgs; [
       git # fugitive/gitsigns/diffview, :!git
       lazygit # toggleterm.lazygit (<leader>gg)
@@ -1829,16 +1829,7 @@ let
         ];
       };
       "herdr-splits.nvim" = {
-        package = pkgs.vimUtils.buildVimPlugin {
-          pname = "herdr-splits.nvim";
-          version = "0.5.3";
-          src = pkgs.fetchFromGitHub {
-            owner = "lmilojevicc";
-            repo = "herdr-splits.nvim";
-            tag = "v0.5.3";
-            hash = "sha256-7rHAPSjd2n16FGOcqI/1KNHl1yCmMOVVwiJl/eEU9n8=";
-          };
-        };
+        package = pkgs-unstable.vimPlugins.herdr-splits-nvim;
         # Outside a herdr pane <C-h/j/k/l> must stay plain wincmd.
         enabled =
           lib.generators.mkLuaInline # lua
@@ -1931,12 +1922,12 @@ let
       "herdr-nvim" = {
         package = pkgs.vimUtils.buildVimPlugin {
           pname = "herdr-nvim";
-          version = "0.2.1";
+          version = "1.1.0";
           src = pkgs.fetchFromGitHub {
             owner = "ChmaraX";
             repo = "herdr-nvim";
-            tag = "v0.2.1";
-            hash = "sha256-7xnhtj2ngPe/QXMN8crT3mB+QuJ7PvPFwGuS9TMNPMQ=";
+            tag = "v1.1.0";
+            hash = "sha256-q44Qt73XzNNipwF3hHr3Hzg0EReC3tz2bKB/l4ZBqiE=";
           };
         };
         enabled =
@@ -1975,12 +1966,12 @@ let
 in
 {
   perSystem =
-    { pkgs, ... }:
+    { pkgs, pkgs-unstable, ... }:
     let
       neovimPkg =
         (inputs.nvf.lib.neovimConfiguration {
           inherit pkgs;
-          modules = [ { config.vim = makeNvimSettings pkgs pkgs.lib; } ];
+          modules = [ { config.vim = makeNvimSettings pkgs pkgs-unstable pkgs.lib; } ];
         }).neovim;
     in
     {
@@ -1992,6 +1983,7 @@ in
       config,
       lib,
       pkgs,
+      pkgs-unstable,
       hostname,
       username,
       ...
@@ -2004,7 +1996,7 @@ in
         defaultEditor = true;
         # Не home.homeDirectory: модуль подключён и для users.root, а флейк
         # лежит в домашнем каталоге основного пользователя.
-        settings.vim = pkgs.lib.recursiveUpdate (makeNvimSettings pkgs pkgs.lib) (
+        settings.vim = pkgs.lib.recursiveUpdate (makeNvimSettings pkgs pkgs-unstable pkgs.lib) (
           mkNixdSettings pkgs pkgs.lib {
             flakePath = "/home/${username}/dotfiles/nixos";
             inherit hostname;

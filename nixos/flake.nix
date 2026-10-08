@@ -47,10 +47,6 @@
       url = "github:Raimguzhinov/ecdy";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    herdr = {
-      url = "github:herdrdev/herdr/v0.8.2";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
