@@ -313,18 +313,19 @@ in
               apiKey = "local";
             };
             models = {
-              "granite-4.2-3b" = {
-                name = "Granite 4.2 3B";
+              "ornith-ai/Ornith-1.5-35B-A3B" = {
+                name = "Ornith 1.5 35B A3B";
                 description = "Локальная модель для offline-кодинга";
                 tool_call = true;
                 reasoning = true;
                 limit = {
-                  context = 32768;
+                  context = 65536;
                   output = 8192;
                 };
                 options = {
-                  temperature = 0.7;
+                  temperature = 0.6;
                   topP = 0.95;
+                  topK = 20;
                 };
                 variants = {
                   off.chat_template_kwargs.enable_thinking = false;
