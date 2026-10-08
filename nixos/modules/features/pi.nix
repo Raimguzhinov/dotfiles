@@ -542,7 +542,7 @@ in
             chmod -R u+w "$out"
             cd "$out/extensions/self-compact"
             substituteInPlace defaults.ts \
-              --replace-fail '{ softAt: "10%", at: "20%", buffer: "10%" }' '{ softAt: "60000", at: "80000", buffer: "15000" }'
+              --replace-fail '{ softAt: "10%", at: "20%", buffer: "10%" }' '{ softAt: "45%", at: "60%", buffer: "12%" }'
             substituteInPlace self-compact.ts \
               --replace-fail 'installFooter(ctx);' "" \
               --replace-fail 'if (ctx.mode === "tui") R.requestRender?.();' "" \
