@@ -8,6 +8,7 @@
           delve
           gcc
           go
+          go-task
           go-tools
           golangci-lint
           gopls
