@@ -166,8 +166,8 @@ in
                 minimal = null;
                 low = "low";
                 medium = "medium";
-                high = null;
-                xhigh = "xhigh";
+                high = "high";
+                xhigh = null;
                 max = null;
               };
               compat = {
@@ -731,6 +731,13 @@ in
                 || log "WARNING: npm install $dep failed (no network?)"
             fi
           done
+
+          perm="$npm_dir/node_modules/pi-permission-system/src/index.ts"
+          if [[ -f "$perm" ]]; then
+            ${pkgs.gnused}/bin/sed -i \
+              's/const allTools = pi.getAllTools();/const allTools = pi.getAllTools().filter((tool) => pi.getActiveTools().includes(getEventToolName(tool) ?? ""));/' \
+              "$perm"
+          fi
 
           log "pi setup complete"
         '';
