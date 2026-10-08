@@ -985,6 +985,7 @@
 
       # Power
       services.tuned.enable = true;
+      services.thermald.enable = true;
       services.upower.enable = true;
       services.upower.criticalPowerAction = "Hibernate";
       services.fwupd.enable = true;
@@ -1022,7 +1023,12 @@
       };
 
       # pppd (sstp-client) needs /etc/ppp to write resolv.conf
-      systemd.tmpfiles.rules = [ "d /etc/ppp 0755 root root -" ];
+      systemd.tmpfiles.rules = [
+        "d /etc/ppp 0755 root root -"
+        "r /etc/tuned/active_profile" # сброс выбранного вручную профиля на дефолтный balanced при загрузке
+        "r /etc/tuned/profile_mode"
+        "r /etc/tuned/ppd_base_profile"
+      ];
 
       # Logging
       services.logrotate = {
