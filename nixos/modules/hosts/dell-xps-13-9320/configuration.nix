@@ -861,6 +861,7 @@
           "docker"
           "wireshark"
           "libvirtd"
+          "incus-admin"
           "kvm"
           "camera"
           "video"
@@ -1056,6 +1057,46 @@
               enabled = true;
               defaultKeepStorage = "20GB";
             };
+            ip-forward-no-drop = true;
+          };
+        };
+        incus = {
+          enable = true;
+          preseed = {
+            networks = [
+              {
+                name = "incusbr0";
+                type = "bridge";
+                config = {
+                  "ipv4.address" = "10.0.100.1/24";
+                  "ipv4.nat" = "true";
+                  "ipv6.address" = "none";
+                };
+              }
+            ];
+            storage_pools = [
+              {
+                name = "default";
+                driver = "dir";
+              }
+            ];
+            profiles = [
+              {
+                name = "default";
+                devices = {
+                  eth0 = {
+                    name = "eth0";
+                    network = "incusbr0";
+                    type = "nic";
+                  };
+                  root = {
+                    path = "/";
+                    pool = "default";
+                    type = "disk";
+                  };
+                };
+              }
+            ];
           };
         };
         libvirtd = {
@@ -1101,6 +1142,8 @@
       networking.firewall.trustedInterfaces = [
         config.services.tailscale.interfaceName
         "virbr0"
+        "incusbr0"
+        "tropabr0"
       ];
       networking.firewall.allowedTCPPorts = [
         8081
