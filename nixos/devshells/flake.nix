@@ -31,9 +31,14 @@
         {
           config,
           pkgs,
+          system,
           ...
         }:
         {
+          _module.args.pkgs = import inputs.nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
           devShells.work = pkgs.mkShell {
             inputsFrom = [
               config.devShells.go

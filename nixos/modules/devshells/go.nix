@@ -39,6 +39,52 @@
           mainProgram = "dlv";
         };
       };
+      pvs-golang = pkgs.stdenv.mkDerivation rec {
+        pname = "pvs-golang";
+        version = "8.01.119";
+        src = pkgs.fetchurl {
+          url = "https://files.pvs-studio.com/pvs-golang-${version}-x86_64.tar.gz";
+          hash = "sha256-Ck4Qa9ULln2UYxkzPaG3CQyO13VxPpTBEfK9entyyxY=";
+        };
+        sourceRoot = ".";
+        nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out
+          cp -r bin share $out/
+          runHook postInstall
+        '';
+        meta = {
+          description = "PVS-Studio static analyzer for Go";
+          homepage = "https://pvs-studio.com";
+          license = pkgs.lib.licenses.unfree;
+          platforms = [ "x86_64-linux" ];
+          mainProgram = "pvs-golang";
+        };
+      };
+      pvs-studio = pkgs.stdenv.mkDerivation rec {
+        pname = "pvs-studio";
+        version = "8.01.110581.857";
+        src = pkgs.fetchurl {
+          url = "https://files.pvs-studio.ru/pvs-studio-${version}-x86_64.tgz";
+          hash = "sha256-JjOsIvNiApkuYAxCM0qRuGgsQYEAygY9tneHRVgvrwU=";
+        };
+        sourceRoot = ".";
+        dontStrip = true;
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out
+          cp -r bin etc lib share $out/
+          runHook postInstall
+        '';
+        meta = {
+          description = "PVS-Studio static analyzer for C and C++";
+          homepage = "https://pvs-studio.com";
+          license = pkgs.lib.licenses.unfree;
+          platforms = [ "x86_64-linux" ];
+          mainProgram = "pvs-studio-analyzer";
+        };
+      };
     in
     {
       devShells.go = pkgs.mkShell {
@@ -61,6 +107,8 @@
           pkgs-protoc-gen-go-grpc.protoc-gen-go-grpc
           pkgs-protoc-gen-go.protoc-gen-go
           protobuf23
+          pvs-golang
+          pvs-studio
           rustc
 
           zstd
