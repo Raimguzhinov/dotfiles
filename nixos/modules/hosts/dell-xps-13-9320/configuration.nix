@@ -520,7 +520,18 @@
               qt6ctSettings = qt5ctSettings;
             };
 
-            programs.gpg.enable = true;
+            programs.gpg = {
+              enable = true;
+              publicKeys = [
+                {
+                  source = pkgs.fetchurl {
+                    url = "https://github.com/Raimguzhinov.gpg";
+                    hash = "sha256-7LkQ4VnlZER4gitui89b5FSw9SZDedPOua8supaO+yg=";
+                  };
+                  trust = 5;
+                }
+              ];
+            };
             services.gpg-agent = {
               enable = true;
               enableZshIntegration = true;
