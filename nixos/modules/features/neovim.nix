@@ -89,6 +89,7 @@ let
       lsof # opencode.nvim: port lookup for discovered servers
       # clang-tools # форматер для protobuf; включить при необходимости
     ];
+    startPlugins = [ pkgs.vimPlugins.vim-fetch ];
     globals.loaded_netrwPlugin = 1;
     globals.opencode_opts = {
       server =
