@@ -23,6 +23,7 @@
             pushall = "!f(){ git push -u origin \"$@\" || exit 1; git push mirror \"$@\" || echo \"mirror push failed\"; }; f";
           };
           init.defaultBranch = "main";
+          credential.helper = "store";
           core.editor = "nvim";
           pull.rebase = true;
           color.ui = true;
