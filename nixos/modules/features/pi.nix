@@ -271,6 +271,7 @@ in
         defaultModel = "agent_proteya";
         theme = "dark";
         defaultThinkingLevel = "low";
+        defaultTools = [ "-powershell" ];
         thinkingBudgets = {
           low = 2048;
           medium = 4096;
