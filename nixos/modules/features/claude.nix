@@ -335,6 +335,10 @@
             type = "http";
             url = "https://mcp.grep.app";
           };
+          huggingface = {
+            type = "http";
+            url = "https://huggingface.co/mcp?login";
+          };
           codebase_memory = {
             type = "stdio";
             command = "npx";
