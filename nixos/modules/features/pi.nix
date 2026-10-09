@@ -298,7 +298,7 @@ in
         defaultProvider = "Protei";
         defaultModel = "auto";
         theme = "dark";
-        defaultThinkingLevel = "low";
+        defaultThinkingLevel = "medium";
         defaultTools = [ "-powershell" ];
         thinkingBudgets = {
           low = 2048;
