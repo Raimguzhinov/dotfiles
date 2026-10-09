@@ -536,7 +536,7 @@ in
         import type { Api, Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
         import type { ExtensionAPI, ExtensionContext, ModelRouteRequest } from "@earendil-works/pi-coding-agent";
         import { calculateContextTokens, estimateTokens } from "@earendil-works/pi-coding-agent";
-        import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+        import { readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
         import { homedir } from "node:os";
         import { dirname, join } from "node:path";
 
@@ -585,14 +585,20 @@ in
 
         const ewmaOf = (id: string, now = Date.now()) => {
           const e = readAll()[id];
-          return e && typeof e.ewma === "number" && now - e.at < CFG.freshMs ? e.ewma : undefined;
+          return e && Number.isFinite(e.ewma) && Number.isFinite(e.at) && e.at <= now && now - e.at < CFG.freshMs ? e.ewma : undefined;
         };
 
         const writeEwma = (id: string, ewma: number) => {
+          const tmp = `''${FILE}.''${process.pid}.''${Math.random().toString(36).slice(2)}.tmp`;
           try {
             mkdirSync(dirname(FILE), { recursive: true });
-            writeFileSync(FILE, JSON.stringify({ ...readAll(), [id]: { ewma, at: Date.now() } }));
-          } catch {}
+            writeFileSync(tmp, JSON.stringify({ ...readAll(), [id]: { ewma, at: Date.now() } }));
+            renameSync(tmp, FILE);
+          } catch {
+            try {
+              unlinkSync(tmp);
+            } catch {}
+          }
         };
 
         const contextTokens = (messages: ModelRouteRequest["messages"]) => {
@@ -630,6 +636,7 @@ in
           let last = 0;
           let chars = 0;
           let review = false;
+          let lastMain = Date.now();
 
           const backend = () => TARGETS[routed].id;
 
@@ -670,6 +677,7 @@ in
             upTarget = -1;
             upCount = 0;
             review = false;
+            lastMain = Date.now();
           };
 
           const choosePool = (now: number) => {
@@ -678,7 +686,9 @@ in
             const dwelt = now - since >= CFG.dwellMs;
             if (probe) return;
             if (pool === "main") {
-              if (dwelt && main !== undefined && main < CFG.slowBelow && (small === undefined || small >= CFG.smallFactor * main)) {
+              const slow = main !== undefined && main < CFG.slowBelow && (small === undefined || small >= CFG.smallFactor * main);
+              const silent = main === undefined && small !== undefined && small >= CFG.upAtLeast[0] && now - lastMain > CFG.freshMs;
+              if (dwelt && (slow || silent)) {
                 pool = "small";
                 since = now;
               }
@@ -709,6 +719,7 @@ in
             const base = ewmaOf(id);
             const ewma = base === undefined ? speed : CFG.alpha * speed + (1 - CFG.alpha) * base;
             writeEwma(id, ewma);
+            if (id === MAIN) lastMain = Date.now();
             if (id === MAIN && probe) {
               probe = false;
               if (ewma < CFG.slowBelow) {
@@ -755,15 +766,24 @@ in
               };
               const keyOf = (m: { provider: string; id: string }) =>
                 (Object.keys(TARGETS) as Target[]).find((t) => TARGETS[t].provider === m.provider && TARGETS[t].id === m.id);
+              if (request.reason === "direct") {
+                const big = contextTokens(request.messages) > Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
+                const key = request.previous && keyOf(request.previous.model);
+                const next: Target = key ? (big && key !== "strict" ? "strict" : key) : big || planMode(ctx) === "plan" ? "strict" : pool;
+                return { model: find(next), thinkingLevel: request.thinkingLevel };
+              }
               review = reviewActive(ctx, request.messages);
               const sticky = request.reason === "retry" ? request.failed : request.reason === "user" ? undefined : request.previous;
               const stickyKey = sticky && keyOf(sticky.model);
               const stickyLevel = sticky?.thinkingLevel;
               const forced: ModelThinkingLevel = "high";
+              const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
+              const big = contextTokens(request.messages) > limit;
               if (sticky && stickyKey && stickyLevel && levelIndex(stickyLevel) >= 0) {
-                const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
-                const forceStrict = request.reason !== "retry" && stickyKey !== "strict" && contextTokens(request.messages) > limit;
-                routed = forceStrict ? "strict" : stickyKey;
+                const continuation = request.reason === "continuation";
+                const forceStrict = continuation && stickyKey !== "strict" && big;
+                const leavePlan = continuation && stickyKey === "strict" && !big && planMode(ctx) !== "plan";
+                routed = forceStrict ? "strict" : leavePlan ? "main" : stickyKey;
                 show(ctx);
                 return { model: find(routed), thinkingLevel: review ? forced : stickyLevel };
               }
@@ -775,15 +795,8 @@ in
                 selected = request.thinkingLevel;
                 if (auto === undefined) auto = Math.max(0, levelIndex(request.thinkingLevel));
               }
-              const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
-              const big = contextTokens(request.messages) > limit;
               choosePool(now);
-              if (big && pool === "small") {
-                pool = "main";
-                since = now;
-                probe = false;
-              }
-              retarget(pool === "small" ? "small" : big || planMode(ctx) === "plan" ? "strict" : "main");
+              retarget(big || planMode(ctx) === "plan" ? "strict" : pool);
               const model: Model<Api> = find(routed);
               const thinkingLevel: ModelThinkingLevel = review ? forced : LEVELS[level(now)];
               show(ctx);
@@ -890,7 +903,7 @@ in
               --replace-fail 'const messages = context.messages.map(message => {' 'const messages = context.messages.map((message, index) => { if (message.role === "system" && index === 0) return { ...message, content: system };' \
               --replace-fail 'historyInput(event.preparation.turnPrefixMessages)].sort(' 'historyInput(event.preparation.turnPrefixMessages), `# Conversation\n''${serializeConversation(convertToLlm(event.preparation.turnPrefixMessages))}\n\n# Instructions\n`].sort(' \
               --replace-fail 'replaceInstructions(context, inputs, userInstructions, budgetChars);' 'replaceInstructions(context, inputs, userInstructions, budgetChars, system.text);' \
-              --replace-fail 'await ctx.modelRegistry.complete(model, ' 'await (model.api === "pi-virtual" ? (m: typeof model, c: Context, o: Parameters<typeof ctx.modelRegistry.streamSimple>[2]) => ctx.modelRegistry.streamSimple(m, c, o).result() : ctx.modelRegistry.complete.bind(ctx.modelRegistry))(model, '
+              --replace-fail 'await ctx.modelRegistry.complete(model, ' 'await (model.api === "pi-virtual" ? (m: typeof model, c: Context, o: Parameters<typeof ctx.modelRegistry.streamSimple>[2]) => ctx.modelRegistry.streamSimple(m, c, { ...o, reasoning: "low" }).result() : ctx.modelRegistry.complete.bind(ctx.modelRegistry))(model, '
           '';
 
       appendSystemFile = pkgs.writeText "pi-append-system.md" /* markdown */ ''
