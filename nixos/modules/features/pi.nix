@@ -137,59 +137,87 @@ in
 
       readSecret = name: "!cat ${config.sops.secrets.${name}.path}";
 
-      modelsConfig = {
-        providers.Protei = {
-          baseUrl = "https://agent.ai.protei.ru/api";
-          api = "openai-completions";
-          apiKey = readSecret "work_ai/litellm_api_key";
-          models = [
-            {
-              id = "agent_proteya";
-              name = "Protei Coding";
-              reasoning = true;
-              input = [
-                "text"
-                "image"
-              ];
-              contextWindow = 131072;
-              maxTokens = 8192;
-              samplingParams = {
-                temperature = 1.0;
-                top_p = 0.95;
-                top_k = 20;
-                min_p = 0.0;
-                presence_penalty = 0.0;
-                repetition_penalty = 1.0;
-              };
-              thinkingLevelMap = {
-                off = "none";
-                minimal = null;
-                low = "low";
-                medium = "medium";
-                high = "high";
-                xhigh = null;
-                max = null;
-              };
-              compat = {
-                supportsDeveloperRole = false;
-                thinkingFormat = "chat-template";
-                # TODO: если LiteLLM/vLLM Протея отвечает 400 — первым убрать это поле
-                thinkingTokenBudgetField = "thinking_token_budget";
-                sendSessionAffinityHeaders = true;
-                chatTemplateKwargs = {
-                  enable_thinking = {
-                    "$var" = "thinking.enabled";
-                  };
-                  reasoning_effort = {
-                    "$var" = "thinking.effort";
-                    omitWhenOff = true;
-                  };
+      modelsConfig =
+        let
+          proteiModel = id: name: {
+            inherit id;
+            inherit name;
+            reasoning = true;
+            input = [
+              "text"
+              "image"
+            ];
+            contextWindow = 131072;
+            maxTokens = 8192;
+            samplingParams = {
+              temperature = 1.0;
+              top_p = 0.95;
+              top_k = 20;
+              min_p = 0.0;
+              presence_penalty = 0.0;
+              repetition_penalty = 1.0;
+            };
+            samplingParamsByThinkingLevel.off = {
+              temperature = 0.7;
+              top_p = 0.8;
+              presence_penalty = 1.5;
+            };
+            thinkingLevelMap = {
+              off = "none";
+              minimal = null;
+              low = "low";
+              medium = "medium";
+              high = "high";
+              xhigh = null;
+              max = null;
+            };
+            compat = {
+              supportsDeveloperRole = false;
+              thinkingFormat = "chat-template";
+              # TODO: если LiteLLM/vLLM Протея отвечает 400 — первым убрать это поле
+              thinkingTokenBudgetField = "thinking_token_budget";
+              sendSessionAffinityHeaders = true;
+              chatTemplateKwargs = {
+                enable_thinking = {
+                  "$var" = "thinking.enabled";
+                };
+                reasoning_effort = {
+                  "$var" = "thinking.effort";
+                  omitWhenOff = true;
                 };
               };
-            }
+            };
+          };
+          proteiProvider = models: {
+            baseUrl = "https://agent.ai.protei.ru/api";
+            api = "openai-completions";
+            apiKey = readSecret "work_ai/litellm_api_key";
+            inherit models;
+          };
+        in
+        {
+          providers.Protei = proteiProvider [
+            (proteiModel "agent_proteya" "Protei Coding")
+            (proteiModel "agent_proteya_slow" "Protei Small")
+          ];
+          providers.ProteiStrict = proteiProvider [
+            (
+              removeAttrs (proteiModel "agent_proteya" "Protei Strict") [ "samplingParamsByThinkingLevel" ]
+              // {
+                contextWindow = 231072;
+                maxTokens = 16000;
+                samplingParams = {
+                  temperature = 0.7;
+                  top_p = 0.8;
+                  top_k = 20;
+                  min_p = 0.0;
+                  presence_penalty = 1.5;
+                  repetition_penalty = 1.0;
+                };
+              }
+            )
           ];
         };
-      };
 
       mcpConfig = {
         mcpServers = {
@@ -268,7 +296,7 @@ in
 
       settingsSeed = {
         defaultProvider = "Protei";
-        defaultModel = "agent_proteya";
+        defaultModel = "auto";
         theme = "dark";
         defaultThinkingLevel = "low";
         defaultTools = [ "-powershell" ];
@@ -503,6 +531,315 @@ in
         }
       '';
 
+      proteiAutoFile = pkgs.writeText "protei-auto.ts" /* typescript */ ''
+        import type { Api, Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
+        import type { ExtensionAPI, ExtensionContext, ModelRouteRequest } from "@earendil-works/pi-coding-agent";
+        import { calculateContextTokens, estimateTokens } from "@earendil-works/pi-coding-agent";
+        import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+        import { homedir } from "node:os";
+        import { dirname, join } from "node:path";
+
+        const CFG = {
+          alpha: 0.3,
+          minTokens: 64,
+          minSpanMs: 1000,
+          stableSamples: 2,
+          freshMs: 15 * 60_000,
+          manualMs: 60 * 60_000,
+          downBelow: [6, 25, 50],
+          upAtLeast: [8, 30, 60],
+          slowBelow: 8,
+          smallFactor: 1.5,
+          backAtLeast: 15,
+          dwellMs: 30 * 60_000,
+          reserveTokens: ${toString settingsSeed.compaction.reserveTokens},
+        };
+        const LEVELS = ["off", "low", "medium", "high"] as const;
+        const FILE = join(homedir(), ".pi", "agent", "protei-auto.json");
+        const VIRTUAL = { provider: "Protei", id: "auto" };
+        const MAIN = "agent_proteya";
+        const SMALL = "agent_proteya_slow";
+        const TARGETS = {
+          main: { provider: "Protei", id: MAIN },
+          strict: { provider: "ProteiStrict", id: MAIN },
+          small: { provider: "Protei", id: SMALL },
+        };
+        const BACKENDS = new Set(["Protei", "ProteiStrict"]);
+
+        type Target = keyof typeof TARGETS;
+        type Shared = Record<string, { ewma: number; at: number }>;
+        type Entry = { type: string; customType?: string; data?: { mode?: string; active?: boolean } };
+
+        const capFor = (v: number) => CFG.downBelow.filter((t) => v >= t).length;
+        const upFor = (v: number) => CFG.upAtLeast.filter((t) => v >= t).length;
+        const levelIndex = (l: string) => LEVELS.indexOf(l as (typeof LEVELS)[number]);
+
+        const readAll = (): Shared => {
+          try {
+            const j = JSON.parse(readFileSync(FILE, "utf8"));
+            if (j && typeof j === "object" && !Array.isArray(j)) return j as Shared;
+          } catch {}
+          return {};
+        };
+
+        const ewmaOf = (id: string, now = Date.now()) => {
+          const e = readAll()[id];
+          return e && typeof e.ewma === "number" && now - e.at < CFG.freshMs ? e.ewma : undefined;
+        };
+
+        const writeEwma = (id: string, ewma: number) => {
+          try {
+            mkdirSync(dirname(FILE), { recursive: true });
+            writeFileSync(FILE, JSON.stringify({ ...readAll(), [id]: { ewma, at: Date.now() } }));
+          } catch {}
+        };
+
+        const contextTokens = (messages: ModelRouteRequest["messages"]) => {
+          const i = messages.findLastIndex((m) => m.role === "assistant" && m.stopReason !== "error" && m.stopReason !== "aborted");
+          const last = i >= 0 ? messages[i] : undefined;
+          const base = last?.role === "assistant" ? calculateContextTokens(last.usage) : 0;
+          return messages.slice(i + 1).reduce((sum, m) => sum + estimateTokens(m), base);
+        };
+
+        const planMode = (ctx: ExtensionContext) =>
+          (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pi-plan")?.data?.mode ?? "normal";
+
+        const reviewActive = (ctx: ExtensionContext, messages: ModelRouteRequest["messages"]) => {
+          const state = (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "review-session");
+          if (state?.data?.active) return true;
+          const user = messages.findLast((m) => m.role === "user");
+          if (user?.role !== "user") return false;
+          const text = typeof user.content === "string" ? user.content : user.content.find((c) => c.type === "text")?.text;
+          return text?.startsWith("# Review Guidelines") ?? false;
+        };
+
+        const isVirtual = (m: { provider: string; id: string } | undefined) => m?.provider === VIRTUAL.provider && m.id === VIRTUAL.id;
+
+        export default function (pi: ExtensionAPI) {
+          let pool: "main" | "small" = "main";
+          let since = 0;
+          let probe = false;
+          let routed: Target = "main";
+          let auto: number | undefined;
+          let selected: string | undefined;
+          let manual: { level: number; at: number } | undefined;
+          let upTarget = -1;
+          let upCount = 0;
+          let first = 0;
+          let last = 0;
+          let chars = 0;
+          let review = false;
+
+          const backend = () => TARGETS[routed].id;
+
+          const manualLeft = (now = Date.now()) => {
+            if (manual && now - manual.at >= CFG.manualMs) {
+              auto = manual.level;
+              manual = undefined;
+            }
+            return manual ? Math.ceil((CFG.manualMs - (now - manual.at)) / 60_000) : 0;
+          };
+
+          const target = (v: number, cur: number) => {
+            const cap = capFor(v);
+            const up = upFor(v);
+            return cap < cur ? cap : up > cur ? up : cur;
+          };
+
+          const level = (now = Date.now()) => (manual && manualLeft(now) ? manual.level : (auto ?? 1));
+
+          const show = (ctx: ExtensionContext) => {
+            if (!ctx.hasUI) return;
+            if (!isVirtual(ctx.model)) return ctx.ui.setStatus("protei-auto", undefined);
+            const v = ewmaOf(backend());
+            const lvl = LEVELS[level()];
+            const left = manualLeft();
+            const mode = review ? "review" : left ? `manual ''${left}m` : "auto";
+            const speed = v === undefined ? "" : ` ''${Math.round(v)} tok/s`;
+            ctx.ui.setStatus("protei-auto", `''${routed}''${probe ? " probe" : ""}''${speed} · ''${review ? "high" : lvl} ''${mode}`);
+          };
+
+          const reset = () => {
+            pool = "main";
+            since = 0;
+            probe = false;
+            routed = "main";
+            auto = undefined;
+            manual = undefined;
+            upTarget = -1;
+            upCount = 0;
+            review = false;
+          };
+
+          const choosePool = (now: number) => {
+            const main = ewmaOf(MAIN, now);
+            const small = ewmaOf(SMALL, now);
+            const dwelt = now - since >= CFG.dwellMs;
+            if (probe) return;
+            if (pool === "main") {
+              if (dwelt && main !== undefined && main < CFG.slowBelow && (small === undefined || small >= CFG.smallFactor * main)) {
+                pool = "small";
+                since = now;
+              }
+              return;
+            }
+            if (!dwelt) return;
+            if (main !== undefined && main >= CFG.backAtLeast) {
+              pool = "main";
+              since = now;
+            } else if (main === undefined) {
+              pool = "main";
+              since = now;
+              probe = true;
+            }
+          };
+
+          const retarget = (next: Target) => {
+            const prev = TARGETS[routed].id;
+            routed = next;
+            if (TARGETS[next].id === prev || auto === undefined) return;
+            const v = ewmaOf(TARGETS[next].id);
+            if (v !== undefined) auto = target(v, auto);
+            upTarget = -1;
+            upCount = 0;
+          };
+
+          const sample = (id: string, speed: number) => {
+            const base = ewmaOf(id);
+            const ewma = base === undefined ? speed : CFG.alpha * speed + (1 - CFG.alpha) * base;
+            writeEwma(id, ewma);
+            if (id === MAIN && probe) {
+              probe = false;
+              if (ewma < CFG.slowBelow) {
+                pool = "small";
+                since = Date.now();
+              }
+            }
+            if (id !== backend() || auto === undefined) return;
+            if (manual && manualLeft()) {
+              if (capFor(ewma) <= manual.level - 2) {
+                manual = undefined;
+                auto = capFor(ewma);
+              }
+              upCount = 0;
+              return;
+            }
+            const t = target(ewma, auto);
+            if (t > auto) {
+              upCount = t === upTarget ? upCount + 1 : 1;
+              upTarget = t;
+              if (upCount >= CFG.stableSamples) {
+                auto = t;
+                upCount = 0;
+              }
+            } else {
+              upCount = 0;
+              auto = t;
+            }
+          };
+
+          pi.registerVirtualModel({
+            provider: VIRTUAL.provider,
+            id: VIRTUAL.id,
+            name: "Protei auto",
+            thinkingLevels: [...LEVELS],
+            contextWindow: 131072,
+            maxTokens: 8192,
+            route(request, ctx) {
+              const now = Date.now();
+              const find = (t: Target) => {
+                const m = ctx.modelRegistry.find(TARGETS[t].provider, TARGETS[t].id);
+                if (!m) throw new Error(`Model ''${TARGETS[t].provider}/''${TARGETS[t].id} is not in the catalog`);
+                return m;
+              };
+              const keyOf = (m: { provider: string; id: string }) =>
+                (Object.keys(TARGETS) as Target[]).find((t) => TARGETS[t].provider === m.provider && TARGETS[t].id === m.id);
+              review = reviewActive(ctx, request.messages);
+              const sticky = request.reason === "retry" ? request.failed : request.reason === "user" ? undefined : request.previous;
+              const stickyKey = sticky && keyOf(sticky.model);
+              const stickyLevel = sticky?.thinkingLevel;
+              const forced: ModelThinkingLevel = "high";
+              if (sticky && stickyKey && stickyLevel && levelIndex(stickyLevel) >= 0) {
+                const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
+                const forceStrict = request.reason !== "retry" && stickyKey !== "strict" && contextTokens(request.messages) > limit;
+                routed = forceStrict ? "strict" : stickyKey;
+                show(ctx);
+                return { model: find(routed), thinkingLevel: review ? forced : stickyLevel };
+              }
+              if (!review) {
+                if (selected !== undefined && request.thinkingLevel !== selected && levelIndex(request.thinkingLevel) >= 0) {
+                  manual = { level: levelIndex(request.thinkingLevel), at: now };
+                  upCount = 0;
+                }
+                selected = request.thinkingLevel;
+                if (auto === undefined) auto = Math.max(0, levelIndex(request.thinkingLevel));
+              }
+              const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
+              const big = contextTokens(request.messages) > limit;
+              choosePool(now);
+              if (big && pool === "small") {
+                pool = "main";
+                since = now;
+                probe = false;
+              }
+              retarget(pool === "small" ? "small" : big || planMode(ctx) === "plan" ? "strict" : "main");
+              const model: Model<Api> = find(routed);
+              const thinkingLevel: ModelThinkingLevel = review ? forced : LEVELS[level(now)];
+              show(ctx);
+              return { model, thinkingLevel };
+            },
+          });
+
+          pi.on("session_start", async (_e, ctx) => {
+            reset();
+            selected = isVirtual(ctx.model) ? pi.getThinkingLevel() : undefined;
+            show(ctx);
+          });
+
+          pi.on("model_select", async (e, ctx) => {
+            selected = isVirtual(e.model) ? pi.getThinkingLevel() : undefined;
+            show(ctx);
+          });
+
+          pi.on("thinking_level_select", async (e, ctx) => {
+            if (!isVirtual(ctx.model) || selected === undefined || e.level === selected) return;
+            selected = e.level;
+            const l = levelIndex(e.level);
+            if (l >= 0) manual = { level: l, at: Date.now() };
+            upCount = 0;
+            show(ctx);
+          });
+
+          pi.on("message_start", async () => {
+            first = 0;
+            last = 0;
+            chars = 0;
+          });
+
+          pi.on("message_update", async (e) => {
+            const ev = e.assistantMessageEvent;
+            if (ev.type !== "thinking_delta" && ev.type !== "text_delta" && ev.type !== "toolcall_delta") return;
+            const now = Date.now();
+            if (!first) first = now;
+            last = now;
+            chars += ev.delta.length;
+          });
+
+          pi.on("message_end", async (e, ctx) => {
+            if (e.message.role !== "assistant" || !first) return;
+            const msg = e.message;
+            const tokens = msg.usage?.output || chars / 4;
+            const span = last - first;
+            first = 0;
+            if (!BACKENDS.has(msg.provider) || tokens < CFG.minTokens || span < CFG.minSpanMs) return;
+            sample(msg.model, tokens / (span / 1000));
+            show(ctx);
+          });
+
+          pi.on("turn_end", async (_e, ctx) => show(ctx));
+        }
+      '';
+
       piReview = pkgs.fetchFromGitHub {
         owner = "earendil-works";
         repo = "pi-review";
@@ -674,6 +1011,9 @@ in
           cp -r --no-preserve=mode "${selfCompact}" "$agent_dir/self-compact"
           cp --reflink=never "${scoutFile}" "$agent_dir/extensions/scout.ts"
           chmod 644 "$agent_dir/extensions/scout.ts"
+          rm -f "$agent_dir/extensions/thinking-auto.ts" "$agent_dir/thinking-auto.json"
+          cp --reflink=never "${proteiAutoFile}" "$agent_dir/extensions/protei-auto.ts"
+          chmod 644 "$agent_dir/extensions/protei-auto.ts"
 
           for ext in damage-control tool-counter session-replay; do
             cp --reflink=never "${piVsCcExtensions}/$ext.ts" "$agent_dir/extensions/$ext.ts"
