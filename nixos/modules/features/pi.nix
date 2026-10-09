@@ -401,7 +401,7 @@ in
             substitute "$src/extensions/tool-counter.ts" "$out/tool-counter.ts" \
               --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
-              --replace-fail 'const model = ctx.model?.id || "no-model";' 'const latest = ctx.model?.api === "pi-virtual" ? ctx.sessionManager.getBranch().findLast((e) => e.type === "message" && e.message.role === "assistant" && e.message.stopReason !== "error" && e.message.stopReason !== "aborted") : undefined; const routed = latest?.type === "message" && latest.message.role === "assistant" ? latest.message : undefined; const model = (ctx.model?.id || "no-model") + (routed ? ` → ''${routed.model}''${routed.thinkingLevel ? ` · ''${routed.thinkingLevel}` : ""}` : "");' \
+              --replace-fail 'const model = ctx.model?.id || "no-model";' 'const latest = ctx.model?.api === "pi-virtual" ? ctx.sessionManager.getBranch().findLast((e) => e.type === "message" && e.message.role === "assistant" && e.message.stopReason !== "error" && e.message.stopReason !== "aborted") : undefined; const routed = latest?.type === "message" && latest.message.role === "assistant" ? latest.message : undefined; const model = (ctx.model?.id || "no-model") + (routed ? ` → ''${routed.model}` : "");' \
               --replace-fail 'let tokIn = 0;' 'let tokIn = 0; let tokCache = 0;' \
               --replace-fail 'tokIn += m.usage.input;' 'tokIn += m.usage.input; tokCache += m.usage.cacheRead ?? 0;' \
               --replace-fail 'theme.fg("dim", " in ") +' 'theme.fg("dim", " in ") + theme.fg("success", `''${fmt(tokCache)}`) + theme.fg("dim", " cached ") +' \
