@@ -401,6 +401,7 @@ in
             substitute "$src/extensions/tool-counter.ts" "$out/tool-counter.ts" \
               --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
+              --replace-fail 'const model = ctx.model?.id || "no-model";' 'const latest = ctx.model?.api === "pi-virtual" ? ctx.sessionManager.getBranch().findLast((e) => e.type === "message" && e.message.role === "assistant" && e.message.stopReason !== "error" && e.message.stopReason !== "aborted") : undefined; const routed = latest?.type === "message" && latest.message.role === "assistant" ? latest.message : undefined; const model = (ctx.model?.id || "no-model") + (routed ? ` → ''${routed.model}''${routed.thinkingLevel ? ` · ''${routed.thinkingLevel}` : ""}` : "");' \
               --replace-fail 'let tokIn = 0;' 'let tokIn = 0; let tokCache = 0;' \
               --replace-fail 'tokIn += m.usage.input;' 'tokIn += m.usage.input; tokCache += m.usage.cacheRead ?? 0;' \
               --replace-fail 'theme.fg("dim", " in ") +' 'theme.fg("dim", " in ") + theme.fg("success", `''${fmt(tokCache)}`) + theme.fg("dim", " cached ") +' \
@@ -888,7 +889,8 @@ in
               --replace-fail 'instructions: string, budgetChars: number) {' 'instructions: string, budgetChars: number, system: string) {' \
               --replace-fail 'const messages = context.messages.map(message => {' 'const messages = context.messages.map((message, index) => { if (message.role === "system" && index === 0) return { ...message, content: system };' \
               --replace-fail 'historyInput(event.preparation.turnPrefixMessages)].sort(' 'historyInput(event.preparation.turnPrefixMessages), `# Conversation\n''${serializeConversation(convertToLlm(event.preparation.turnPrefixMessages))}\n\n# Instructions\n`].sort(' \
-              --replace-fail 'replaceInstructions(context, inputs, userInstructions, budgetChars);' 'replaceInstructions(context, inputs, userInstructions, budgetChars, system.text);'
+              --replace-fail 'replaceInstructions(context, inputs, userInstructions, budgetChars);' 'replaceInstructions(context, inputs, userInstructions, budgetChars, system.text);' \
+              --replace-fail 'await ctx.modelRegistry.complete(model, ' 'await (model.api === "pi-virtual" ? (m: typeof model, c: Context, o: Parameters<typeof ctx.modelRegistry.streamSimple>[2]) => ctx.modelRegistry.streamSimple(m, c, o).result() : ctx.modelRegistry.complete.bind(ctx.modelRegistry))(model, '
           '';
 
       appendSystemFile = pkgs.writeText "pi-append-system.md" /* markdown */ ''
