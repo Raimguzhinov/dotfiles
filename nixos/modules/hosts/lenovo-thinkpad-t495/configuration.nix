@@ -68,6 +68,8 @@
       ];
 
       networking.hostName = hostname;
+      networking.networkmanager.enable = true;
+      networking.networkmanager.enable = true;
       networking.firewall = {
         enable = true;
         allowedTCPPorts = [
@@ -118,13 +120,16 @@
 
       users.users.${username} = {
         isNormalUser = true;
-        extraGroups = [ "wheel" ];
+        extraGroups = [
+          "wheel"
+          "networkmanager"
+        ];
         initialHashedPassword = # mkpasswd <password>
           "$y$j9T$u06AsIj.fZtLVi2I0teH9.$IRF6NKQyvVgQKtr7r6PPAHO3CPnvp/nPHxVj.SBgBK4";
         openssh.authorizedKeys.keyFiles = [
           (builtins.fetchurl {
             url = "https://github.com/Raimguzhinov.keys";
-            sha256 = "sha256-eWeyPsWYNQdiSrCZGGtTmpwhrSZztiHMDg6vgBZkGRs=";
+            sha256 = "sha256-QzT6y3xDYuPq9NmuqhWqeE9a9pGpgGFqxvrzsuzZ6Eo=";
           })
         ];
       };
