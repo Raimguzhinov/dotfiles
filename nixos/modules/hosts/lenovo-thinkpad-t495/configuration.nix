@@ -133,7 +133,6 @@
         vim
         wget
         yazi
-        zellij
       ];
 
       users.users.kodi = {
@@ -175,9 +174,9 @@
             home.stateVersion = version;
             imports = [
               inputs.nvf.homeManagerModules.default
+              homeModules.git
               homeModules.neovim
               homeModules.tools
-              homeModules.git
             ];
           };
         users.${username} =
@@ -189,9 +188,10 @@
             home.homeDirectory = "/home/${username}";
             imports = [
               inputs.nvf.homeManagerModules.default
+              homeModules.git
+              homeModules.herdr
               homeModules.neovim
               homeModules.tools
-              homeModules.git
             ];
           };
       };
