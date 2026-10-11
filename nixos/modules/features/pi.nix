@@ -312,6 +312,7 @@ in
         extensions = [ "self-compact/extensions/self-compact/self-compact.ts" ];
         packages = [
           "npm:@cortexkit/aft-pi"
+          "npm:pi-lsp-extension"
           "npm:@upstash/context7-pi"
           "npm:@juicesharp/rpiv-todo"
           "npm:pi-cache-optimizer"
@@ -344,6 +345,14 @@ in
           self_compact = "allow";
           view_context = "allow";
           codemode = "allow";
+          lsp_diagnostics = "allow";
+          lsp_hover = "allow";
+          lsp_definition = "allow";
+          lsp_references = "allow";
+          lsp_symbols = "allow";
+          lsp_completions = "allow";
+          code_overview = "allow";
+          ast_search = "allow";
           "mcp__*" = "allow";
         };
       };
@@ -356,6 +365,48 @@ in
         format_on_edit = true;
         edit_mode = "hashline";
         bash.background = false;
+        lsp = {
+          auto_install = false;
+          disabled = [
+            "typescript"
+            "typescript-native"
+            "python"
+            "rust"
+            "go"
+            "bash"
+            "yaml"
+            "ty"
+            "clojure-lsp"
+            "dart"
+            "elixir-ls"
+            "fsharp"
+            "gleam"
+            "haskell-language-server"
+            "jdtls"
+            "julials"
+            "nixd"
+            "ocaml-lsp"
+            "php-intelephense"
+            "ruby-lsp"
+            "sourcekit-lsp"
+            "csharp"
+            "razor"
+            "clangd"
+            "lua-ls"
+            "zls"
+            "tinymist"
+            "kotlin-ls"
+            "texlab"
+            "oxlint"
+            "terraform"
+            "vue"
+            "astro"
+            "prisma"
+            "biome"
+            "svelte"
+            "dockerfile"
+          ];
+        };
         disabled_tools = [
           "aft_inspect"
           "aft_import"
@@ -433,7 +484,7 @@ in
       scoutFile = pkgs.writeText "scout.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-        const SCOUT_TOOLS = ["read", "bash", "grep", "find", "ls", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "codemode"];
+        const SCOUT_TOOLS = ["read", "bash", "grep", "find", "ls", "lsp_definition", "lsp_references", "lsp_symbols", "lsp_hover", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "codemode"];
 
         const scoutPrompt = (task: string) => `Scout the codebase for the task below before any planning. Do not modify anything.
 
@@ -954,12 +1005,19 @@ in
         - суть: reduce your previous answer to the single thing that matters most.
         - пронумеруй: rewrite your previous answer with reference codes.
 
+        ## Code intelligence (LSP)
+        LSP tools are the default way to read and change code in Go, Nix, TypeScript, TSX, JavaScript, Rust and Python.
+        - Where a symbol is defined: lsp_definition. Who uses it: lsp_references. What a file or the workspace contains: lsp_symbols. Its type or signature: lsp_hover. Errors and warnings: lsp_diagnostics. Quick fixes and imports: lsp_code_actions. Renames: lsp_rename.
+        - Search for a symbol with grep or aft_search only after an LSP tool returned nothing or failed, and say so in one line.
+        - Text search is right for strings, comments, logs, config keys and files in other languages.
+        - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
+
         ## Workflow for code tasks
         Work autonomously until the task is done or you are blocked.
-        1. Locate: find the relevant code with grep, aft_search, aft_outline or aft_zoom. Read only the line ranges you need. Never guess file contents, APIs or paths.
+        1. Locate: find symbols with the LSP tools, see Code intelligence. Read only the line ranges you need with aft_outline, aft_zoom or read. Never guess file contents, APIs or paths.
         2. Plan: if the change touches more than one file, first write a numbered plan of at most 5 steps.
         3. Edit: make one small change at a time. Match the existing style. Do not add files, dependencies or refactors that were not asked for.
-        4. Verify: after editing, run the narrowest build, test or lint command. On failure, read the error, fix it and re-run. After 3 failed attempts, stop and report.
+        4. Verify: run lsp_diagnostics on the changed files and fix the errors, then run the narrowest build, test or lint command. On failure, read the error, fix it and re-run. After 3 failed attempts, stop and report.
         5. Report in at most 5 lines: what changed (path:line), how it was verified, what is left.
 
         Rules:
@@ -985,6 +1043,11 @@ in
         home.packages = [
           pkgs-unstable.pi-coding-agent
           (pkgs.callPackage mkPiAcp { })
+          pkgs.gopls
+          pkgs.nixd
+          pkgs.pyright
+          pkgs.rust-analyzer
+          pkgs.typescript-language-server
         ];
 
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
@@ -1092,6 +1155,15 @@ in
             ${pkgs.gnused}/bin/sed -i \
               's/const allTools = pi.getAllTools();/const allTools = pi.getAllTools().filter((tool) => pi.getActiveTools().includes(getEventToolName(tool) ?? ""));/' \
               "$perm"
+          fi
+
+          lsp_ext="$npm_dir/node_modules/pi-lsp-extension/dist/index.js"
+          if [[ -f "$lsp_ext" ]] && ! grep -qF '".nix": "nix"' "$lsp_ext"; then
+            ${pkgs.gnused}/bin/sed -i \
+              -e 's/^  "\.php": "php"$/  ".php": "php",\n  ".nix": "nix"/' \
+              -e 's/^  java: { command: "jdtls", args: \[\] }$/  java: { command: "jdtls", args: [] },\n  nix: { command: "nixd", args: [] }/' \
+              "$lsp_ext"
+            grep -qF 'nix: { command: "nixd"' "$lsp_ext" || log "WARNING: pi-lsp-extension nix patch did not apply"
           fi
 
           log "pi setup complete"

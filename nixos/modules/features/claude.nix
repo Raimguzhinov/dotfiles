@@ -226,6 +226,14 @@
         - суть: reduce your previous answer to the single thing that matters most.
         - пронумеруй: rewrite your previous answer with reference codes.
 
+        ## Code intelligence (LSP)
+        The LSP tool is the default way to read and change code in Go, Nix, TypeScript, TSX, JavaScript, Rust and Python. If it is deferred, load it with ToolSearch (select:LSP).
+        - Where a symbol is defined: goToDefinition. Who uses it: findReferences. Implementations of an interface: goToImplementation. Symbols of a file or the workspace: documentSymbol, workspaceSymbol. Its type or signature: hover. Callers and callees: incomingCalls, outgoingCalls.
+        - Search for a symbol with Grep only after the LSP tool returned nothing or failed, and say so in one line.
+        - Text search is right for strings, comments, logs, config keys and files in other languages.
+        - After an edit, fix every new LSP diagnostic you introduced before reporting the task as done.
+        - Every subagent brief that searches or edits code in these languages tells the subagent to use the LSP tool first and to report LSP diagnostics after edits.
+
         ## Delegation
         You are the orchestrator. Split every task into subtasks and hand each subtask to a subagent with the Agent tool. A router reads each subagent's description and prompt and runs it on haiku, sonnet, opus or fable, so cheap work goes to cheap models and hard work to strong ones.
         - Never set the `model` parameter of the Agent tool. The router chooses it.
@@ -241,7 +249,7 @@
 
         ## Workflow for code tasks
         Work autonomously until the task is done or you are blocked.
-        1. Locate: delegate finding the relevant code. Never guess file contents, APIs or paths.
+        1. Locate: delegate finding the relevant code, with symbols found through the LSP tool. Never guess file contents, APIs or paths.
         2. Plan: if the change touches more than one file, first write a numbered plan of at most 5 steps, each step a subagent brief.
         3. Edit: delegate one small change per subagent. Require matching the existing style and no files, dependencies or refactors that were not asked for.
         4. Verify: delegate running the narrowest build, test or lint command. On failure, send the error to a subagent to fix and re-run. After 3 failed attempts, stop and report.
@@ -321,9 +329,34 @@
             !`${lib.getExe jevRouter} ''${CLAUDE_SESSION_ID} $ARGUMENTS`
           '';
 
-        lspServers.gopls = {
-          command = lib.getExe pkgs.gopls;
-          extensionToLanguage.".go" = "go";
+        lspServers = {
+          gopls = {
+            command = lib.getExe pkgs.gopls;
+            extensionToLanguage.".go" = "go";
+          };
+          nixd = {
+            command = lib.getExe pkgs.nixd;
+            extensionToLanguage.".nix" = "nix";
+          };
+          typescript = {
+            command = lib.getExe pkgs.typescript-language-server;
+            args = [ "--stdio" ];
+            extensionToLanguage = {
+              ".ts" = "typescript";
+              ".tsx" = "typescriptreact";
+              ".js" = "javascript";
+              ".jsx" = "javascriptreact";
+            };
+          };
+          rust-analyzer = {
+            command = lib.getExe pkgs.rust-analyzer;
+            extensionToLanguage.".rs" = "rust";
+          };
+          pyright = {
+            command = lib.getExe' pkgs.pyright "pyright-langserver";
+            args = [ "--stdio" ];
+            extensionToLanguage.".py" = "python";
+          };
         };
 
         mcpServers = {
