@@ -3,6 +3,7 @@
   flake.homeModules.claude =
     {
       config,
+      osConfig,
       lib,
       pkgs,
       pkgs-unstable,
@@ -388,7 +389,7 @@
               "-y"
               "mcp-searxng"
             ];
-            env.SEARXNG_URL = "http://127.0.0.1:8899";
+            env.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
           };
           typst = {
             type = "stdio";

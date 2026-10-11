@@ -155,6 +155,7 @@ in
   flake.homeModules.opencode =
     {
       config,
+      osConfig,
       inputs ? null,
       lib,
       pkgs,
@@ -367,7 +368,7 @@ in
               "-y"
               "mcp-searxng"
             ];
-            environment.SEARXNG_URL = "http://127.0.0.1:8899";
+            environment.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
             enabled = true;
           };
           typst = {

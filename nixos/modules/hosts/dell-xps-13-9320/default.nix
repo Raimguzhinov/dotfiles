@@ -21,6 +21,7 @@
       config.flake.nixosModules.overlays
       config.flake.nixosModules.llamaCpp
       config.flake.nixosModules.pi
+      config.flake.nixosModules.searx
       inputs.home-manager.nixosModules.home-manager
       inputs.niri.nixosModules.niri
     ];

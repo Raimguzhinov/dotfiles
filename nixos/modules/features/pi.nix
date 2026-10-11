@@ -1,7 +1,5 @@
 { ... }:
 let
-  searxPort = 8899;
-
   mkPiAcp =
     {
       lib,
@@ -37,89 +35,17 @@ in
     };
 
   flake.nixosModules.pi =
-    {
-      lib,
-      pkgs,
-      ...
-    }:
-
-    let
-      searxSecretFile = "/var/lib/searx-secret/env";
-    in
+    { ... }:
     {
       config = {
         programs.nix-ld.enable = true;
-
-        systemd.services.searx-secret = {
-          requiredBy = [
-            "searx-init.service"
-            "searx.service"
-          ];
-          before = [
-            "searx-init.service"
-            "searx.service"
-          ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            StateDirectory = "searx-secret";
-            StateDirectoryMode = "0700";
-            UMask = "0077";
-          };
-          script = /* bash */ ''
-            if [[ ! -s ${searxSecretFile} ]]; then
-              printf 'SEARXNG_SECRET=%s\n' \
-                "$(${lib.getExe pkgs.openssl} rand -hex 32)" > ${searxSecretFile}
-            fi
-          '';
-        };
-
-        services.searx = {
-          enable = true;
-          domain = "localhost";
-          environmentFile = searxSecretFile;
-          settings = {
-            server = {
-              port = searxPort;
-              bind_address = "127.0.0.1";
-              secret_key = "$SEARXNG_SECRET";
-            };
-            search.formats = [
-              "html"
-              "json"
-            ];
-            # Эти движки captcha-блокируют/тихо отдают decoy с домашнего IP
-            # (journalctl -u searx.service); mcp-searxng может явно запросить
-            # их через engines=, так что одного disabled: true недостаточно.
-            use_default_settings.engines.remove = [
-              "google"
-              "startpage"
-              "duckduckgo"
-              "brave"
-              # brave.images/videos/news ссылаются на network: brave —
-              # без базового движка searxng падает с KeyError на старте
-              "brave.images"
-              "brave.videos"
-              "brave.news"
-              "mojeek"
-              "bing"
-            ];
-            # yandex по умолчанию выключен (disabled: true) — единственный
-            # оставшийся общий web-движок, не пойманный на бане с этого IP.
-            engines = [
-              {
-                name = "yandex";
-                disabled = false;
-              }
-            ];
-          };
-        };
       };
     };
 
   flake.homeModules.pi =
     {
       config,
+      osConfig,
       lib,
       pkgs,
       pkgs-unstable,
@@ -260,7 +186,7 @@ in
               "-y"
               "mcp-searxng"
             ];
-            env.SEARXNG_URL = "http://127.0.0.1:${toString searxPort}";
+            env.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
           };
           postgres = {
             description = "Read-only queries to the local uc PostgreSQL database";
