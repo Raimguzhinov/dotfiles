@@ -1479,6 +1479,7 @@ in
       '';
       npmPins = {
         "@cortexkit/aft-pi" = config.programs.pi.aftVersion;
+        "pi-lsp-extension" = "1.4.0";
       };
     in
     {
@@ -1657,6 +1658,13 @@ in
               -e 's/^  java: { command: "jdtls", args: \[\] }$/  java: { command: "jdtls", args: [] },\n  nix: { command: "nixd", args: [] }/' \
               "$lsp_ext"
             grep -qF 'nix: { command: "nixd"' "$lsp_ext" || log "WARNING: pi-lsp-extension nix patch did not apply"
+          fi
+
+          if [[ -f "$lsp_ext" ]] && ! grep -qF 'existsSync3(join2(dir, marker))' "$lsp_ext"; then
+            ${pkgs.gnused}/bin/sed -i \
+              -e 's|^    if (!existsSync3(configPath)) return null;$|    if (!existsSync3(configPath)) { const autoStart = [...new Set([["go.mod", "go"], ["Cargo.toml", "rust"], ["flake.nix", "nix"], ["default.nix", "nix"], ["shell.nix", "nix"], ["tsconfig.json", "typescript"], ["package.json", "typescript"], ["pyproject.toml", "python"], ["setup.py", "python"], ["requirements.txt", "python"]].filter(([marker]) => existsSync3(join2(dir, marker))).map(([, lang]) => lang))]; return autoStart.length > 0 ? { autoStart } : null; }|' \
+              "$lsp_ext"
+            grep -qF 'existsSync3(join2(dir, marker))' "$lsp_ext" || log "WARNING: pi-lsp-extension autoStart patch did not apply"
           fi
 
           log "pi setup complete"
