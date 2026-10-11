@@ -1477,8 +1477,17 @@ in
         Good: Не надо. Писатель один, состояние восстанавливается из SQLite, координации между хостами нет. Redis добавит точку отказа и не решит ни одной текущей проблемы.
         Bad: Вы абсолютно правы, Redis может помочь! Но вопрос глубже: речь не о кэше, а об архитектуре.
       '';
+      npmPins = {
+        "@cortexkit/aft-pi" = config.programs.pi.aftVersion;
+      };
     in
     {
+      options.programs.pi.aftVersion = lib.mkOption {
+        type = lib.types.str;
+        default = "0.59.0";
+        description = "aft version shared by pi and opencode, both write the same storage";
+      };
+
       config = {
 
         home.packages = [
@@ -1616,10 +1625,20 @@ in
             done < <("${lib.getExe pkgs.jq}" -r '.dependencies // {} | keys[]' "$npm_dir/package.json")
           fi
 
+          declare -A pins=(${
+            lib.concatStrings (
+              lib.mapAttrsToList (
+                name: version: " [${lib.escapeShellArg name}]=${lib.escapeShellArg version}"
+              ) npmPins
+            )
+          } )
+
           for dep in "''${wanted[@]}"; do
-            if [[ ! -d "$npm_dir/node_modules/$dep" ]]; then
-              log "Installing $dep"
-              "${pkgs.coreutils}/bin/timeout" 180s npm --prefix "$npm_dir" install "$dep" --legacy-peer-deps >/dev/null 2>&1 \
+            pin="''${pins[$dep]:-}"
+            have="$("${lib.getExe pkgs.jq}" -r '.version // empty' "$npm_dir/node_modules/$dep/package.json" 2>/dev/null || true)"
+            if [[ ! -d "$npm_dir/node_modules/$dep" || ( -n "$pin" && "$have" != "$pin" ) ]]; then
+              log "Installing $dep''${pin:+@$pin}"
+              "${pkgs.coreutils}/bin/timeout" 180s npm --prefix "$npm_dir" install "$dep''${pin:+@$pin}" --legacy-peer-deps >/dev/null 2>&1 \
                 || log "WARNING: npm install $dep failed (no network?)"
             fi
           done
