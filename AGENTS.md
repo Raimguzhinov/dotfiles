@@ -126,10 +126,33 @@ nixos/
   `/var/lib/alsa/card0.conf.d/ctl-remap.conf`: если там оказался битый симлинк в
   GC’d `/nix/store`, он удаляется и создаётся пустой файл.
 
+### Swap и гибернация
+
+- Swap: `/swap/swapfile` (32G) в btrfs-сабволюме `swap` внутри LUKS
+  (`cryptroot`). `boot.resumeDevice = "/dev/mapper/cryptroot"` и
+  `resume_offset` в `boot.kernelParams`.
+- `resume_offset` берётся из
+  `btrfs inspect-internal map-swapfile -r /swap/swapfile`. При пересоздании
+  файла его нужно обновить, иначе resume не найдёт образ.
+- Сабволюм `swap` не снапшотить: btrfs не даст, пока swapfile активен.
+- Новые `resume=`/`resume_offset` начинают работать только после
+  перезагрузки. До неё logind отвечает `CanHibernate=na`, и
+  `suspend-then-hibernate` молча становится обычным suspend.
+
+### Отпечаток и PAM
+
+- Опция `pam_fprintd` пишется `max-tries=` (через дефис). `max_tries`
+  молча игнорируется. sudo: `debug max-tries=5 timeout=30`.
+- Сканер Goodix `27c6:63bc` быстро тратит попытки (fprintd #217), поэтому
+  нужен запас по `max-tries` и `timeout`.
+- ly 1.4.1 не умеет входить только по отпечатку (codeberg ly #227), поэтому
+  `pam_fprintd` из стека ly убран.
+
 ### Post-resume хелперы
 
-- `xps-auth-post-resume` перезапускает `fprintd` и `polkit-soteria` после resume
-  для снижения race-condition.
+- `xps-auth-post-resume` (рестарт `fprintd` и `polkit-soteria`) удалён
+  (октябрь 2026): сбои отпечатка в sudo шли от настроек `pam_fprintd`, см.
+  «Отпечаток и PAM».
 - `xps-touchpad-reset-post-resume` (unbind/bind `i2c-VEN_04F3:00`) из
   resume-хука **убран** (октябрь 2026): именно этот повторный probe вешал
   шину тачпада. Юнит оставлен только для ручного вызова, и тоже рискованно.

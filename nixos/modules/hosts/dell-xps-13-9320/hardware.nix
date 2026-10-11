@@ -64,12 +64,18 @@
         options = [ "subvol=nix" ];
       };
 
-      swapDevices = [
-        { device = "/dev/disk/by-uuid/67de0ed7-3439-4495-a77b-124b27ab717a"; }
-      ];
+      fileSystems."/swap" = {
+        device = "/dev/mapper/cryptroot";
+        fsType = "btrfs";
+        options = [
+          "subvol=swap"
+          "noatime"
+        ];
+      };
 
-      # Resume from hibernate: must match swap device UUID above
-      boot.resumeDevice = "/dev/disk/by-uuid/67de0ed7-3439-4495-a77b-124b27ab717a";
+      swapDevices = [ { device = "/swap/swapfile"; } ];
+
+      boot.resumeDevice = "/dev/mapper/cryptroot";
 
       # Zswap: compressed RAM cache in front of disk swap.
       # Pages are compressed in RAM first; cold pages spill to disk swap.
@@ -81,6 +87,7 @@
         "zswap.compressor=zstd"
         "zswap.max_pool_percent=20"
         "zswap.shrinker_enabled=1"
+        "resume_offset=130557184" # btrfs inspect-internal map-swapfile -r /swap/swapfile
       ];
 
       # Low swappiness: prefer keeping processes in RAM, use swap only under pressure.

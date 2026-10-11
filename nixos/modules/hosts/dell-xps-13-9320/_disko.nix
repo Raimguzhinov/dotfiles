@@ -2,9 +2,9 @@
 # Used only by the install script (disko CLI), NOT as a NixOS module.
 # nixos-generate-config writes fileSystems to hardware-configuration.nix.
 #
-# Layout: GPT → ESP (512M) + swap (32G) + LUKS2 → btrfs (/root, /home, /nix)
-# Swap is outside LUKS for simple hibernation support (resumeDevice = true).
-# Adjust swap size to match your RAM.
+# Layout: GPT → ESP (512M) + LUKS2 → btrfs (/root, /home, /nix, /swap)
+# Swap is a swapfile inside LUKS; after install set resume_offset from
+# `btrfs inspect-internal map-swapfile -r /swap/swapfile`.
 {
   lib,
   disk ? "/dev/disk/by-diskseq/1",
@@ -26,13 +26,6 @@
               format = "vfat";
               mountpoint = "/boot";
               mountOptions = [ "umask=0077" ];
-            };
-          };
-          swap = {
-            size = "32G";
-            content = {
-              type = "swap";
-              resumeDevice = true;
             };
           };
           luks = {
@@ -65,6 +58,10 @@
                       "compress=zstd"
                       "noatime"
                     ];
+                  };
+                  "/swap" = {
+                    mountpoint = "/swap";
+                    swap.swapfile.size = "32G";
                   };
                 };
               };
