@@ -583,8 +583,8 @@ in
           if [[ -f "$opencode_dir/opencode.json" ]]; then
             "${lib.getExe pkgs.jq}" \
               'del(.enabled_providers)
-               | .model = "opencode/muse-spark-1.3-contributor-free"
-               | .small_model = "opencode/mimo-v2.6-flash-free"
+               | .model = "opencode/step-5-preview-free"
+               | .small_model = "opencode/step-5-preview-free"
                | del(.provider.Protei.models[]?.variants.high)
                | .provider.Protei.models.Coding.limit = { context: 262144, output: 65536 }
                | .provider.Protei.models.Strict.limit.context = 262144' \
