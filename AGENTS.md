@@ -130,8 +130,9 @@ nixos/
 
 - `xps-auth-post-resume` перезапускает `fprintd` и `polkit-soteria` после resume
   для снижения race-condition.
-- `xps-touchpad-reset-post-resume` делает unbind/bind `i2c-VEN_04F3:00` в
-  драйвере `i2c_hid_acpi` (полный probe = HID RESET тачпада Elan).
+- `xps-touchpad-reset-post-resume` (unbind/bind `i2c-VEN_04F3:00`) из
+  resume-хука **убран** (октябрь 2026): именно этот повторный probe вешал
+  шину тачпада. Юнит оставлен только для ручного вызова, и тоже рискованно.
 - Все post-resume сервисы запускаются из `powerManagement.resumeCommands`
   (скрипт `ExecStop` у `sleep-actions.service`), а не через
   `post-resume.target` — такого таргета нет.
@@ -146,10 +147,16 @@ nixos/
 
 | Симптом | Причина | Фикс |
 |---|---|---|
-| После resume курсор сам уезжает, в `dmesg` флуд `i2c_designware.1: spurious STOP detected` | Elan после некоторых resume в полуинициализированном состоянии; `i2c_hid` не делает HID RESET на resume (нет `I2C_HID_QUIRK_RESET_ON_RESUME` для Elan) | `xps-touchpad-reset-post-resume` |
+| После resume курсор сам уезжает, в `dmesg` флуд `i2c_designware.1: spurious STOP detected` | не воспроизводится с октября 2026 (0 из 230 циклов s2idle). Гипотеза: эмуляция тачпада в EC Dell (второй мастер на шине) | раньше лечилось rebind, теперь rebind запрещён (см. ниже) |
+| Тачпад мёртв, флуд `controller timed out` / `timeout waiting for bus ready` / `-110` | повторный probe `i2c_hid` (unbind/bind) вешает шину: первое чтение feature report 2 после reset не завершается. 4/54 rebind после resume, 2/3 rebind в покое, 2/6 загрузок, когда probe шёл через ~60 с после ядра (EC держал шину до `_DSM`). SDA/SCL при этом высокие, rebind и сброс контроллера не помогают | rebind не делать; probe в initrd (`boot.initrd.kernelModules`: `pinctrl_tigerlake intel_lpss_pci idma64 i2c_hid_acpi hid_multitouch`); восстановление только гибернацией через `xps-touchpad-watchdog` |
 | После сна «нужен лишний палец» (1 палец — ничего, 2 — курсор), само проходит | libinput #1319: протухший `is_tool_palm` у слота после закрытия fd (крышка → `tp_suspend(SUSPEND_LID)`) | патч libinput в overlay (см. ниже) |
 | Раз в день «зажата кнопка» (движение = выделение/drag) | не доказано; главная гипотеза — второй путь тачпада через PS/2 (`DLL0af3` на i8042 AUX) | `boot.blacklistedKernelModules = [ "psmouse" ]` |
 
+- `HibernateDelaySec` и `HibernateMode=shutdown` задаются в
+  `systemd.sleep.settings.Sleep`, а не в logind: logind этот ключ
+  игнорирует. До октября 2026 из-за этого `suspend-then-hibernate` никогда
+  не гибернировал, и ноутбук с закрытой крышкой спал в s2idle до разряда
+  батареи («лимбо»). `shutdown` обходит S4-путь прошивки Dell.
 - `services.upower.criticalPowerAction = "Hibernate"`: дефолтный
   `HybridSleep` при 2% оставлял машину в s2idle на пустой батарее
   (один из триггеров сбоя тачпада, плюс hybrid-sleep 25.09 потерял сессию).
@@ -159,6 +166,18 @@ nixos/
   ребута. Именно это «ломало тачпад» в старой попытке.
 - `tap = false`, `dwt = false` в niri — tap-and-drag/drag-lock к залипанию
   кнопки отношения не имеют.
+- `xps-touchpad-watchdog`: по строке `i2c-VEN_04F3:00: failed to` в
+  журнале ядра делает активную проверку (`HIDIOCGFEATURE` report 2 через
+  `hidraw`) и, только если тачпад не отвечает, уходит в `systemctl hibernate`
+  (не чаще раза в 10 минут). Ошибки, записанные при входе в гибернацию,
+  после resume приходят в журнал со свежим временем. Поэтому смотреть только
+  в журнал нельзя: это двойная гибернация.
+- Проверено и **не работает**: пауза после HID RESET в `i2c-hid`
+  (out-of-tree патч, 300 мс), сброс контроллера I2C1, 9 тактов SCL
+  (линии не прижаты). В ACPI у тачпада нет ни питания, ни reset-пина.
+- Стенд стресс-тестов: `.claude/skills/xps-touchpad-debug/stress/`
+  (`run.sh OUT [default|t2a|ec]`). Он никогда не гибернирует, при
+  зависании останавливается с кодом 3.
 
 Диагностика в момент сбоя — навык `.claude/skills/xps-touchpad-debug`
 (локальный, `.claude` в gitignore). Ключевое: сравнить состояние ядра

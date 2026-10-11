@@ -727,17 +727,12 @@
       systemd.services.display-manager.wants = [ "fprintd.service" ];
       systemd.services.display-manager.after = [ "fprintd.service" ];
 
-      # NOTE: `ly` shows only a password form, but PAM modules like pam_fprintd may
-      # still run and block. To allow both "password OR fingerprint" without long
-      # blocking, we override PAM stacks for ly and noctalia with short
-      # pam_fprintd timeouts.
       security.pam.services.ly.fprintAuth = false;
       security.pam.services.ly.text = ''
         # Account management.
         account required ${pkgs.pam}/lib/security/pam_unix.so
 
         # Authentication management.
-        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max_tries=1 timeout=3
         auth optional ${pkgs.pam}/lib/security/pam_unix.so likeauth
         auth optional ${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so
         auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
@@ -783,7 +778,7 @@
         account required ${pkgs.pam}/lib/security/pam_unix.so
 
         # Authentication management.
-        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so max-tries=3 timeout=15
+        auth [success=done default=ignore] ${pkgs.fprintd}/lib/security/pam_fprintd.so debug max-tries=5 timeout=30
         auth sufficient ${pkgs.pam}/lib/security/pam_unix.so likeauth try_first_pass
         auth required ${pkgs.pam}/lib/security/pam_deny.so
 
@@ -803,7 +798,11 @@
         HandlePowerKeyLongPress = "poweroff";
         HandleLidSwitch = "suspend-then-hibernate";
         HandleLidSwitchExternalPower = "suspend-then-hibernate";
+      };
+
+      systemd.sleep.settings.Sleep = {
         HibernateDelaySec = "5min";
+        HibernateMode = "shutdown";
       };
 
       # Enable sound with pipewire.

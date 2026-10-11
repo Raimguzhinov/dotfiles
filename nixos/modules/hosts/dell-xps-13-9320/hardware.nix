@@ -21,7 +21,13 @@
         "usb_storage"
         "sd_mod"
       ];
-      boot.initrd.kernelModules = [ ];
+      boot.initrd.kernelModules = [
+        "pinctrl_tigerlake"
+        "intel_lpss_pci"
+        "idma64"
+        "i2c_hid_acpi"
+        "hid_multitouch"
+      ];
       boot.blacklistedKernelModules = [ "psmouse" ];
 
       # Kernel pinning: keeps updates predictable and avoids surprise jumps.
@@ -343,28 +349,6 @@
       # not itself a contributing cause. Cold-boot camera-setup/camera-bridge
       # above are unaffected — they only read existing state.
 
-      # Post-resume: restart fprintd + polkit agent to reduce race conditions.
-      # This is especially helpful after hibernate/suspend where devices or D-Bus
-      # activations may behave inconsistently.
-      systemd.services.xps-auth-post-resume = {
-        description = "XPS 9320: restart auth agents after resume";
-        serviceConfig = {
-          Type = "oneshot";
-          TimeoutStartSec = 5;
-        };
-        script = ''
-          set -eu
-
-          echo "[xps-auth-post-resume] restart fprintd"
-          ${pkgs.systemd}/bin/systemctl restart fprintd.service 2>/dev/null || true
-
-          echo "[xps-auth-post-resume] restart polkit-soteria for all users"
-          ${pkgs.systemd}/bin/loginctl list-users --no-legend | ${pkgs.gawk}/bin/awk '{print $2}' | while read -r user; do
-            ${pkgs.systemd}/bin/systemctl --user -M "$user@" restart polkit-soteria.service 2>/dev/null || true
-          done
-        '';
-      };
-
       # Post-resume: restore ALSA state after S4.
       # This fixes the common case where SoundWire capture controls reset on resume.
       systemd.services.xps-alsa-restore-post-resume = {
@@ -417,23 +401,26 @@
           last=$(cat "$run/last" 2>/dev/null || echo 0)
 
           healthy() {
-            sleep 1
-            since=$(date +%s)
-            sleep 4
-            ls /sys/bus/i2c/devices/i2c-VEN_04F3:00/0018:04F3:31D1.*/driver >/dev/null 2>&1 &&
-              ! journalctl -k -b --since "@$since" -o cat --no-pager | grep -qF "$pat"
+            sleep 5
+            for h in /sys/bus/i2c/devices/i2c-VEN_04F3:00/0018:04F3:31D1.*/hidraw/hidraw*; do
+              [ -e "$h" ] || continue
+              timeout 5 ${pkgs.python3}/bin/python3 -c 'import fcntl, sys; fcntl.ioctl(open(sys.argv[1], "rb", buffering=0), 0xC0024807, bytearray(b"\x02\x00"))' "/dev/''${h##*/}" && return 0
+            done
+            return 1
           }
 
           recover() {
             if healthy; then
-              echo "touchpad I2C errors stopped on their own"
+              echo "touchpad answers feature report, no recovery needed"
               return 0
             fi
-            if [ -e "$run/hibernated" ]; then
-              echo "touchpad still hung, hibernation already used this boot"
+            prev=$(cat "$run/hibernated" 2>/dev/null)
+            [ -n "$prev" ] || prev=0
+            if [ $(($(date +%s) - prev)) -lt 600 ]; then
+              echo "touchpad still hung, hibernated less than 10 minutes ago"
               return 1
             fi
-            touch "$run/hibernated"
+            date +%s > "$run/hibernated"
             echo "touchpad I2C bus hung, hibernating"
             systemctl hibernate
           }
@@ -456,9 +443,7 @@
       # --no-block: fire all four in parallel, don't hold up resume on them.
       powerManagement.resumeCommands = ''
         ${pkgs.systemd}/bin/systemctl start --no-block \
-          xps-auth-post-resume.service \
           xps-alsa-restore-post-resume.service \
-          xps-touchpad-reset-post-resume.service \
           xps-mic-route.service
       '';
 
