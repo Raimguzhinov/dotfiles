@@ -54,7 +54,15 @@
       networking.firewall = {
         enable = true;
         allowedTCPPorts = [ 22 ];
+        trustedInterfaces = [ config.services.tailscale.interfaceName ];
       };
+
+      networking.nftables.enable = true;
+      services.tailscale = {
+        enable = true;
+        openFirewall = true;
+      };
+      systemd.services.tailscaled.environment.TS_DEBUG_FIREWALL_MODE = "nftables";
 
       time.timeZone = "Asia/Novosibirsk";
       i18n.defaultLocale = "en_US.UTF-8";
