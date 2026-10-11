@@ -212,6 +212,20 @@ in
               CBM_ALLOWED_ROOT = config.home.homeDirectory;
             };
           };
+          chrome-devtools = {
+            description = "Chrome DevTools for the running Chromium: pages, console, network, screenshots, performance";
+            command = "npx";
+            args = [
+              "-y"
+              "chrome-devtools-mcp@1.10.1"
+              "--autoConnect"
+              "--userDataDir"
+              "${config.xdg.configHome}/chromium"
+              "--no-usage-statistics"
+              "--no-performance-crux"
+            ];
+            env.CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS = "1";
+          };
           uc-dev = {
             command = "uc-dev";
             args = [ "mcp" ];
@@ -238,10 +252,12 @@ in
         extensions = [ "self-compact/extensions/self-compact/self-compact.ts" ];
         packages = [
           "npm:@cortexkit/aft-pi"
-          "npm:pi-lsp-extension"
-          "npm:@upstash/context7-pi"
           "npm:@juicesharp/rpiv-todo"
+          "npm:@upstash/context7-pi"
+          "npm:pi-add-dir"
           "npm:pi-cache-optimizer"
+          "npm:pi-fff"
+          "npm:pi-lsp-extension"
           "npm:pi-permission-system"
           "${piPlan}"
           "npm:pi-undo-redo"
@@ -279,6 +295,9 @@ in
           lsp_completions = "allow";
           code_overview = "allow";
           ast_search = "allow";
+          find_files = "allow";
+          fff_multi_grep = "allow";
+          subagent = "allow";
           "mcp__*" = "allow";
         };
       };
@@ -353,6 +372,12 @@ in
       permissionsPolicyFile = toJsonFile "pi-permissions.json" permissionsPolicy;
       keybindingsJsonFile = toJsonFile "pi-keybindings.json" keybindingsOverrides;
       aftJsonFile = toJsonFile "aft.jsonc" aftConfig;
+      fffJsonFile = toJsonFile "pi-fff.json" {
+        enabledFeatures = [
+          "autocomplete"
+          "agentTools"
+        ];
+      };
       piVsCcExtensions =
         pkgs.runCommand "pi-vs-cc-extensions"
           {
@@ -407,90 +432,95 @@ in
               --replace-fail '`Execute the plan. Start with: ''${steps[0].text}`' '`Execute the plan. Start with: ''${steps[0].text}\nAfter completing a step, include a [DONE:n] tag in your response.`'
           '';
 
-      scoutFile = pkgs.writeText "scout.ts" /* typescript */ ''
+      researchFile = pkgs.writeText "research.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-        const SCOUT_TOOLS = ["read", "bash", "grep", "find", "ls", "lsp_definition", "lsp_references", "lsp_symbols", "lsp_hover", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "codemode"];
+        const RESEARCH_TOOLS = ["read", "bash", "grep", "find", "ls", "find_files", "fff_multi_grep", "lsp_definition", "lsp_references", "lsp_symbols", "lsp_hover", "lsp_diagnostics", "code_overview", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "codemode"];
 
-        const scoutPrompt = (task: string) => `Scout the codebase for the task below before any planning. Do not modify anything.
+        const researchPrompt = (topic: string) => `Research the topic below before any planning. Do not modify anything.
 
-        Task: ''${task}
+        Topic: ''${topic}
 
-        1. Locate the code the task touches: entry points, key types and functions, callers, data flow. Read only the line ranges you need.
-        2. Find existing patterns to copy and the tests that cover this area, with the exact command that runs them.
-        3. If the task uses external libraries, check their current API with context7.
+        1. Decide which sources the topic needs: this codebase, library or API docs, the web, GitLab projects, merge requests and pipelines, the team knowledge base, issues. Use only the ones that matter.
+        2. Codebase: locate the code with the LSP tools and find_files, read only the line ranges you need, note existing patterns and how this area is verified today.
+        3. Libraries and APIs: check the current docs with context7. Web, GitLab, knowledge base and issues: use the matching MCP tools you have.
+        4. Prefer primary sources. Cross-check every claim the result depends on. Mark what you could not confirm.
 
-        Reply with a "## Scout" report of at most 40 lines:
-        - Entry points: path:line
-        - Relevant code: path:lines, why it matters
-        - Patterns to follow
-        - Tests: files and the run command
-        - Risks and open questions
+        Reply with a "## Research" report of at most 60 lines:
+        - Question: what was researched, in one line
+        - Findings: each with its source (path:line or URL)
+        - Options and trade-offs, if there is a choice to make
+        - Recommendation
+        - Deliverable: what the result should be (code change, tests, report, OpenAPI/Swagger spec, diagram, table, ADR or another artifact) and why
+        - Open questions
         Do not plan or propose changes yet.`;
 
-        const planPrompt = (task: string) => `Using the scout report above, plan: ''${task}
+        const planPrompt = (topic: string) => `Using the research report above, plan: ''${topic}
 
-        Plan test-first. For every behavior change, one step writes a failing test and the next step makes it pass. Put the exact test command in the steps. For a step that cannot be tested (config, docs, wiring), say how it will be verified instead.`;
+        Pick the deliverable that fits the task: a code change, tests, a report, an OpenAPI/Swagger spec, a diagram, a table, an ADR or another artifact.
+        Tests go into the plan only when the behavior can be tested, tests fit the task and the user confirmed they want them. If tests would fit, ask the user one question about it before you finish the plan. Without that confirmation, plan another way to verify the result.
+        For each step say how it will be verified and which skills from your system prompt and which MCP tools it will use.`;
 
-        const TDD =
-          "[TDD] For each plan step: write or extend the test first, run it and confirm it fails for the expected reason, " +
-          "then write the minimal code that makes it pass and run it again, then refactor with the tests green. " +
-          "Never weaken a test to make it pass. Show the failing and the passing run.";
+        const DELIVERABLE =
+          "[Deliverable] Produce exactly the deliverable agreed in the plan. " +
+          "Before writing a test or an artifact, check the skills listed in your system prompt and the MCP tools, and use the ones that match the format and the topic. " +
+          "Write tests only if the user confirmed them in this session: write each test first, run it and confirm it fails for the expected reason, write the minimal code that makes it pass, and never weaken a test to make it pass. " +
+          "For any other artifact, base every claim on the research and keep its sources.";
 
         type Entry = { type: string; customType?: string; data?: { mode?: string } };
 
         const planEntries = (ctx: ExtensionContext) =>
           (ctx.sessionManager.getBranch() as Entry[]).filter(
-            (e) => e.type === "custom" && (e.customType === "pi-plan" || e.customType === "scout"),
+            (e) => e.type === "custom" && (e.customType === "pi-plan" || e.customType === "research"),
           );
 
         const planMode = (ctx: ExtensionContext) =>
           planEntries(ctx).findLast((e) => e.customType === "pi-plan")?.data?.mode ?? "normal";
 
-        const scouted = (ctx: ExtensionContext) => {
+        const researched = (ctx: ExtensionContext) => {
           for (const e of planEntries(ctx).reverse()) {
-            if (e.customType === "scout") return true;
+            if (e.customType === "research") return true;
             if (e.data?.mode === "normal") return false;
           }
           return false;
         };
 
         export default function (pi: ExtensionAPI) {
-          let task: string | undefined;
+          let topic: string | undefined;
           let inPlan = false;
           let restore: string[] = [];
           let ok = false;
 
-          pi.registerCommand("scout", {
-            description: "Scout the code for a task, then plan it test-first in /plan",
+          pi.registerCommand("research", {
+            description: "Research any topic in code, docs and the web, then plan it in /plan with a fitting deliverable",
             handler: async (args, ctx) => {
               const text = args.trim();
-              if (!text) return ctx.ui.notify("Usage: /scout <task>", "warning");
+              if (!text) return ctx.ui.notify("Usage: /research <topic>", "warning");
               if (!ctx.isIdle()) return ctx.ui.notify("Wait for the agent to finish", "warning");
               const mode = planMode(ctx);
               if (mode === "execute") return ctx.ui.notify("A plan is executing", "warning");
-              task = text;
+              topic = text;
               inPlan = mode === "plan";
-              pi.appendEntry("scout", { task });
+              pi.appendEntry("research", { topic });
               if (!inPlan) {
                 restore = pi.getActiveTools();
-                const known = new Set(pi.getAllTools().map((t) => t.name));
-                pi.setActiveTools(SCOUT_TOOLS.filter((n) => known.has(n)));
+                const names = pi.getAllTools().map((t) => t.name);
+                pi.setActiveTools(names.filter((n) => RESEARCH_TOOLS.includes(n) || n.startsWith("mcp")));
               }
-              pi.sendUserMessage(scoutPrompt(text));
+              pi.sendUserMessage(researchPrompt(text));
             },
           });
 
           pi.on("agent_end", (event) => {
-            if (!task) return;
+            if (!topic) return;
             const last = event.messages.findLast((m) => m.role === "assistant") as { stopReason?: string } | undefined;
             ok = !!last && last.stopReason !== "aborted" && last.stopReason !== "error";
           });
 
           pi.on("agent_settled", () => {
-            if (!task) return;
-            const t = task;
-            task = undefined;
+            if (!topic) return;
+            const t = topic;
+            topic = undefined;
             if (restore.length > 0) pi.setActiveTools(restore);
             restore = [];
             if (!ok) return;
@@ -499,11 +529,11 @@ in
           });
 
           pi.on("context", (event, ctx) => {
-            if (planMode(ctx) !== "execute" || !scouted(ctx)) return;
+            if (planMode(ctx) !== "execute" || !researched(ctx)) return;
             const i = event.messages.findLastIndex((m) => (m as { customType?: string }).customType === "pi-plan-execute");
             if (i < 0) return;
             const messages = [...event.messages];
-            messages.splice(i + 1, 0, { ...messages[i], customType: "scout-tdd", content: TDD } as (typeof messages)[number]);
+            messages.splice(i + 1, 0, { ...messages[i], customType: "research-deliverable", content: DELIVERABLE } as (typeof messages)[number]);
             return { messages };
           });
         }
@@ -852,6 +882,409 @@ in
         }
       '';
 
+      todoReminderFile = pkgs.writeText "todo-reminder.ts" /* typescript */ ''
+        import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+        type Task = { id: number; subject: string; status: string };
+        type Entry = { type?: string; message?: { role?: string; toolName?: string; details?: { tasks?: Task[]; nextId?: number } } };
+
+        const STALE_AFTER = 8;
+
+        export default function (pi: ExtensionAPI) {
+          pi.on("context", (event, ctx) => {
+            let tasks: Task[] = [];
+            let since = 0;
+            for (const entry of ctx.sessionManager.getBranch() as Entry[]) {
+              const msg = entry.type === "message" ? entry.message : undefined;
+              if (msg?.role !== "toolResult") continue;
+              if (msg.toolName === "todo" && Array.isArray(msg.details?.tasks) && typeof msg.details?.nextId === "number") {
+                tasks = msg.details.tasks;
+                since = 0;
+              } else {
+                since++;
+              }
+            }
+            const open = tasks.filter((t) => t.status === "pending" || t.status === "in_progress");
+            if (open.length === 0) return;
+            const list = open.map((t) => `#''${t.id} [''${t.status}] ''${t.subject}`).join("\n");
+            const stale = since >= STALE_AFTER ? `\nThe list was last updated ''${since} tool calls ago. Update it now if it is out of date.` : "";
+            const content =
+              `[Todo] Open tasks:\n''${list}\n` +
+              "Keep this list current with the todo tool: set a task to in_progress when you start it, to completed right after it is done, add tasks you discover and delete tasks that no longer apply." +
+              stale;
+            const reminder = { role: "custom", customType: "todo-reminder", content, display: false, timestamp: Date.now() };
+            return { messages: [...event.messages, reminder as (typeof event.messages)[number]] };
+          });
+        }
+      '';
+
+      subagentFile = pkgs.writeText "subagent.ts" /* typescript */ ''
+        import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+        import { Type } from "typebox";
+        import { execFile, spawn } from "node:child_process";
+        import { randomUUID } from "node:crypto";
+        import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+        import { homedir, tmpdir } from "node:os";
+        import { join, resolve } from "node:path";
+
+        type Agent = { name: string; description: string; tools?: string; model?: string; thinking?: string; body: string };
+        type Answer = { answer: string; stopReason?: string; usage?: unknown };
+        type Herdr = { ok: true; result: any } | { ok: false; code: string; message: string };
+        type Job = {
+          agent: string;
+          task: string;
+          cwd: string;
+          run: string;
+          sessionId: string;
+          status: string;
+          progress?: string;
+          ok?: boolean;
+          answer?: string;
+          error?: string;
+          stopReason?: string;
+          usage?: unknown;
+          tab?: string;
+          pane?: string;
+        };
+
+        const DIR = join(process.env.XDG_RUNTIME_DIR || tmpdir(), "pi-herdr");
+        const AGENTS = join(process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent"), "agents");
+        const TICK_MS = 5000;
+        const CAP = 4000;
+
+        const head = (s: string, n = 30) => {
+          const t = s.replace(/\s+/g, " ").trim();
+          return t.length > n ? t.slice(0, n - 1) + "…" : t;
+        };
+
+        const file = (run: string, ext: string) => join(DIR, run + ext);
+
+        const readText = (path: string) => {
+          try {
+            return readFileSync(path, "utf8");
+          } catch {
+            return undefined;
+          }
+        };
+
+        const writeAtomic = (path: string, data: string) => {
+          try {
+            mkdirSync(DIR, { recursive: true });
+            const tmp = `''${path}.''${process.pid}.tmp`;
+            writeFileSync(tmp, data);
+            renameSync(tmp, path);
+          } catch {}
+        };
+
+        const readAnswer = (run: string): Answer | undefined => {
+          const raw = readText(file(run, ".json"));
+          if (!raw) return undefined;
+          try {
+            return JSON.parse(raw) as Answer;
+          } catch {
+            return undefined;
+          }
+        };
+
+        const fromMessage = (m: any): Answer | undefined => {
+          if (!m || m.role !== "assistant") return undefined;
+          const parts = Array.isArray(m.content) ? m.content : [{ type: "text", text: String(m.content ?? "") }];
+          const answer = parts
+            .filter((c: any) => c?.type === "text")
+            .map((c: any) => c.text)
+            .join("\n")
+            .trim();
+          return { answer, stopReason: m.stopReason, usage: m.usage };
+        };
+
+        const loadAgents = () => {
+          const out = new Map<string, Agent>();
+          let names: string[] = [];
+          try {
+            names = readdirSync(AGENTS).filter((f) => f.endsWith(".md"));
+          } catch {
+            return out;
+          }
+          for (const f of names) {
+            const raw = readText(join(AGENTS, f)) ?? "";
+            const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+            const meta: Record<string, string> = {};
+            for (const line of (m?.[1] ?? "").split(/\r?\n/)) {
+              const kv = line.match(/^([A-Za-z_][\w-]*):\s*(.+)$/);
+              if (kv) meta[kv[1]] = kv[2].trim().replace(/^["']|["']$/g, "");
+            }
+            const name = meta.name || f.slice(0, -3);
+            out.set(name, { name, description: meta.description ?? "", tools: meta.tools, model: meta.model, thinking: meta.thinking, body: (m ? m[2] : raw).trim() });
+          }
+          return out;
+        };
+
+        const herdr = (args: string[], signal?: AbortSignal): Promise<Herdr> =>
+          new Promise((done) => {
+            execFile("herdr", args, { signal, maxBuffer: 16 << 20 }, (err, stdout, stderr) => {
+              const parse = (s: string) => {
+                try {
+                  return JSON.parse(s);
+                } catch {
+                  return undefined;
+                }
+              };
+              if (!err) return done({ ok: true, result: parse(stdout)?.result ?? {} });
+              const e = parse(String(stderr))?.error;
+              done({ ok: false, code: e?.code ?? (signal?.aborted ? "aborted" : "exec"), message: e?.message ?? (String(stderr).trim() || err.message) });
+            });
+          });
+
+        const sleep = (ms: number, signal: AbortSignal) =>
+          new Promise<void>((done) => {
+            const t = setTimeout(done, ms);
+            signal.addEventListener("abort", () => (clearTimeout(t), done()), { once: true });
+          });
+
+        function childMode(pi: ExtensionAPI) {
+          const run = process.env.PI_HERDR_RUN;
+          if (!run) return;
+          pi.on("agent_end", (event) => {
+            if ((event as { willRetry?: boolean }).willRetry) return;
+            const last = fromMessage(event.messages.findLast((m) => m.role === "assistant"));
+            writeAtomic(file(run, ".json"), JSON.stringify({ answer: last?.answer ?? "", stopReason: last?.stopReason, usage: last?.usage }));
+          });
+          pi.on("tool_execution_start", (event) => writeAtomic(file(run, ".progress"), event.toolName));
+          pi.on("ui_prompt_start", (event) => pi.events.emit("herdr:blocked", { active: true, label: event.title ?? event.kind }));
+          pi.on("ui_prompt_end", (event) => pi.events.emit("herdr:blocked", { active: false, label: event.title ?? event.kind }));
+        }
+
+        const childArgs = (agent: Agent, job: Job) => {
+          const prompt = file(job.run, ".md");
+          writeAtomic(prompt, `<active_agent name="''${agent.name}" />\n\n''${agent.body}\n`);
+          const args = ["--session-id", job.sessionId, "--name", `''${agent.name}: ''${head(job.task)}`];
+          if (agent.model) args.push("--model", agent.model);
+          if (agent.thinking) args.push("--thinking", agent.thinking);
+          const tools = agent.tools?.split(",").map((t) => t.trim()).filter(Boolean);
+          if (tools?.length) args.push("--tools", tools.join(","));
+          else args.push("--exclude-tools", "subagent");
+          args.push("--append-system-prompt", prompt);
+          return args;
+        };
+
+        const childEnv = (job: Job) => ({ PI_HERDR_DEPTH: "1", PI_HERDR_RUN: job.run });
+
+        async function viaHerdr(job: Job, args: string[], ws: string, outer: AbortSignal, timeoutMs: number, notify: (msg: string) => void) {
+          const deadline = Date.now() + timeoutMs;
+          const sig = AbortSignal.any([outer, AbortSignal.timeout(timeoutMs)]);
+          const left = () => Math.max(1000, deadline - Date.now());
+          const slice = () => String(Math.min(15000, left()));
+          const name = `sub-''${job.agent.toLowerCase().replace(/[^a-z0-9_-]/g, "").slice(0, 14) || "agent"}-''${job.run.slice(0, 8)}`;
+          const task = job.task.replace(/\s+/g, " ").trim();
+          const label = `''${job.agent}: ''${task.length > 12 ? task.slice(0, 12) + "…" : task}`;
+          const env = Object.entries(childEnv(job)).flatMap(([k, v]) => ["--env", `''${k}=''${v}`]);
+          const tab = await herdr(["tab", "create", "--workspace", ws, "--cwd", job.cwd, "--label", label, "--no-focus", ...env], sig);
+          if (!tab.ok) return Object.assign(job, { ok: false, error: `tab create failed: ''${tab.message}` });
+          const tabId: string = tab.result.tab?.tab_id;
+          job.tab = label;
+          job.pane = tab.result.root_pane?.pane_id;
+          const keep = (error: string) => Object.assign(job, { ok: false, error });
+          const stop = async () => {
+            await herdr(["agent", "send-keys", name, "esc"]);
+            await herdr(["tab", "close", tabId]);
+            return Object.assign(job, { ok: false, error: outer.aborted ? "aborted" : "timed out", tab: undefined, pane: undefined });
+          };
+          job.status = "starting";
+          const start = await herdr(["agent", "start", name, "--kind", "pi", "--pane", String(job.pane), "--timeout", String(Math.min(120000, left())), "--", ...args], sig);
+          if (sig.aborted) return stop();
+          if (!start.ok && start.code !== "agent_not_ready") return keep(`agent start failed: ''${start.message}`);
+          let sent = false;
+          let notified = false;
+          while (true) {
+            if (sig.aborted) return stop();
+            const answer = readAnswer(job.run);
+            if (answer) {
+              await herdr(["tab", "close", tabId]);
+              return Object.assign(job, { ok: !!answer.answer, ...answer, error: answer.answer ? undefined : `empty answer (''${answer.stopReason})`, tab: undefined, pane: undefined });
+            }
+            const got = await herdr(["agent", "get", name], sig);
+            if (sig.aborted) return stop();
+            if (!got.ok) return keep(`agent get failed: ''${got.message}`);
+            job.status = got.result.agent?.agent_status ?? "unknown";
+            if (job.status === "blocked") {
+              if (!notified) notify(`subagent ''${job.agent} waits for approval in tab ''${label}`);
+              notified = true;
+              await herdr(["agent", "wait", name, "--until", "idle", "--until", "done", "--timeout", slice()], sig);
+              continue;
+            }
+            notified = false;
+            if (!sent) {
+              const p = await herdr(["agent", "prompt", name, "--wait", "--until", "idle", "--until", "done", "--until", "blocked", "--timeout", String(left()), "--", job.task], sig);
+              if (p.ok || p.code === "agent_prompt_stalled" || p.code === "timeout") sent = true;
+              else if (p.code !== "agent_blocked" && !sig.aborted) return keep(`agent prompt failed: ''${p.message}`);
+              continue;
+            }
+            if (job.status === "idle" || job.status === "done") {
+              for (let i = 0; i < 6 && !readAnswer(job.run) && !sig.aborted; i++) await sleep(500, sig);
+              if (readAnswer(job.run) || sig.aborted) continue;
+              return keep("agent finished without an answer");
+            }
+            await herdr(["agent", "wait", name, "--timeout", slice()], sig);
+          }
+        }
+
+        function viaPrint(job: Job, args: string[], outer: AbortSignal, timeoutMs: number) {
+          return new Promise<Job>((done) => {
+            const sig = AbortSignal.any([outer, AbortSignal.timeout(timeoutMs)]);
+            job.status = "running";
+            const child = spawn("pi", ["-p", "--mode", "json", ...args, "--", job.task], { cwd: job.cwd, env: { ...process.env, ...childEnv(job) }, stdio: ["ignore", "pipe", "pipe"] });
+            let buf = "";
+            let err = "";
+            let last: Answer | undefined;
+            child.stdout.setEncoding("utf8");
+            child.stdout.on("data", (chunk: string) => {
+              buf += chunk;
+              for (let i = buf.indexOf("\n"); i >= 0; i = buf.indexOf("\n")) {
+                const line = buf.slice(0, i).replace(/\r$/, "");
+                buf = buf.slice(i + 1);
+                let ev: any;
+                try {
+                  ev = JSON.parse(line);
+                } catch {
+                  continue;
+                }
+                if (ev.type === "tool_execution_start") job.progress = ev.toolName;
+                if (ev.type === "message_end" && ev.message?.role === "assistant") last = fromMessage(ev.message);
+              }
+            });
+            child.stderr.on("data", (chunk) => (err = (err + chunk).slice(-2000)));
+            const kill = () => {
+              child.kill("SIGINT");
+              setTimeout(() => child.kill("SIGKILL"), 5000).unref();
+            };
+            sig.addEventListener("abort", kill, { once: true });
+            const finish = (error?: string) => {
+              sig.removeEventListener("abort", kill);
+              if (sig.aborted) return done(Object.assign(job, { ok: false, error: outer.aborted ? "aborted" : "timed out" }));
+              if (last?.answer) return done(Object.assign(job, { ok: true, ...last }));
+              done(Object.assign(job, { ok: false, ...last, error: error ?? `pi gave no answer (''${last?.stopReason ?? "no message"}): ''${err.trim().slice(-500)}` }));
+            };
+            child.on("error", (e) => finish(`pi failed to start: ''${e.message}`));
+            child.on("close", () => finish());
+          });
+        }
+
+        const describe = (agents: Map<string, Agent>) =>
+          "Run tasks in child pi agents (fresh context, each in its own background herdr tab) and return each final answer. " +
+          "Tasks run in parallel. For a chain, call again with the previous result. " +
+          "Delegate only independent, substantial read-only work. Each task must be self-contained. You do the edits yourself. " +
+          `Agents: ''${[...agents.values()].map((a) => (a.description ? `''${a.name} (''${a.description})` : a.name)).join(", ") || "none"}.`;
+
+        export default function (pi: ExtensionAPI) {
+          if (process.env.PI_HERDR_DEPTH) return childMode(pi);
+          const agents = loadAgents();
+          pi.registerTool({
+            name: "subagent",
+            label: "Subagent",
+            description: describe(agents),
+            parameters: Type.Object({
+              tasks: Type.Array(
+                Type.Object({
+                  task: Type.String({ description: "Complete instructions and expected answer format" }),
+                  agent: Type.Optional(Type.String({ description: "Agent name, default scout" })),
+                  cwd: Type.Optional(Type.String({ description: "Working directory, default current" })),
+                }),
+                { minItems: 1, maxItems: 4 },
+              ),
+              timeoutMin: Type.Optional(Type.Integer({ description: "Per-task limit in minutes, default 30" })),
+            }),
+            async execute(_id, params, signal, onUpdate, ctx) {
+              const outer = signal ?? new AbortController().signal;
+              const timeoutMs = Math.max(1, params.timeoutMin ?? 30) * 60000;
+              const notify = (msg: string) => {
+                if (ctx.hasUI) ctx.ui.notify(msg, "warning");
+                onUpdate?.({ content: [{ type: "text", text: msg }], details: { jobs } });
+              };
+              let ws = process.env.HERDR_ENV === "1" ? process.env.HERDR_WORKSPACE_ID : undefined;
+              if (process.env.HERDR_ENV === "1" && !ws && process.env.HERDR_PANE_ID) {
+                const p = await herdr(["pane", "get", process.env.HERDR_PANE_ID], outer);
+                if (p.ok) ws = p.result.pane?.workspace_id;
+              }
+              const jobs: Job[] = params.tasks.map((t) => ({
+                agent: t.agent || "scout",
+                task: t.task,
+                cwd: resolve(ctx.cwd, t.cwd || "."),
+                run: randomUUID(),
+                sessionId: randomUUID(),
+                status: "queued",
+              }));
+              const runOne = async (job: Job) => {
+                const agent = agents.get(job.agent);
+                if (!agent) return Object.assign(job, { ok: false, error: `unknown agent, available: ''${[...agents.keys()].join(", ") || "none"}` });
+                try {
+                  const args = childArgs(agent, job);
+                  job.progress = undefined;
+                  if (ws) await viaHerdr(job, args, ws, outer, timeoutMs, notify);
+                  else await viaPrint(job, args, outer, timeoutMs);
+                } catch (e) {
+                  Object.assign(job, { ok: false, error: String(e) });
+                } finally {
+                  job.status = job.ok ? "done" : "failed";
+                  for (const ext of [".json", ".progress", ".md"]) rmSync(file(job.run, ext), { force: true });
+                }
+              };
+              const tick = () => {
+                for (const j of jobs) if (ws && j.status !== "done" && j.status !== "failed") j.progress = readText(file(j.run, ".progress")) ?? j.progress;
+                const text = jobs.map((j) => `''${j.agent}: ''${head(j.task)} [''${j.status}''${j.progress ? `, ''${j.progress}` : ""}]`).join("\n");
+                onUpdate?.({ content: [{ type: "text", text }], details: { jobs } });
+              };
+              const timer = setInterval(tick, TICK_MS);
+              try {
+                const queue = [...jobs];
+                const limit = Math.max(1, Number(process.env.PI_SUBAGENT_CONCURRENCY) || 2);
+                await Promise.all(
+                  Array.from({ length: Math.min(limit, jobs.length) }, async () => {
+                    for (let job = queue.shift(); job; job = queue.shift()) await runOne(job);
+                  }),
+                );
+              } finally {
+                clearInterval(timer);
+              }
+              const text = jobs
+                .map((j) => {
+                  const body = j.ok
+                    ? (j.answer ?? "").length > CAP
+                      ? `''${j.answer!.slice(0, CAP)}\n[answer truncated at ''${CAP} chars]`
+                      : j.answer
+                    : `No answer: ''${j.error}.''${j.tab ? ` Tab "''${j.tab}" (pane ''${j.pane}) is kept open.` : ""}`;
+                  return `### ''${j.agent}: ''${head(j.task)}\n''${body}\nsession: ''${j.sessionId}`;
+                })
+                .join("\n\n");
+              return { content: [{ type: "text", text }], details: { jobs }, isError: jobs.every((j) => !j.ok) };
+            },
+          });
+        }
+      '';
+
+      subagentReadOnly = ''
+        tools: read, grep, find, ls, find_files, fff_multi_grep, lsp_definition, lsp_references, lsp_symbols, lsp_hover, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id, bash
+        permission:
+          tools:
+            read: allow
+            grep: allow
+            find: allow
+            ls: allow
+            find_files: allow
+            fff_multi_grep: allow
+            lsp_definition: allow
+            lsp_references: allow
+            lsp_symbols: allow
+            lsp_hover: allow
+            aft_outline: allow
+            aft_zoom: allow
+            aft_search: allow
+            query-docs: allow
+            resolve-library-id: allow
+            bash: allow
+            edit: deny
+            write: deny
+      '';
+
       selfCompact =
         pkgs.runCommand "pi-self-compact"
           {
@@ -938,9 +1371,14 @@ in
         - Text search is right for strings, comments, logs, config keys and files in other languages.
         - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
 
+        ## Finding files (fff)
+        - To find a file by an approximate name or topic, use find_files. Do not use find, ls or bash for it.
+        - To search for several literal variants at once (old and new names, aliases), use fff_multi_grep instead of several grep calls.
+        - Use find and ls only for exact directory listings.
+
         ## Workflow for code tasks
         Work autonomously until the task is done or you are blocked.
-        1. Locate: find symbols with the LSP tools, see Code intelligence. Read only the line ranges you need with aft_outline, aft_zoom or read. Never guess file contents, APIs or paths.
+        1. Locate: find symbols with the LSP tools and files with find_files. Read only the line ranges you need with aft_outline, aft_zoom or read. Never guess file contents, APIs or paths.
         2. Plan: if the change touches more than one file, first write a numbered plan of at most 5 steps.
         3. Edit: make one small change at a time. Match the existing style. Do not add files, dependencies or refactors that were not asked for.
         4. Verify: run lsp_diagnostics on the changed files and fix the errors, then run the narrowest build, test or lint command. On failure, read the error, fix it and re-run. After 3 failed attempts, stop and report.
@@ -982,6 +1420,30 @@ in
           LLAMA_BASE_URL = "http://127.0.0.1:8085";
         };
 
+        home.file.".pi/agent/agents/scout.md".text = ''
+          ---
+          name: scout
+          description: read-only reconnaissance of code and docs
+          ${subagentReadOnly}---
+          You are scout, a read-only reconnaissance agent started by another agent. The first user message is your task and the only context you get.
+
+          Explore code and docs until the task is answered. Locate symbols with the LSP tools and files with find_files, then read only the line ranges you need. Check library and API facts with query-docs. Never modify files, never run commands that change state, and never ask the user questions.
+
+          Your final message is the only thing the caller sees. Keep it to at most 40 lines. Start with the direct answer, then list the findings, each with its path:line. Mark what you could not confirm. Do not paste file contents or tool output.
+        '';
+
+        home.file.".pi/agent/agents/reviewer.md".text = ''
+          ---
+          name: reviewer
+          description: read-only review of a diff or files for correctness bugs
+          ${subagentReadOnly}---
+          You are reviewer, a read-only code review agent started by another agent. The first user message is your task and the only context you get. It names a diff, a commit range or files to review.
+
+          Look for correctness bugs: wrong logic, broken edge cases, missing error handling, races, resource leaks, security holes and mismatches with the surrounding code. Ignore style and naming unless they hide a bug. Read enough of the surrounding code to confirm each finding before you report it. Never modify files, never run commands that change state, and never ask the user questions.
+
+          Your final message is the only thing the caller sees. Keep it to at most 40 lines. Rank the findings by severity (critical, major, minor). For each give its path:line, the problem and the input or case that breaks, in one or two sentences. If you find nothing, say so in one line.
+        '';
+
         programs.zsh.shellAliases.pig = "pi -e ${piAgentDir}/npm/node_modules/${lib.removePrefix "npm:" grillMePackage}";
 
         home.activation.setupPi = mkAfter /* bash */ ''
@@ -1013,8 +1475,9 @@ in
           rm -f "$agent_dir/extensions/checkpoint-nudge.ts"
           rm -rf "$agent_dir/self-compact"
           cp -r --no-preserve=mode "${selfCompact}" "$agent_dir/self-compact"
-          cp --reflink=never "${scoutFile}" "$agent_dir/extensions/scout.ts"
-          chmod 644 "$agent_dir/extensions/scout.ts"
+          rm -f "$agent_dir/extensions/scout.ts"
+          cp --reflink=never "${researchFile}" "$agent_dir/extensions/research.ts"
+          chmod 644 "$agent_dir/extensions/research.ts"
           rm -f "$agent_dir/extensions/thinking-auto.ts" "$agent_dir/thinking-auto.json"
           cp --reflink=never "${proteiAutoFile}" "$agent_dir/extensions/protei-auto.ts"
           chmod 644 "$agent_dir/extensions/protei-auto.ts"
@@ -1023,6 +1486,12 @@ in
             cp --reflink=never "${piVsCcExtensions}/$ext.ts" "$agent_dir/extensions/$ext.ts"
             chmod 644 "$agent_dir/extensions/$ext.ts"
           done
+          cp --reflink=never "${fffJsonFile}" "$agent_dir/extensions/pi-fff.json"
+          chmod 644 "$agent_dir/extensions/pi-fff.json"
+          cp --reflink=never "${todoReminderFile}" "$agent_dir/extensions/todo-reminder.ts"
+          chmod 644 "$agent_dir/extensions/todo-reminder.ts"
+          cp --reflink=never "${subagentFile}" "$agent_dir/extensions/subagent.ts"
+          chmod 644 "$agent_dir/extensions/subagent.ts"
           cp --reflink=never "${grillHintFile}" "$agent_dir/extensions/grill-hint.ts"
           chmod 644 "$agent_dir/extensions/grill-hint.ts"
           cp --reflink=never "${piReview}/review.ts" "$agent_dir/extensions/review.ts"
