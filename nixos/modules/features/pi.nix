@@ -258,6 +258,7 @@ in
           "npm:pi-cache-optimizer"
           "npm:pi-fff"
           "npm:pi-lsp-extension"
+          "npm:pi-nvim"
           "npm:pi-permission-system"
           "${piPlan}"
           "npm:pi-undo-redo"
@@ -868,6 +869,82 @@ in
         hash = "sha256-bvdJjLudTd9YQF8ip30jIvi6MY3MAcw5GXVONx1DLuQ=";
       };
 
+      nvimFile = pkgs.writeText "nvim.ts" /* typescript */ ''
+        import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+        import { writeFileSync } from "node:fs";
+
+        export default function (pi: ExtensionAPI) {
+          pi.registerCommand("nvim", {
+            description: "Закрыть pi и продолжить текущую сессию в Neovim. Аргументы — файлы, которые нужно открыть",
+            handler: async (args, ctx) => {
+              if (process.env.NVIM) {
+                ctx.ui.notify("pi уже запущен внутри Neovim — используй <leader>At, а не /nvim", "warning");
+                return;
+              }
+              const handoff = process.env.PI_NVIM_HANDOFF;
+              if (!handoff) {
+                ctx.ui.notify("Передача сессии недоступна: pi запущен не через обёртку из dotfiles", "warning");
+                return;
+              }
+              const files = args
+                .split(/\s+/)
+                .filter(Boolean)
+                .map((file) => file.replace(/^@/, ""));
+              writeFileSync(handoff, JSON.stringify({ session: ctx.sessionManager.getSessionFile() ?? null, files }));
+              ctx.shutdown();
+            },
+          });
+        }
+      '';
+
+      piNvimLauncher =
+        pkgs.writeShellScriptBin "pi" # bash
+          ''
+            set -u
+
+            real="${pkgs-unstable.pi-coding-agent}/bin/pi"
+
+            if [ -n "''${NVIM-}" ] || [ ! -t 0 ] || [ ! -t 1 ]; then
+              exec "$real" "$@"
+            fi
+
+            state="''${XDG_RUNTIME_DIR:-/tmp}/pi-nvim-handoff.$$"
+            rm -f "$state"
+            PI_NVIM_HANDOFF="$state" "$real" "$@"
+            status=$?
+
+            if [ ! -e "$state" ]; then
+              exit $status
+            fi
+
+            session=$(${lib.getExe pkgs.jq} -r '.session // empty' "$state")
+            mapfile -t files < <(${lib.getExe pkgs.jq} -r '.files[]' "$state")
+            rm -f "$state"
+
+            if ! command -v nvim > /dev/null; then
+              echo "pi: nvim не найден в PATH, передача сессии невозможна." >&2
+              exit 1
+            fi
+
+            if [ -n "$session" ]; then
+              export PI_NVIM_SESSION="$session"
+            else
+              export PI_NVIM_CONTINUE=1
+            fi
+            exec nvim "''${files[@]}"
+          '';
+
+      piNvimWrapped = pkgs.symlinkJoin {
+        name = "pi-nvim-${pkgs-unstable.pi-coding-agent.version}";
+        inherit (pkgs-unstable.pi-coding-agent) meta;
+        inherit (pkgs-unstable.pi-coding-agent) version;
+        paths = [ pkgs-unstable.pi-coding-agent ];
+        postBuild = ''
+          rm -f "$out/bin/pi"
+          ln -s ${piNvimLauncher}/bin/pi "$out/bin/pi"
+        '';
+      };
+
       grillHintFile = pkgs.writeText "grill-hint.ts" /* typescript */ ''
         import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
@@ -1405,7 +1482,7 @@ in
       config = {
 
         home.packages = [
-          pkgs-unstable.pi-coding-agent
+          piNvimWrapped
           (pkgs.callPackage mkPiAcp { })
           pkgs.gopls
           pkgs.nixd
@@ -1494,6 +1571,8 @@ in
           chmod 644 "$agent_dir/extensions/subagent.ts"
           cp --reflink=never "${grillHintFile}" "$agent_dir/extensions/grill-hint.ts"
           chmod 644 "$agent_dir/extensions/grill-hint.ts"
+          cp --reflink=never "${nvimFile}" "$agent_dir/extensions/nvim.ts"
+          chmod 644 "$agent_dir/extensions/nvim.ts"
           cp --reflink=never "${piReview}/review.ts" "$agent_dir/extensions/review.ts"
           chmod 644 "$agent_dir/extensions/review.ts"
           cp --reflink=never "${piVsCcExtensions}/damage-control-rules.json" "${config.home.homeDirectory}/.pi/damage-control-rules.json"

@@ -64,6 +64,28 @@ let
       };
     };
 
+  piTermCmd = # lua
+    ''(vim.env.PI_NVIM_SESSION and "pi --session " .. vim.fn.shellescape(vim.env.PI_NVIM_SESSION)) or (vim.env.PI_NVIM_CONTINUE == "1" and "pi --continue") or "pi"'';
+
+  piTermOpts = # lua
+    ''{ win = { position = "right", width = 0.35 } }'';
+
+  piTerm = # lua
+    "Snacks.terminal.get(${piTermCmd}, { create = false })";
+
+  piSlash =
+    command: # lua
+    ''
+      function()
+        local term = ${piTerm}
+        if not (term and term:buf_valid()) then
+          return vim.notify("pi terminal is not open (<leader>At)", vim.log.levels.WARN)
+        end
+        term:show()
+        require("pi-nvim").prompt("${command}")
+      end
+    '';
+
   sqlSources = [
     "lsp"
     "dadbod"
@@ -82,60 +104,13 @@ let
       lazygit # toggleterm.lazygit (<leader>gg)
       lazydocker # lazydocker.nvim
       yazi # yazi-nvim
-      fd # telescope find_files
-      ripgrep # telescope live_grep
+      fd # snacks.picker files
+      ripgrep # snacks.picker grep, todo_comments
       golangci-lint-langserver # бинарь LSP-сервера из lsp.servers выше
-      procps # opencode.nvim: pgrep-based server discovery
-      lsof # opencode.nvim: port lookup for discovered servers
       # clang-tools # форматер для protobuf; включить при необходимости
     ];
     startPlugins = [ pkgs.vimPlugins.vim-fetch ];
     globals.loaded_netrwPlugin = 1;
-    globals.opencode_opts = {
-      server =
-        let
-          openTerminal =
-            fn:
-            lib.generators.mkLuaInline # lua
-              ''
-                function()
-                  local cmd = vim.env.OPENCODE_NVIM_RESUME == "1" and "opencode --continue" or "opencode"
-                  require("opencode.terminal").${fn}(cmd, {
-                    split = "right",
-                    width = math.floor(vim.o.columns * 0.35),
-                  })
-                end
-              '';
-        in
-        {
-          start = openTerminal "open";
-          toggle = openTerminal "toggle";
-          stop =
-            lib.generators.mkLuaInline # lua
-              ''
-                function()
-                  require("opencode.terminal").close()
-                end
-              '';
-        };
-      lsp = {
-        enabled = true;
-        handlers = {
-          # Апстрим удалил всю lsp-фичу в v1.0.0: hover требует re-trigger,
-          # который перерисовывает экран поверх чужих hover и blink.
-          hover.enabled = false;
-          code_action.enabled = true;
-        };
-      };
-      events = {
-        enabled = true;
-        reload = true;
-        permissions = {
-          enabled = true;
-          edits.enabled = true;
-        };
-      };
-    };
     filetype.extension.log = "log";
     viAlias = true;
     vimAlias = true;
@@ -365,28 +340,32 @@ let
             '';
       }
       {
+        event = [
+          "FocusGained"
+          "BufEnter"
+          "TermLeave"
+        ];
+        command = "silent! checktime";
+      }
+      {
+        event = [ "ExitPre" ];
+        callback =
+          lib.generators.mkLuaInline # lua
+            ''
+              function()
+                for _, term in ipairs(Snacks.terminal.list()) do
+                  pcall(vim.api.nvim_clear_autocmds, { event = "ExitPre", group = term.augroup })
+                end
+              end
+            '';
+      }
+      {
         event = [ "StdinReadPre" ];
         callback =
           lib.generators.mkLuaInline # lua
             ''
               function()
                 vim.g.nvf_started_with_stdin = true
-              end
-            '';
-      }
-      {
-        event = [ "User" ];
-        pattern = [ "OpencodeEvent:session.status" ];
-        callback =
-          lib.generators.mkLuaInline # lua
-            ''
-              function(args)
-                local status = args.data.event.properties.status
-                if status.type == "error" then
-                  vim.notify(status.message or "error", vim.log.levels.ERROR, { title = "opencode" })
-                elseif status.type == "requesting_permission" then
-                  vim.notify("waiting for permission", vim.log.levels.WARN, { title = "opencode" })
-                end
               end
             '';
       }
@@ -420,7 +399,7 @@ let
                 if vim.fn.argc() ~= 0 or vim.g.nvf_started_with_stdin then
                   return
                 end
-                if vim.env.OPENCODE_NVIM_RESUME == "1" then
+                if vim.env.PI_NVIM_SESSION or vim.env.PI_NVIM_CONTINUE == "1" then
                   return
                 end
                 for _, arg in ipairs(vim.v.argv) do
@@ -461,11 +440,11 @@ let
           lib.generators.mkLuaInline # lua
             ''
               function()
-                if vim.env.OPENCODE_NVIM_RESUME ~= "1" then
+                if not (vim.env.PI_NVIM_SESSION or vim.env.PI_NVIM_CONTINUE == "1") then
                   return
                 end
                 vim.schedule(function()
-                  require("opencode").toggle()
+                  Snacks.terminal.get(${piTermCmd}, ${piTermOpts})
                 end)
               end
             '';
@@ -476,11 +455,6 @@ let
           lib.generators.mkLuaInline # lua
             ''
               function()
-                local ok_lzn, lzn = pcall(require, "lz.n")
-                if ok_lzn then
-                  lzn.trigger_load("telescope")
-                end
-
                 local go_env_cache = {}
                 local function go_env(name)
                   if go_env_cache[name] == nil then
@@ -743,16 +717,47 @@ let
           input.enabled = true;
           picker = {
             enabled = true;
+            ui_select = true;
             win.input.keys."<a-o>" = {
-              "@" = "opencode_send";
+              "@" = "pi_send";
               mode = [
                 "n"
                 "i"
               ];
             };
-            actions.opencode_send =
+            actions.pi_send =
               lib.generators.mkLuaInline # lua
-                ''require("opencode").snacks_picker_send'';
+                ''
+                  function(picker)
+                    local refs = {}
+                    for _, item in ipairs(picker:selected({ fallback = true })) do
+                      local path = Snacks.picker.util.path(item)
+                      if path then
+                        refs[#refs + 1] = "@" .. vim.fn.fnamemodify(path, ":.")
+                      end
+                    end
+                    picker:close()
+                    if #refs == 0 then
+                      return
+                    end
+                    local text = table.concat(refs, " ") .. " "
+                    vim.schedule(function()
+                      local term = ${piTerm}
+                      if term and term:buf_valid() then
+                        term:show()
+                        term:focus()
+                        vim.api.nvim_chan_send(vim.bo[term.buf].channel, "\27[200~" .. text .. "\27[201~")
+                        vim.cmd.startinsert()
+                        return
+                      end
+                      vim.ui.input({ prompt = "Pi prompt: ", default = text }, function(input)
+                        if input and input ~= "" then
+                          require("pi-nvim").prompt(input)
+                        end
+                      end)
+                    end)
+                  end
+                '';
           };
         };
       };
@@ -935,12 +940,11 @@ let
             mac = "";
           };
         }
-        # Deferred through pcall: lz.n loads opencode.nvim after lualine's setup.
         (lib.generators.mkLuaInline # lua
           ''
             function()
-              local ok, opencode = pcall(require, "opencode")
-              return ok and opencode.statusline() or ""
+              local ok, pi = pcall(require, "pi-nvim")
+              return ok and pi.get_socket_path() and "π" or ""
             end
           ''
         )
@@ -956,39 +960,6 @@ let
         )
       ];
     };
-    telescope = {
-      enable = true;
-      mappings = {
-        lspDefinitions = "gd";
-        lspReferences = "gu";
-        lspImplementations = "gi";
-        lspTypeDefinitions = "gD";
-      };
-      setupOpts.pickers = {
-        # A single, unambiguous match jumps in the current window instead of
-        # opening a new tab; the picker still opens normally for multiple matches.
-        lsp_definitions.jump_type = "edit";
-        lsp_references.jump_type = "edit";
-        lsp_implementations.jump_type = "edit";
-        lsp_type_definitions.jump_type = "edit";
-      };
-      extensions = [
-        {
-          name = "fzf";
-          packages = [ pkgs.vimPlugins.telescope-fzf-native-nvim ];
-          setup.fzf.fuzzy = true;
-        }
-        {
-          name = "ui-select";
-          packages = [ pkgs.vimPlugins.telescope-ui-select-nvim ];
-          setup."ui-select" = [
-            (lib.generators.mkLuaInline # lua
-              ''require("telescope.themes").get_dropdown({})''
-            )
-          ];
-        }
-      ];
-    };
     tabline.nvimBufferline = {
       enable = true;
       mappings = {
@@ -1000,18 +971,20 @@ let
     };
     notes.todo-comments.enable = true;
     binds = {
-      cheatsheet.enable = true;
       whichKey = {
         enable = true;
         register = {
           "<leader>a" = "AI (herdr)";
-          "<leader>A" = "AI (opencode)";
+          "<leader>A" = "AI (pi)";
           "<leader>b" = "Buffers";
           "<leader>c" = "Conflict (ours/theirs/base)";
           "<leader>d" = "Debug";
           "<leader>e" = "Explorer";
           "<leader>f" = "Find";
+          "<leader>fl" = "Find/LSP";
+          "<leader>fls" = "Find/LSP symbols";
           "<leader>fv" = "Find/Git";
+          "<leader>fvc" = "Find/Git commits";
           "<leader>g" = "Git";
           "<leader>l" = "LSP";
           "<leader>r" = "Run/Refactor";
@@ -1408,8 +1381,168 @@ let
         action = "<C-x>";
         desc = "Decrement number under cursor";
       }
-    ];
+    ]
+    ++
+      lib.mapAttrsToList
+        (key: picker: {
+          inherit key;
+          mode = "n";
+          lua = true;
+          action = "function() Snacks.picker.${picker.source}() end";
+          desc = "${picker.desc} [snacks.picker]";
+        })
+        {
+          "<leader>fb" = {
+            source = "buffers";
+            desc = "Buffers";
+          };
+          "<leader>fh" = {
+            source = "help";
+            desc = "Help tags";
+          };
+          "<leader>ft" = {
+            source = "pickers";
+            desc = "Open";
+          };
+          "<leader>fr" = {
+            source = "resume";
+            desc = "Resume (previous search)";
+          };
+          "<leader>fs" = {
+            source = "treesitter";
+            desc = "Treesitter";
+          };
+          "<leader>fvf" = {
+            source = "git_files";
+            desc = "Git files";
+          };
+          "<leader>fvcw" = {
+            source = "git_log";
+            desc = "Git commits";
+          };
+          "<leader>fvcb" = {
+            source = "git_log_file";
+            desc = "Git buffer commits";
+          };
+          "<leader>fvb" = {
+            source = "git_branches";
+            desc = "Git branches";
+          };
+          "<leader>fvs" = {
+            source = "git_status";
+            desc = "Git status";
+          };
+          "<leader>fvx" = {
+            source = "git_stash";
+            desc = "Git stash";
+          };
+          "<leader>flsb" = {
+            source = "lsp_symbols";
+            desc = "LSP Document Symbols";
+          };
+          "<leader>flsw" = {
+            source = "lsp_workspace_symbols";
+            desc = "LSP Workspace Symbols";
+          };
+          "<leader>fld" = {
+            source = "diagnostics";
+            desc = "Diagnostics";
+          };
+          "gd" = {
+            source = "lsp_definitions";
+            desc = "LSP Definitions";
+          };
+          "gu" = {
+            source = "lsp_references";
+            desc = "LSP References";
+          };
+          "gi" = {
+            source = "lsp_implementations";
+            desc = "LSP Implementations";
+          };
+          "gD" = {
+            source = "lsp_type_definitions";
+            desc = "LSP Type Definitions";
+          };
+        };
     lazy.plugins = {
+      "fff.nvim" = {
+        package = pkgs-unstable.vimPlugins.fff-nvim;
+        lazy = false;
+        setupModule = "fff";
+        setupOpts = {
+          lazy_sync = false;
+          layout.border = "rounded";
+          git.status_text_color = true;
+        };
+        keys = [
+          {
+            key = "<leader>ff";
+            mode = "n";
+            action = "<cmd>FFFFind<CR>";
+            desc = "Find files [fff]";
+          }
+          {
+            key = "<leader>fg";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("fff").live_grep() end'';
+            desc = "Live grep [fff]";
+          }
+          {
+            key = "<leader>fw";
+            mode = [
+              "n"
+              "x"
+            ];
+            lua = true;
+            action = # lua
+              ''function() require("fff").live_grep_under_cursor() end'';
+            desc = "Grep word under cursor [fff]";
+          }
+          {
+            key = "<leader>fz";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("fff").live_grep({ grep = { modes = { "fuzzy", "plain" } } }) end'';
+            desc = "Fuzzy grep [fff]";
+          }
+          {
+            key = "<leader>fd";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("fff").find_files_in_dir(vim.fn.expand("%:p:h")) end'';
+            desc = "Find files in current file's dir [fff]";
+          }
+          {
+            key = "<leader>fR";
+            mode = "n";
+            action = "<cmd>FFFResume<CR>";
+            desc = "Resume last search [fff]";
+          }
+          {
+            key = "<leader>fvm";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("fff").find_files({ query = "git:modified " }) end'';
+            desc = "Git modified files [fff]";
+          }
+        ];
+      };
+      todo-comments-nvim.keys = [
+        {
+          key = "<leader>tds";
+          mode = "n";
+          lua = true;
+          action = # lua
+            "function() Snacks.picker.todo_comments() end";
+          desc = "Open Todo-s [snacks.picker]";
+        }
+      ];
       vim-dadbod-ui = {
         package = pkgs.vimPlugins.vim-dadbod-ui;
         lazy = true;
@@ -1653,179 +1786,110 @@ let
             })
           '';
       };
-      "opencode.nvim" = {
-        package = pkgs.vimPlugins.opencode-nvim;
-        # Not lazy: events, edit permissions and buffer reload must be live from
-        # startup, and lualine resolves the statusline component on setup.
+      "carderne-pi-nvim" = {
+        package = pkgs-unstable.vimPlugins.carderne-pi-nvim;
         lazy = false;
+        setupModule = "pi-nvim";
+        setupOpts.set_default_keymaps = false;
         keys = [
-          {
-            key = "<leader>Aa";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").ask() end'';
-            desc = "Ask [opencode]";
-          }
-          {
-            key = "<leader>Aa";
-            mode = "x";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").ask("@this: ") end'';
-            desc = "Ask about this [opencode]";
-          }
-          {
-            key = "<leader>AA";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").ask("@this: ") end'';
-            desc = "Ask about this [opencode]";
-          }
-          {
-            key = "<leader>AA";
-            mode = "x";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").ask() end'';
-            desc = "Ask [opencode]";
-          }
-          {
-            key = "<leader>Ax";
-            mode = [
-              "n"
-              "x"
-            ];
-            lua = true;
-            action = # lua
-              ''function() require("opencode").prompt("Explain @this and its context") end'';
-            desc = "Explain this [opencode]";
-          }
-          {
-            key = "<leader>As";
-            mode = [
-              "n"
-              "x"
-            ];
-            lua = true;
-            action = # lua
-              ''function() require("opencode").select() end'';
-            desc = "Select prompt/command [opencode]";
-          }
           {
             key = "<leader>At";
             mode = "n";
             lua = true;
             action = # lua
-              ''function() require("opencode").toggle() end'';
-            desc = "Toggle opencode terminal";
+              "function() Snacks.terminal.toggle(${piTermCmd}, ${piTermOpts}) end";
+            desc = "Toggle pi terminal";
+          }
+          {
+            key = "<leader>Aa";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("pi-nvim").prompt() end'';
+            desc = "Send prompt [pi]";
+          }
+          {
+            key = "<leader>Aa";
+            mode = "x";
+            action = ":PiSendSelection<CR>";
+            desc = "Send selection [pi]";
+          }
+          {
+            key = "<leader>AA";
+            mode = "n";
+            action = "<cmd>Pi<CR>";
+            desc = "Send dialog [pi]";
+          }
+          {
+            key = "<leader>AA";
+            mode = "x";
+            action = ":Pi<CR>";
+            desc = "Send dialog with selection [pi]";
+          }
+          {
+            key = "<leader>Ax";
+            mode = "n";
+            lua = true;
+            action = # lua
+              ''function() require("pi-nvim").prompt(string.format("Explain %s:%d and its context", vim.fn.expand("%:."), vim.fn.line("."))) end'';
+            desc = "Explain this [pi]";
           }
           {
             key = "<leader>An";
             mode = "n";
             lua = true;
-            action = # lua
-              ''function() require("opencode").command("session.new") end'';
-            desc = "New session [opencode]";
+            action = piSlash "/new";
+            desc = "New session [pi]";
           }
           {
             key = "<leader>Ae";
             mode = "n";
             lua = true;
-            action = # lua
-              ''
-                function()
-                  require("opencode.ui.select_session")
-                    .select_session()
-                    :next(function(picked)
-                      picked.server:select_session(picked.session.id)
-                    end)
-                    :catch(function(err)
-                      if err then
-                        vim.notify(err, vim.log.levels.ERROR, { title = "opencode" })
-                      end
-                    end)
-                end
-              '';
-            desc = "Select session [opencode]";
+            action = piSlash "/resume";
+            desc = "Resume session [pi]";
           }
           {
             key = "<leader>Ac";
             mode = "n";
             lua = true;
-            action = # lua
-              ''function() require("opencode").command("session.compact") end'';
-            desc = "Compact session [opencode]";
+            action = piSlash "/compact";
+            desc = "Compact session [pi]";
+          }
+          {
+            key = "<leader>Au";
+            mode = "n";
+            lua = true;
+            action = piSlash "/undo";
+            desc = "Undo last message [pi]";
+          }
+          {
+            key = "<leader>AR";
+            mode = "n";
+            lua = true;
+            action = piSlash "/redo";
+            desc = "Redo last message [pi]";
           }
           {
             key = "<leader>Ai";
             mode = "n";
             lua = true;
             action = # lua
-              ''function() require("opencode").command("session.interrupt") end'';
-            desc = "Interrupt session [opencode]";
+              ''
+                function()
+                  local term = ${piTerm}
+                  if not (term and term:buf_valid()) then
+                    return vim.notify("pi terminal is not open (<leader>At)", vim.log.levels.WARN)
+                  end
+                  vim.api.nvim_chan_send(vim.bo[term.buf].channel, "\27")
+                end
+              '';
+            desc = "Interrupt [pi]";
           }
           {
-            key = "<leader>Au";
+            key = "<leader>AS";
             mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").command("session.undo") end'';
-            desc = "Undo session step [opencode]";
-          }
-          {
-            key = "<leader>AR";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").command("session.redo") end'';
-            desc = "Redo session step [opencode]";
-          }
-          {
-            key = "<leader>Ag";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").command("agent.cycle") end'';
-            desc = "Cycle agent [opencode]";
-          }
-          {
-            key = "<C-S-u>";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").command("session.half.page.up") end'';
-            desc = "Scroll opencode up";
-          }
-          {
-            key = "<C-S-d>";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("opencode").command("session.half.page.down") end'';
-            desc = "Scroll opencode down";
-          }
-          {
-            key = "go";
-            mode = [
-              "n"
-              "x"
-            ];
-            lua = true;
-            expr = true;
-            action = # lua
-              ''function() return require("opencode").operator("@this ") end'';
-            desc = "Append range to opencode";
-          }
-          {
-            key = "goo";
-            mode = "n";
-            lua = true;
-            expr = true;
-            action = # lua
-              ''function() return require("opencode").operator("@this ") .. "_" end'';
-            desc = "Append line to opencode";
+            action = "<cmd>PiSessions<CR>";
+            desc = "Select session socket [pi]";
           }
         ];
       };
@@ -1848,6 +1912,8 @@ let
             "dadbod-ui"
             "dbout"
             "dbui"
+            "fff_input"
+            "fff_list"
             "qf"
             "snacks_picker"
             "yazi"
