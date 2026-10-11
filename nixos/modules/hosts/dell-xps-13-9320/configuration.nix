@@ -42,6 +42,10 @@
           "flakes"
         ];
         auto-optimise-store = true;
+        connect-timeout = 10;
+        stalled-download-timeout = 30;
+        download-attempts = 2;
+        fallback = true;
       };
       nix.settings.trusted-users = [ username ];
 

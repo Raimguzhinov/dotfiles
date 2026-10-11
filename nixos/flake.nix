@@ -2,15 +2,9 @@
   description = "NixOS configuration";
 
   nixConfig = {
-    # При недоступности кэша — сборка из исходников
-    fallback = true;
-    # Быстрый отказ при плохом интернете, но не слишком агрессивные
-    connect-timeout = 10;
-    stalled-download-timeout = 30;
-    download-attempts = 2;
     extra-substituters = [
-      "https://mirror.yandex.ru/nixos"
-      "https://mirrors.ustc.edu.cn/nix-channels/store"
+      "https://mirror.yandex.ru/nixos?priority=50"
+      "https://mirrors.ustc.edu.cn/nix-channels/store?priority=60"
       "https://nix-community.cachix.org"
       "https://niri.cachix.org"
       "https://notashelf.cachix.org"
