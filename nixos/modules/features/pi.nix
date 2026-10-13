@@ -130,7 +130,7 @@ in
             (
               removeAttrs (proteiModel "agent_proteya" "Protei Strict") [ "samplingParamsByThinkingLevel" ]
               // {
-                contextWindow = 231072;
+                contextWindow = 131072;
                 maxTokens = 16000;
                 samplingParams = {
                   temperature = 0.7;
@@ -414,15 +414,18 @@ in
           /* bash */ ''
             mkdir -p "$out"
             tar xzf "$src" -C "$out" --strip-components=1
+            substituteInPlace "$out/src/safety.ts" \
+              --replace-fail '  /^\s*bat\b/,' '  /^\s*bat\b/, /^\s*herdr\s+(status|(pane\s+(list|current|get|layout|process-info|neighbor|edges|read|wait-output)|tab\s+(list|get)|workspace\s+(list|get)|agent\s+(list|get|read|wait|explain))\b)/,'
             substituteInPlace "$out/extensions/plan/index.ts" \
               --replace-fail 'const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];' "" \
               --replace-fail 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls"];' 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "todo", "lsp_definition", "lsp_references", "lsp_hover", "lsp_diagnostics", "aft_outline", "aft_zoom", "aft_search", "query-docs", "resolve-library-id"];' \
-              --replace-fail '- You can only use: read, bash, grep, find, ls' '- You can only use: read, bash, grep, find, ls, todo, lsp_definition, lsp_references, lsp_hover, lsp_diagnostics, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id' \
+              --replace-fail '- You can only use: read, bash, grep, find, ls' '- You can only use: read, bash, grep, find, ls, todo, lsp_definition, lsp_references, lsp_hover, lsp_diagnostics, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id, subagent with the scout or reviewer agent' \
               --replace-fail 'pi.setActiveTools(PLAN_MODE_TOOLS);' "" \
               --replace-fail 'pi.setActiveTools(NORMAL_MODE_TOOLS);' 'if (!pi.getActiveTools().includes("edit")) pi.setActiveTools(pi.getAllTools().filter((t) => !t.exposure || t.exposure === "direct" || t.exposure === "model-only").map((t) => t.name));' \
-              --replace-fail 'if (event.toolName === "write" || event.toolName === "edit") {' 'if (!PLAN_MODE_TOOLS.includes(event.toolName) && event.toolName !== "mcp" && !event.toolName.startsWith("mcp__")) {' \
+              --replace-fail 'if (event.toolName === "write" || event.toolName === "edit") {' 'if (!PLAN_MODE_TOOLS.includes(event.toolName) && event.toolName !== "mcp" && !event.toolName.startsWith("mcp__") && !(event.toolName === "subagent" && ((event.input as { tasks?: { agent?: string }[] }).tasks ?? []).every((t) => ["scout", "reviewer"].includes(t.agent ?? "scout")))) {' \
               --replace-fail '"Plan mode active. File modifications blocked. Use /plan to disable."' '`Plan mode active. Only ''${PLAN_MODE_TOOLS.join(", ")} are allowed, file modifications are blocked. Use /plan to disable.`' \
               --replace-fail 'ctx.ui.theme.muted(' 'ctx.ui.theme.fg("muted", ' \
+              --replace-fail 'pi.sendUserMessage(refinement.trim());' 'pi.sendUserMessage(refinement.trim(), { deliverAs: "followUp" });' \
               --replace-fail 'import { extractPlanSteps } from' 'import { cleanStepText, extractPlanSteps } from' \
               --replace-fail 'markCompletedSteps,' "" \
               --replace-fail 'function persistState(): void {' 'function syncFromTodo(ctx: ExtensionContext, extra: unknown[] = []): boolean { type Todo = { id?: unknown; subject?: unknown; status?: unknown }; type Result = { role?: string; toolName?: string; details?: { action?: unknown; tasks?: Todo[] } }; const results = (messages: unknown[]) => (messages as Array<Result | undefined>).filter((m): m is Result & { details: { tasks: Todo[] } } => m?.role === "toolResult" && m.toolName === "todo" && Array.isArray(m.details?.tasks)); const branch = ctx.sessionManager.getBranch() as Array<{ type: string; customType?: string; data?: PlanState; message?: unknown }>; const start = branch.findLastIndex((e) => e.type === "custom" && e.customType === "pi-plan" && e.data?.mode !== "execute"); let ignored = new Set(results(branch.slice(0, start + 1).map((e) => e.message)).at(-1)?.details.tasks.map((t) => t.id)); let tasks: Todo[] | undefined; for (const m of results([...branch.slice(start + 1).map((e) => e.message), ...extra])) { if (m.details.action === "clear") ignored = new Set(); tasks = m.details.tasks; } if (!tasks) return false; const norm = (s: string) => cleanStepText(s.replace(/^\s*\d+\.(?!\d)\s*/, "")).toLowerCase(); let changed = false; for (const s of steps) { const task = tasks.findLast((t) => !ignored.has(t.id) && t.status !== "deleted" && typeof t.subject === "string" && (t.subject.match(/^\s*(\d+)\.(?!\d)/)?.[1] === String(s.step) || norm(t.subject) === s.text.toLowerCase())); const done = task?.status === "completed"; if (s.completed !== done) { s.completed = done; changed = true; } } return changed; } function persistState(): void {' \
@@ -571,7 +574,7 @@ in
           swapBelow: 40_000,
           swapFactor: 2,
           dwellMs: 30 * 60_000,
-          reserveTokens: ${toString settingsSeed.compaction.reserveTokens},
+          headroom: 16_384,
         };
         const LEVELS = ["off", "low", "medium", "high"] as const;
         const FILE = join(homedir(), ".pi", "agent", "protei-auto.json");
@@ -799,7 +802,7 @@ in
               const keyOf = (m: { provider: string; id: string }) =>
                 (Object.keys(TARGETS) as Target[]).find((t) => TARGETS[t].provider === m.provider && TARGETS[t].id === m.id);
               if (request.reason === "direct") {
-                const big = contextTokens(request.messages) > Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
+                const big = contextTokens(request.messages) > Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.headroom;
                 const key = request.previous && keyOf(request.previous.model);
                 const next: Target = key ? (big && key !== "strict" ? "strict" : key) : big || planMode(ctx) === "plan" ? "strict" : pool;
                 return { model: find(next), thinkingLevel: request.thinkingLevel };
@@ -809,7 +812,7 @@ in
               const stickyKey = sticky && keyOf(sticky.model);
               const stickyLevel = sticky?.thinkingLevel;
               const forced: ModelThinkingLevel = "high";
-              const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.reserveTokens;
+              const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.headroom;
               const big = contextTokens(request.messages) > limit;
               if (sticky && stickyKey && stickyLevel && levelIndex(stickyLevel) >= 0) {
                 const continuation = request.reason === "continuation";
@@ -821,7 +824,7 @@ in
                 const slowNow = cur !== undefined && cur < CFG.slowBelow && (alt === undefined || alt >= CFG.smallFactor * cur);
                 const worth = contextTokens(request.messages) < CFG.swapBelow || slowNow || (cur !== undefined && alt !== undefined && alt >= CFG.swapFactor * cur);
                 const swap = continuation && stickyKey !== "strict" && worth;
-                if (swap || leavePlan) choosePool(now);
+                if (!forceStrict && (swap || leavePlan)) choosePool(now);
                 retarget(forceStrict ? "strict" : leavePlan || swap ? pool : stickyKey);
                 show(ctx);
                 return { model: find(routed), thinkingLevel: review ? forced : stickyLevel };
@@ -834,8 +837,9 @@ in
                 selected = request.thinkingLevel;
                 if (auto === undefined) auto = Math.max(0, levelIndex(request.thinkingLevel));
               }
-              choosePool(now);
-              retarget(big || planMode(ctx) === "plan" ? "strict" : pool);
+              const strict = big || planMode(ctx) === "plan";
+              if (!strict) choosePool(now);
+              retarget(strict ? "strict" : pool);
               const model: Model<Api> = find(routed);
               const thinkingLevel: ModelThinkingLevel = review ? forced : LEVELS[level(now)];
               show(ctx);
@@ -890,7 +894,7 @@ in
             const failed = msg.stopReason === "error" && !/terminated/i.test(msg.errorMessage ?? "");
             if (!BACKENDS.has(msg.provider) || msg.stopReason === "aborted" || failed) return;
             const busy = Math.max(wall - ((msg.usage?.input ?? 0) / CFG.prefillTps) * 1000, wall * 0.2);
-            if (msg.provider !== "ProteiStrict" && wall > 0 && (tokens >= CFG.minTokens || wall >= CFG.slowWallMs)) poolSample(msg.model, tokens / (busy / 1000));
+            if (wall > 0 && (tokens >= CFG.minTokens || wall >= CFG.slowWallMs)) poolSample(msg.model, tokens / (busy / 1000));
             if (msg.stopReason === "error") return show(ctx);
             if (tokens >= CFG.minTokens && span >= CFG.minSpanMs) sample(msg.model, tokens / (span / 1000));
             show(ctx);
@@ -1151,6 +1155,8 @@ in
         const LOOP_WINDOW = 10;
         const LOOP_REPEATS = 2;
         const READ_LIKE = new Set(["read", "aft_zoom", "aft_outline"]);
+        const CODE_FILE = /\.(go|ts|tsx|js|jsx|mjs|cjs|rs|py|nix|sh|bash|zsh|lua|java|kt|c|h|cc|cpp|hpp|cs|rb|php|swift|sql|zig|proto)$/;
+        const COMMENT = /^\s*(\/\/|\/\*|\*\/|\*\s|#(?!!)|--\s)|\s(\/\/|#|--)\s/;
         const CUT_HINT =
           "[Harness] Your previous response was cut off by a proxy timeout before it finished. Keep thinking short and split large changes: write or edit at most about 60 lines per tool call.";
         const USER_CHARS = 2000;
@@ -1300,6 +1306,26 @@ in
             cut = false;
           });
 
+          pi.on("tool_result", (event) => {
+            if (event.isError || (event.toolName !== "edit" && event.toolName !== "write")) return;
+            const input = event.input as { path?: unknown; content?: unknown; appendContent?: unknown; edits?: { oldString?: unknown; newString?: unknown; content?: unknown }[] };
+            if (typeof input.path !== "string" || !CODE_FILE.test(input.path)) return;
+            const str = (v: unknown) => (typeof v === "string" ? v : "");
+            const pairs = [
+              ["", str(input.content)],
+              ["", str(input.appendContent)],
+              ...(Array.isArray(input.edits) ? input.edits.map((e) => [str(e.oldString), str(e.newString) || str(e.content)]) : []),
+            ];
+            const added = pairs.flatMap(([before, after]) => {
+              const old = new Set(before.split("\n").map((l) => l.trim()));
+              return after.split("\n").filter((l) => COMMENT.test(l) && !old.has(l.trim())).map((l) => l.trim());
+            });
+            if (added.length === 0) return;
+            const list = added.slice(0, 10).map((l) => `  ''${clip(l, 160)}`).join("\n");
+            const text = `[Harness] This edit added ''${added.length} comment line(s):\n''${list}\nCheck each against the Code comments rules. Keep one only if it explains a non-obvious why that the code cannot show. Remove the others with your next edit.`;
+            return { content: [...event.content, { type: "text" as const, text }], structuredContent: event.structuredContent };
+          });
+
           pi.on("session_compact", (_event, ctx) => {
             if (ctx.hasUI) ctx.ui.setStatus(STATE, undefined);
           });
@@ -1434,6 +1460,7 @@ in
         import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
         import { homedir, tmpdir } from "node:os";
         import { join, resolve } from "node:path";
+        import { checkCommand } from "${piPlan}/src/safety.ts";
 
         type Agent = { name: string; description: string; tools?: string; model?: string; thinking?: string; body: string };
         type Answer = { answer: string; stopReason?: string; usage?: unknown };
@@ -1453,6 +1480,7 @@ in
           usage?: unknown;
           tab?: string;
           pane?: string;
+          readonly?: boolean;
         };
 
         const DIR = join(process.env.XDG_RUNTIME_DIR || tmpdir(), "pi-herdr");
@@ -1550,6 +1578,13 @@ in
           });
 
         function childMode(pi: ExtensionAPI) {
+          if (process.env.PI_READONLY)
+            pi.on("tool_call", (event) => {
+              if (event.toolName === "edit" || event.toolName === "write") return { block: true, reason: "Read-only: the calling agent is in plan mode." };
+              if (event.toolName !== "bash") return;
+              const check = checkCommand(String((event.input as { command?: unknown }).command ?? ""));
+              return check.safe ? undefined : { block: true, reason: check.reason ?? "Read-only: the calling agent is in plan mode." };
+            });
           const run = process.env.PI_HERDR_RUN;
           if (!run) return;
           pi.on("agent_end", (event) => {
@@ -1575,7 +1610,7 @@ in
           return args;
         };
 
-        const childEnv = (job: Job) => ({ PI_HERDR_DEPTH: "1", PI_HERDR_RUN: job.run });
+        const childEnv = (job: Job) => ({ PI_HERDR_DEPTH: "1", PI_HERDR_RUN: job.run, ...(job.readonly ? { PI_READONLY: "1" } : {}) });
 
         async function viaHerdr(job: Job, args: string[], ws: string, outer: AbortSignal, timeoutMs: number, notify: (msg: string) => void) {
           const deadline = Date.now() + timeoutMs;
@@ -1713,6 +1748,8 @@ in
                 const p = await herdr(["pane", "get", process.env.HERDR_PANE_ID], outer);
                 if (p.ok) ws = p.result.pane?.workspace_id;
               }
+              type PlanEntry = { type: string; customType?: string; data?: { mode?: string } };
+              const inPlan = (ctx.sessionManager.getBranch() as PlanEntry[]).findLast((e) => e.type === "custom" && e.customType === "pi-plan")?.data?.mode === "plan";
               const jobs: Job[] = params.tasks.map((t) => ({
                 agent: t.agent || "scout",
                 task: t.task,
@@ -1720,6 +1757,7 @@ in
                 run: randomUUID(),
                 sessionId: randomUUID(),
                 status: "queued",
+                readonly: inPlan,
               }));
               const runOne = async (job: Job) => {
                 const agent = agents.get(job.agent);
@@ -1820,16 +1858,17 @@ in
         - Summarize finished work briefly, not as a detailed report.
 
         ## Code comments
-        - Almost never write comments in code, including godoc and other doc comments on functions, types and packages.
-        - Write a comment only when the code cannot explain itself:
-          - a workaround for a bug in a library, tool or upstream service
+        The default is no comment. A comment is a sign that the code failed to explain itself, it costs every future reader and it rots when the code changes. You understand code without comments, so never write one for yourself or for another agent: comments exist only for a human reader.
+        - Before writing a comment, make the code say it: a precise name, an extracted function, a named constant, a type, a test. Write the comment only if none of these can carry the meaning.
+        - A comment may explain why, never what or how. Allowed only when a careful reader would otherwise get it wrong:
+          - a workaround for a bug in a library, tool or upstream service, with the issue link if there is one
           - an order of operations, locking or concurrency rule that breaks if changed
           - a magic value imposed by a protocol, hardware or external API
           - code that looks dead, wrong or redundant but is intentional
-          - a non-obvious side effect or performance trick
-        - Never repeat what the code, names or types already say.
-        - Format: one short sentence in Russian, no period at the end, no dashes, no ";".
-        - Put it at the end of the code line. Only if it does not fit, put it on the line above.
+          - a non-obvious side effect, invariant or performance trick
+        - Forbidden: restating the code, names or types; doc comments on functions, types and packages (godoc, JSDoc, docstrings); commented-out code; section dividers and banners; change history, authorship or "fixed X" notes (that is what git is for); TODO without a ticket; notes about your task or your reasoning.
+        - When you change code, delete the comments your change made false. Do not touch other people's correct comments and do not add new ones to code you only read.
+        - Format: one short sentence in Russian, no period at the end, no dashes, no ";". Put it at the end of the code line. Only if it does not fit, put it on the line above.
 
         ## Commands
         If the whole user message is exactly one of these words, act as if its expansion was written instead. Inside a longer message they are ordinary words.
