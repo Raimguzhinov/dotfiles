@@ -59,7 +59,25 @@ in
 
       piAgentDir = "${config.home.homeDirectory}/.pi/agent";
 
-      grillMePackage = "npm:@majorgilles/pi-grill-me";
+      agentSkillsDir = "${config.home.homeDirectory}/.agents/skills";
+
+      mattpocockSkills = [
+        "grilling"
+        "grill-me"
+        "grill-with-docs"
+        "domain-modeling"
+        "triage"
+        "diagnosing-bugs"
+        "tdd"
+        "codebase-design"
+        "to-tickets"
+        "implement"
+        "code-review"
+        "retro"
+        "pr"
+        "handoff"
+        "writing-for-agents"
+      ];
 
       readSecret = name: "!cat ${config.sops.secrets.${name}.path}";
 
@@ -273,7 +291,6 @@ in
           special = "ask";
         };
         tools = {
-          "grill_*" = "allow";
           read = "allow";
           grep = "allow";
           find = "allow";
@@ -419,10 +436,10 @@ in
             substituteInPlace "$out/extensions/plan/index.ts" \
               --replace-fail 'const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];' "" \
               --replace-fail 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls"];' 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "todo", "lsp_definition", "lsp_references", "lsp_hover", "lsp_diagnostics", "aft_outline", "aft_zoom", "aft_search", "query-docs", "resolve-library-id"];' \
-              --replace-fail '- You can only use: read, bash, grep, find, ls' '- You can only use: read, bash, grep, find, ls, todo, lsp_definition, lsp_references, lsp_hover, lsp_diagnostics, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id, subagent with the scout or reviewer agent' \
+              --replace-fail '- You can only use: read, bash, grep, find, ls' '- You can only use: read, bash, grep, find, ls, todo, lsp_definition, lsp_references, lsp_hover, lsp_diagnostics, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id, subagent with the scout, reviewer, critic, tester, rival, psychologist or gopnik agent, subagent_wait' \
               --replace-fail 'pi.setActiveTools(PLAN_MODE_TOOLS);' "" \
               --replace-fail 'pi.setActiveTools(NORMAL_MODE_TOOLS);' 'if (!pi.getActiveTools().includes("edit")) pi.setActiveTools(pi.getAllTools().filter((t) => !t.exposure || t.exposure === "direct" || t.exposure === "model-only").map((t) => t.name));' \
-              --replace-fail 'if (event.toolName === "write" || event.toolName === "edit") {' 'if (!PLAN_MODE_TOOLS.includes(event.toolName) && event.toolName !== "mcp" && !event.toolName.startsWith("mcp__") && !(event.toolName === "subagent" && ((event.input as { tasks?: { agent?: string }[] }).tasks ?? []).every((t) => ["scout", "reviewer"].includes(t.agent ?? "scout")))) {' \
+              --replace-fail 'if (event.toolName === "write" || event.toolName === "edit") {' 'if (!PLAN_MODE_TOOLS.includes(event.toolName) && event.toolName !== "mcp" && event.toolName !== "subagent_wait" && !event.toolName.startsWith("mcp__") && !(event.toolName === "subagent" && ((event.input as { tasks?: { agent?: string }[] }).tasks ?? []).every((t) => ["scout", "reviewer", "critic", "tester", "rival", "psychologist", "gopnik"].includes(t.agent ?? "scout")))) {' \
               --replace-fail '"Plan mode active. File modifications blocked. Use /plan to disable."' '`Plan mode active. Only ''${PLAN_MODE_TOOLS.join(", ")} are allowed, file modifications are blocked. Use /plan to disable.`' \
               --replace-fail 'ctx.ui.theme.muted(' 'ctx.ui.theme.fg("muted", ' \
               --replace-fail 'pi.sendUserMessage(refinement.trim());' 'pi.sendUserMessage(refinement.trim(), { deliverAs: "followUp" });' \
@@ -444,23 +461,23 @@ in
 
         const RESEARCH_TOOLS = ["read", "bash", "grep", "find", "ls", "lsp_definition", "lsp_references", "lsp_hover", "lsp_diagnostics", "aft_outline", "aft_zoom", "aft_search", "resolve-library-id", "query-docs", "codemode", "todo"];
 
-        const researchPrompt = (topic: string) => `Research the topic below before any planning. Do not modify anything.
+        const researchPrompt = (topic: string) => `Research the question below. Do not modify anything. Do not decide what to change, where to change it or what to deliver: that comes later.
 
         Topic: ''${topic}
 
-        1. Decide which sources the topic needs: this codebase, library or API docs, the web, GitLab projects, merge requests and pipelines, the team knowledge base, issues. Use only the ones that matter.
-        2. Codebase: locate the code with aft_search, aft_outline and LSP references or definitions, read only the line ranges you need, note existing patterns and how this area is verified today.
-        3. Libraries and APIs: check the current docs with context7. Web, GitLab, knowledge base and issues: use the matching MCP tools you have.
-        4. Prefer primary sources. Cross-check every claim the result depends on. Mark what you could not confirm.
+        1. Turn the topic into 1-3 concrete questions the research must answer.
+        2. Pick the sources the questions need: library and API docs, RFCs and specs, the team knowledge base, GitLab merge requests and issues, the web, this codebase. Use only the ones that matter.
+        3. In the codebase, study how the mechanism works today and why it was built that way (git history, merge request discussions), not where to edit it.
+        4. Libraries and APIs: check the current docs with context7. Web, GitLab, knowledge base and issues: use the matching MCP tools you have.
+        5. Prefer primary sources. Cross-check every claim an answer depends on. Mark what you could not confirm.
 
         Reply with a "## Research" report of at most 60 lines:
-        - Question: what was researched, in one line
-        - Findings: each with its source (path:line or URL)
-        - Options and trade-offs, if there is a choice to make
-        - Recommendation
-        - Deliverable: what the result should be (code change, tests, report, OpenAPI/Swagger spec, diagram, table, ADR or another artifact) and why
+        - Questions
+        - Answers, each with its source (path:line, commit or URL)
+        - Constraints the sources impose: protocols, RFC requirements, compatibility, conventions
+        - Options and trade-offs, if the sources show a choice
         - Open questions
-        Do not plan or propose changes yet.`;
+        Do not list files to change, do not pick a deliverable and do not plan.`;
 
         const planPrompt = (topic: string) => `Using the research report above, plan: ''${topic}
 
@@ -1019,6 +1036,581 @@ in
         } "$@"
       '';
 
+      piPipelineView = pkgs.writeShellScriptBin "pi-pipeline-view" ''
+        exec ${pkgs.python3}/bin/python3 ${
+          pkgs.writeText "pi-pipeline-view.py" /* python */ ''
+            import json
+            import os
+            import queue
+            import threading
+            import time
+            from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+            from pathlib import Path
+
+            EVENTS = Path(os.environ.get("PI_PIPELINE_EVENTS") or Path.home() / ".pi/agent/pipeline/events.jsonl")
+            SESSIONS = Path.home() / ".pi/agent/sessions"
+            PORT = int(os.environ.get("PI_PIPELINE_PORT", "8517"))
+
+            nodes = {}
+            clients = set()
+            lock = threading.Lock()
+
+
+            def ingest(line):
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    return None
+                if not isinstance(e, dict) or not e.get("id"):
+                    return None
+                e["parents"] = [p for p in (e.get("parents") or []) if isinstance(p, str)]
+                old = nodes.get(e["id"])
+                if old:
+                    e = {**old, **e, "start": old.get("start", old.get("ts"))}
+                else:
+                    e["start"] = e.get("ts")
+                nodes[e["id"]] = e
+                return e
+
+
+            def tail():
+                pos = 0
+                buf = b""
+                while True:
+                    try:
+                        size = EVENTS.stat().st_size
+                    except OSError:
+                        time.sleep(0.5)
+                        continue
+                    if size < pos:
+                        pos = 0
+                        buf = b""
+                        with lock:
+                            nodes.clear()
+                        push({"reset": True})
+                    if size > pos:
+                        with EVENTS.open("rb") as f:
+                            f.seek(pos)
+                            chunk = f.read()
+                        pos += len(chunk)
+                        buf += chunk
+                        *lines, buf = buf.split(b"\n")
+                        batch = []
+                        with lock:
+                            for raw in lines:
+                                e = ingest(raw.decode("utf-8", "replace"))
+                                if e:
+                                    batch.append(e)
+                        if batch:
+                            push({"nodes": list({n["id"]: n for n in batch}.values())})
+                    time.sleep(0.4)
+
+
+            def push(payload):
+                data = json.dumps(payload)
+                with lock:
+                    for q in list(clients):
+                        q.put(data)
+
+
+            def find_session(sid):
+                if not sid or not all(c.isalnum() or c in "-_" for c in sid):
+                    return None
+                for f in SESSIONS.glob(f"**/*{sid}*.jsonl"):
+                    return f
+                for f in SESSIONS.glob("**/*.jsonl"):
+                    try:
+                        with f.open() as fh:
+                            if json.loads(fh.readline()).get("id") == sid:
+                                return f
+                    except (ValueError, OSError):
+                        continue
+                return None
+
+
+            def text_of(content):
+                if isinstance(content, str):
+                    return content
+                out = []
+                for b in content or []:
+                    if isinstance(b, dict):
+                        if b.get("type") == "text":
+                            out.append(b.get("text", ""))
+                        elif b.get("type") == "toolCall":
+                            out.append(f"[tool {b.get('name')}]")
+                return " ".join(out)
+
+
+            def session_tail(sid):
+                f = find_session(sid)
+                if not f:
+                    return None
+                msgs = []
+                for line in f.open():
+                    try:
+                        e = json.loads(line)
+                    except ValueError:
+                        continue
+                    m = e.get("message")
+                    if e.get("type") == "message" and isinstance(m, dict):
+                        msgs.append({"role": m.get("role"), "text": text_of(m.get("content"))[:300]})
+                return msgs[-40:]
+
+
+            PAGE = r"""<!doctype html>
+            <html><head><meta charset="utf-8"><title>pi pipeline</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+            :root{--bg:#fafafa;--fg:#1d2024;--mut:#6b7280;--card:#fff;--bd:#d8dce2;--run:#2563eb;--ok:#16a34a;--fail:#dc2626;--skip:#9ca3af}
+            @media(prefers-color-scheme:dark){:root{--bg:#14161a;--fg:#e5e7eb;--mut:#9aa1ac;--card:#1d2026;--bd:#333943;--run:#60a5fa;--ok:#4ade80;--fail:#f87171;--skip:#6b7280}}
+            *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:13px system-ui,sans-serif;display:flex;height:100vh}
+            #runs{width:260px;border-right:1px solid var(--bd);overflow:auto}
+            #runs div{padding:8px 10px;border-bottom:1px solid var(--bd);cursor:pointer}
+            #runs div.sel{background:var(--card)}#runs small{color:var(--mut);display:block}
+            .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+            #main{flex:1;overflow:auto;position:relative}#side{width:340px;border-left:1px solid var(--bd);overflow:auto;padding:10px;background:var(--card)}
+            #side pre{white-space:pre-wrap;word-break:break-word;margin:4px 0;padding:6px;border:1px solid var(--bd);border-radius:4px;font-size:12px}
+            #side h3{margin:0 0 6px}#side dt{color:var(--mut);margin-top:6px}#side dd{margin:0;word-break:break-all}
+            svg text{fill:var(--fg);font:11px system-ui,sans-serif}svg .lane{fill:none;stroke:var(--bd);stroke-dasharray:4 4}
+            svg .edge{fill:none;stroke:var(--mut);stroke-width:1.3}svg .nd{fill:var(--card);stroke-width:2;cursor:pointer}
+            svg .nd.sel{stroke-width:4}svg .lt{fill:var(--mut)}
+            .run{stroke:var(--run)}.ok{stroke:var(--ok)}.fail{stroke:var(--fail)}.skipped{stroke:var(--skip)}
+            .b-run{background:var(--run)}.b-ok{background:var(--ok)}.b-fail{background:var(--fail)}.b-skipped{background:var(--skip)}
+            #empty{padding:20px;color:var(--mut)}
+            </style></head><body>
+            <div id="runs"></div><div id="main"><div id="empty">waiting for events</div></div><div id="side"><div style="color:var(--mut)">click a node</div></div>
+            <script>
+            const nodes = new Map();
+            let sel = null, selNode = null, dirty = false;
+            const NS = 'http://www.w3.org/2000/svg';
+            const $ = id => document.getElementById(id);
+            const base = p => (p || ''').split('/').filter(Boolean).pop() || '/';
+            const cls = s => s === 'running' ? 'run' : s;
+            const fmt = t => t ? new Date(t).toLocaleTimeString() : ''';
+
+            function runs() {
+              const m = new Map();
+              for (const n of nodes.values()) {
+                const r = m.get(n.run) || {run: n.run, ts: 0, cwd: n.cwd, st: 'ok', count: 0};
+                r.ts = Math.max(r.ts, n.ts || 0); r.count++;
+                if (n.status === 'running') r.st = 'running';
+                else if (n.status === 'fail' && r.st !== 'running') r.st = 'fail';
+                if (n.kind === 'run') r.cwd = n.cwd;
+                m.set(n.run, r);
+              }
+              return [...m.values()].sort((a, b) => b.ts - a.ts);
+            }
+
+            function drawRuns() {
+              const box = $('runs'); box.textContent = ''';
+              for (const r of runs()) {
+                const d = document.createElement('div');
+                if (r.run === sel) d.className = 'sel';
+                const dot = document.createElement('span'); dot.className = 'dot b-' + cls(r.st);
+                d.append(dot, document.createTextNode(r.run.slice(0, 24)));
+                const s = document.createElement('small'); s.textContent = base(r.cwd) + ' / ' + r.count + ' nodes / ' + fmt(r.ts);
+                d.append(s); d.onclick = () => { sel = r.run; selNode = null; dirty = true; };
+                box.append(d);
+              }
+            }
+
+            function layout(list) {
+              const byId = new Map(list.map(n => [n.id, n]));
+              const depth = new Map();
+              const visit = (n, seen) => {
+                if (depth.has(n.id)) return depth.get(n.id);
+                if (seen.has(n.id)) return 0;
+                seen.add(n.id);
+                let d = 0;
+                for (const p of n.parents) if (byId.has(p)) d = Math.max(d, visit(byId.get(p), seen) + 1);
+                depth.set(n.id, d); seen.delete(n.id);
+                return d;
+              };
+              for (const n of list) visit(n, new Set());
+              const lanes = [...new Set(list.map(n => n.cwd || '''))].sort();
+              const pos = new Map(); const rows = {};
+              const order = [...list].sort((a, b) => depth.get(a.id) - depth.get(b.id) || (a.start || 0) - (b.start || 0));
+              const laneTop = []; let y = 30;
+              for (const l of lanes) {
+                const mine = order.filter(n => (n.cwd || ''') === l);
+                const used = new Map();
+                let maxRow = 0;
+                for (const n of mine) {
+                  const d = depth.get(n.id), k = used.get(d) || 0; used.set(d, k + 1);
+                  maxRow = Math.max(maxRow, k);
+                  pos.set(n.id, {x: 40 + d * 190, row: k});
+                }
+                laneTop.push({l, y, h: (maxRow + 1) * 56 + 14});
+                for (const n of mine) { const p = pos.get(n.id); p.y = y + 24 + p.row * 56; }
+                y += (maxRow + 1) * 56 + 30;
+              }
+              let w = 0; for (const p of pos.values()) w = Math.max(w, p.x + 170);
+              return {pos, laneTop, w, h: y};
+            }
+
+            function el(tag, attrs, text) {
+              const e = document.createElementNS(NS, tag);
+              for (const k in attrs) e.setAttribute(k, attrs[k]);
+              if (text != null) e.textContent = text;
+              return e;
+            }
+
+            function shape(n, p) {
+              const c = 'nd ' + cls(n.status) + (n.id === selNode ? ' sel' : ''');
+              const x = p.x, y = p.y;
+              if (n.kind === 'gate') return el('polygon', {class: c, points: `''${x + 70},''${y - 20} ''${x + 140},''${y} ''${x + 70},''${y + 20} ''${x},''${y}`});
+              if (n.kind === 'join') return el('polygon', {class: c, points: `''${x + 14},''${y - 18} ''${x + 126},''${y - 18} ''${x + 140},''${y} ''${x + 126},''${y + 18} ''${x + 14},''${y + 18} ''${x},''${y}`});
+              if (n.kind === 'agent') return el('rect', {class: c, x, y: y - 18, width: 140, height: 36, rx: 18});
+              if (n.kind === 'phase') return el('rect', {class: c, x, y: y - 18, width: 140, height: 36, rx: 2});
+              if (n.kind === 'run') return el('rect', {class: c, x, y: y - 18, width: 140, height: 36, rx: 8});
+              return el('rect', {class: c, x, y: y - 18, width: 140, height: 36, rx: 6});
+            }
+
+            function drawGraph() {
+              const box = $('main'); box.textContent = ''';
+              const list = [...nodes.values()].filter(n => n.run === sel);
+              if (!list.length) { const e = document.createElement('div'); e.id = 'empty'; e.textContent = 'no run selected'; box.append(e); return; }
+              const {pos, laneTop, w, h} = layout(list);
+              const svg = el('svg', {width: Math.max(w, 400), height: h + 20});
+              for (const t of laneTop) {
+                svg.append(el('rect', {class: 'lane', x: 4, y: t.y, width: Math.max(w, 400) - 8, height: t.h, rx: 6}));
+                svg.append(el('text', {class: 'lt', x: 10, y: t.y + 12}, base(t.l) + (t.l ? '  ' + t.l : ''')));
+              }
+              for (const n of list) for (const par of n.parents) {
+                const a = pos.get(par), b = pos.get(n.id);
+                if (!a || !b) continue;
+                const x1 = a.x + 140, x2 = b.x, mx = (x1 + x2) / 2;
+                svg.append(el('path', {class: 'edge', d: `M''${x1},''${a.y} C''${mx},''${a.y} ''${mx},''${b.y} ''${x2},''${b.y}`}));
+              }
+              for (const n of list) {
+                const p = pos.get(n.id);
+                const g = el('g', {});
+                g.append(shape(n, p));
+                g.append(el('text', {x: p.x + 8, y: p.y - 3}, (n.label || n.id).slice(0, 22)));
+                g.append(el('text', {class: 'lt', x: p.x + 8, y: p.y + 10}, n.kind + (n.phase ? ' / ' + n.phase : ''')));
+                g.onclick = () => { selNode = n.id; dirty = true; showNode(n); };
+                svg.append(g);
+              }
+              box.append(svg);
+            }
+
+            async function showNode(n) {
+              const s = $('side'); s.textContent = ''';
+              const h = document.createElement('h3'); h.textContent = n.label || n.id; s.append(h);
+              const dl = document.createElement('dl');
+              const row = (k, v) => { if (v == null || v === ''') return; const t = document.createElement('dt'); t.textContent = k; const d = document.createElement('dd'); d.textContent = v; dl.append(t, d); };
+              row('kind', n.kind); row('status', n.status); row('phase', n.phase); row('detail', n.detail);
+              row('cwd', n.cwd); row('sessionId', n.sessionId); row('id', n.id); row('parents', n.parents.join(', '));
+              row('started', n.start ? new Date(n.start).toLocaleString() : '''); row('updated', n.ts ? new Date(n.ts).toLocaleString() : ''');
+              if (n.start && n.ts) row('duration', ((n.ts - n.start) / 1000).toFixed(1) + 's');
+              s.append(dl);
+              if (!n.sessionId) return;
+              try {
+                const r = await fetch('/session/' + encodeURIComponent(n.sessionId));
+                if (!r.ok) { const p = document.createElement('pre'); p.textContent = 'session not found'; s.append(p); return; }
+                for (const m of await r.json()) { const p = document.createElement('pre'); p.textContent = m.role + ': ' + m.text; s.append(p); }
+              } catch (e) {}
+            }
+
+            function render() {
+              if (!dirty) return;
+              dirty = false;
+              if (!sel) { const r = runs(); if (r.length) sel = r[0].run; }
+              drawRuns(); drawGraph();
+              if (selNode && nodes.has(selNode)) { const n = nodes.get(selNode); if (n.status === 'running') showNode(n); }
+            }
+            setInterval(render, 250);
+
+            const es = new EventSource('/events');
+            es.onmessage = ev => {
+              const d = JSON.parse(ev.data);
+              if (d.reset) nodes.clear();
+              for (const n of d.nodes || []) nodes.set(n.id, n);
+              dirty = true;
+            };
+            </script></body></html>
+            """
+
+
+            class Handler(BaseHTTPRequestHandler):
+                def log_message(self, *a):
+                    pass
+
+                def send(self, code, ctype, body):
+                    self.send_response(code)
+                    self.send_header("Content-Type", ctype)
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+
+                def do_GET(self):
+                    path = self.path.split("?")[0]
+                    if path == "/":
+                        self.send(200, "text/html; charset=utf-8", PAGE.encode())
+                    elif path == "/events":
+                        self.stream()
+                    elif path.startswith("/session/"):
+                        msgs = session_tail(path[len("/session/"):])
+                        if msgs is None:
+                            self.send(404, "application/json", b'{"error":"session not found"}')
+                        else:
+                            self.send(200, "application/json", json.dumps(msgs).encode())
+                    else:
+                        self.send(404, "text/plain", b"not found")
+
+                def stream(self):
+                    q = queue.Queue()
+                    with lock:
+                        snap = list(nodes.values())
+                        clients.add(q)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/event-stream")
+                    self.send_header("Cache-Control", "no-cache")
+                    self.end_headers()
+                    try:
+                        self.wfile.write(b"data: " + json.dumps({"reset": True, "nodes": snap}).encode() + b"\n\n")
+                        self.wfile.flush()
+                        while True:
+                            try:
+                                data = q.get(timeout=15)
+                                self.wfile.write(b"data: " + data.encode() + b"\n\n")
+                            except queue.Empty:
+                                self.wfile.write(b": ping\n\n")
+                            self.wfile.flush()
+                    except OSError:
+                        pass
+                    finally:
+                        with lock:
+                            clients.discard(q)
+
+
+            if __name__ == "__main__":
+                threading.Thread(target=tail, daemon=True).start()
+                srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+                srv.daemon_threads = True
+                print(f"pi-pipeline-view: http://127.0.0.1:{PORT}")
+                try:
+                    srv.serve_forever()
+                except KeyboardInterrupt:
+                    pass
+          ''
+        } "$@"
+      '';
+
+      piEval = pkgs.writeShellScriptBin "pi-eval" ''
+        exec ${pkgs.python3}/bin/python3 ${
+          pkgs.writeText "pi-eval.py" /* python */ ''
+            import argparse
+            import hashlib
+            import json
+            import os
+            import shutil
+            import statistics
+            import subprocess
+            import sys
+            import tarfile
+            import time
+            import io
+            from collections import defaultdict
+            from pathlib import Path
+
+            HOME = Path.home()
+            TASKS = HOME / ".pi/eval/tasks.jsonl"
+            RESULTS = HOME / ".pi/eval/results.jsonl"
+            TREES = HOME / ".pi/worktrees"
+
+
+            def git(repo, *args, check=True, env=None):
+                r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, env=env)
+                if check and r.returncode:
+                    raise RuntimeError(f"git {' '.join(args)}: {r.stderr.strip()}")
+                return r.stdout
+
+
+            def task_id(repo, commit):
+                return hashlib.sha1(f"{repo}:{commit}".encode()).hexdigest()[:8]
+
+
+            def load_tasks():
+                if not TASKS.exists():
+                    return []
+                out = []
+                for line in TASKS.open():
+                    try:
+                        out.append(json.loads(line))
+                    except ValueError:
+                        continue
+                return out
+
+
+            def mine(args):
+                repo = Path(args.repo).expanduser().resolve()
+                commits = git(repo, "log", "--no-merges", "--format=%H", "-n", str(args.scan)).split()
+                found = []
+                for c in commits:
+                    stat = git(repo, "show", "--numstat", "--format=", c).splitlines()
+                    files = []
+                    lines = 0
+                    for s in stat:
+                        parts = s.split("\t")
+                        if len(parts) != 3:
+                            continue
+                        add, rem, name = parts
+                        if add == "-":
+                            continue
+                        lines += int(add) + int(rem)
+                        files.append(name)
+                    go = [f for f in files if f.endswith(".go")]
+                    tests = [f for f in go if f.endswith("_test.go")]
+                    if not tests or len(go) == len(tests) or lines >= 300:
+                        continue
+                    pkgs = sorted({"./" + str(Path(t).parent) if str(Path(t).parent) != "." else "." for t in tests})
+                    subject = git(repo, "show", "-s", "--format=%s", c).strip()
+                    found.append({"repo": str(repo), "commit": c, "subject": subject, "tests": tests, "pkgs": pkgs})
+                    if len(found) >= args.n:
+                        break
+                for t in found:
+                    print(json.dumps(t, ensure_ascii=False))
+                if args.add:
+                    have = {(t["repo"], t["commit"]) for t in load_tasks()}
+                    TASKS.parent.mkdir(parents=True, exist_ok=True)
+                    with TASKS.open("a") as f:
+                        for t in found:
+                            if (t["repo"], t["commit"]) not in have:
+                                t["id"] = task_id(t["repo"], t["commit"])
+                                f.write(json.dumps(t, ensure_ascii=False) + "\n")
+
+
+            def extract(repo, rev, dest, paths=None):
+                cmd = ["git", "-C", str(repo), "archive", "--format=tar", rev]
+                if paths:
+                    cmd += ["--", *paths]
+                data = subprocess.run(cmd, capture_output=True, check=True).stdout
+                with tarfile.open(fileobj=io.BytesIO(data)) as t:
+                    t.extractall(dest, filter="data")
+
+
+            def parse_events(out):
+                tokens = 0
+                calls = 0
+                for line in out.splitlines():
+                    try:
+                        e = json.loads(line)
+                    except ValueError:
+                        continue
+                    if e.get("type") == "tool_execution_start":
+                        calls += 1
+                    if e.get("type") == "message_end":
+                        m = e.get("message") or {}
+                        if m.get("role") == "assistant":
+                            u = m.get("usage") or {}
+                            tokens += u.get("totalTokens") or ((u.get("input") or 0) + (u.get("output") or 0) + (u.get("cacheRead") or 0))
+                return tokens, calls
+
+
+            def run_task(t, timeout, label):
+                repo = Path(t["repo"])
+                tid = t["id"]
+                tree = TREES / f"eval-{tid}"
+                if tree.exists():
+                    shutil.rmtree(tree)
+                tree.mkdir(parents=True)
+                res = {"id": tid, "label": label, "repo": t["repo"], "commit": t["commit"], "ts": time.time()}
+                try:
+                    extract(repo, t["commit"] + "^", tree)
+                    env = {**os.environ, "GIT_AUTHOR_NAME": "eval", "GIT_AUTHOR_EMAIL": "eval@localhost", "GIT_COMMITTER_NAME": "eval", "GIT_COMMITTER_EMAIL": "eval@localhost"}
+                    git(tree, "init", "-q")
+                    git(tree, "add", "-A")
+                    git(tree, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "baseline", env=env)
+                    body = git(repo, "show", "-s", "--format=%B", t["commit"]).strip()
+                    start = time.time()
+                    timed_out = False
+                    try:
+                        p = subprocess.run(["pi", "-p", "--mode", "json", "--no-session", body], cwd=tree, capture_output=True, text=True, timeout=timeout)
+                        out = p.stdout
+                    except subprocess.TimeoutExpired as e:
+                        timed_out = True
+                        out = (e.stdout or b"").decode("utf-8", "replace") if isinstance(e.stdout, bytes) else (e.stdout or "")
+                    res["wall"] = round(time.time() - start, 1)
+                    res["timeout"] = timed_out
+                    res["tokens"], res["tool_calls"] = parse_events(out)
+                    res["diff_lines"] = sum(
+                        int(x) for l in git(tree, "diff", "--numstat", "HEAD").splitlines() for x in l.split("\t")[:2] if x.isdigit()
+                    )
+                    extract(repo, t["commit"], tree, t["tests"])
+                    g = subprocess.run(["go", "test", "-count=1", *t["pkgs"]], cwd=tree, capture_output=True, text=True, timeout=1800)
+                    res["pass"] = g.returncode == 0 and not timed_out
+                    res["test_tail"] = (g.stdout + g.stderr)[-500:]
+                except Exception as e:
+                    res["pass"] = False
+                    res["error"] = str(e)[:300]
+                finally:
+                    shutil.rmtree(tree, ignore_errors=True)
+                return res
+
+
+            def run(args):
+                tasks = load_tasks()
+                if args.only:
+                    tasks = [t for t in tasks if t.get("id") == args.only]
+                if not tasks:
+                    sys.exit("no tasks: use `pi-eval mine <repo> --add` first")
+                label = os.environ.get("PI_EVAL_LABEL") or default_label()
+                RESULTS.parent.mkdir(parents=True, exist_ok=True)
+                for t in tasks:
+                    t.setdefault("id", task_id(t["repo"], t["commit"]))
+                    r = run_task(t, args.timeout, label)
+                    with RESULTS.open("a") as f:
+                        f.write(json.dumps(r, ensure_ascii=False) + "\n")
+                    print(f"{r['id']} {'PASS' if r['pass'] else 'FAIL'} {r.get('wall', 0)}s tokens={r.get('tokens', 0)} calls={r.get('tool_calls', 0)}", flush=True)
+
+
+            def default_label():
+                r = subprocess.run(["git", "-C", str(HOME / "dotfiles"), "rev-parse", "--short", "HEAD"], capture_output=True, text=True)
+                return r.stdout.strip() or "unknown"
+
+
+            def report(args):
+                if not RESULTS.exists():
+                    sys.exit("no results")
+                rows = defaultdict(list)
+                for line in RESULTS.open():
+                    try:
+                        r = json.loads(line)
+                    except ValueError:
+                        continue
+                    rows[r.get("label", "?")].append(r)
+                print(f"{'label':14} {'runs':>4} {'pass':>6} {'time p50':>9} {'tokens p50':>11} {'calls p50':>9}")
+                for label, rs in rows.items():
+                    passed = sum(1 for r in rs if r.get("pass")) / len(rs)
+                    med = lambda k: statistics.median([r.get(k) or 0 for r in rs])
+                    print(f"{label[:14]:14} {len(rs):4} {passed:6.0%} {med('wall'):8.0f}s {med('tokens') / 1000:10.0f}k {med('tool_calls'):9.0f}")
+
+
+            def main():
+                ap = argparse.ArgumentParser(prog="pi-eval")
+                sub = ap.add_subparsers(dest="cmd", required=True)
+                m = sub.add_parser("mine")
+                m.add_argument("repo")
+                m.add_argument("-n", type=int, default=20)
+                m.add_argument("--scan", type=int, default=500)
+                m.add_argument("--add", action="store_true")
+                m.set_defaults(fn=mine)
+                r = sub.add_parser("run")
+                r.add_argument("--only")
+                r.add_argument("--timeout", type=int, default=3600)
+                r.set_defaults(fn=run)
+                p = sub.add_parser("report")
+                p.set_defaults(fn=report)
+                args = ap.parse_args()
+                args.fn(args)
+
+
+            main()
+          ''
+        } "$@"
+      '';
+
       piNvimLauncher =
         pkgs.writeShellScriptBin "pi" # bash
           ''
@@ -1070,20 +1662,6 @@ in
           ln -s ${piNvimLauncher}/bin/pi "$out/bin/pi"
         '';
       };
-
-      grillHintFile = pkgs.writeText "grill-hint.ts" /* typescript */ ''
-        import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-        export default function (pi: ExtensionAPI) {
-          if (process.argv.some((arg) => arg.includes("pi-grill-me"))) return;
-          pi.registerCommand("grill", {
-            description: "grill-me загружается только через алиас pig",
-            handler: async (_args, ctx) => {
-              ctx.ui.notify("grill-me в этой сессии не загружен. Выйди из pi, запусти pig и повтори /grill", "warning");
-            },
-          });
-        }
-      '';
 
       todoReminderFile = pkgs.writeText "todo-reminder.ts" /* typescript */ ''
         import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -1457,15 +2035,19 @@ in
         import { Type } from "typebox";
         import { execFile, spawn } from "node:child_process";
         import { randomUUID } from "node:crypto";
-        import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+        import { appendFileSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
         import { homedir, tmpdir } from "node:os";
-        import { join, resolve } from "node:path";
+        import { basename, dirname, join, resolve } from "node:path";
         import { checkCommand } from "${piPlan}/src/safety.ts";
 
         type Agent = { name: string; description: string; tools?: string; model?: string; thinking?: string; body: string };
         type Answer = { answer: string; stopReason?: string; usage?: unknown };
         type Herdr = { ok: true; result: any } | { ok: false; code: string; message: string };
+        type Pipe = { run: string; parent: string; phase?: string };
         type Job = {
+          id: string;
+          nodeId?: string;
+          pipe?: Pipe;
           agent: string;
           task: string;
           cwd: string;
@@ -1485,8 +2067,47 @@ in
 
         const DIR = join(process.env.XDG_RUNTIME_DIR || tmpdir(), "pi-herdr");
         const AGENTS = join(process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent"), "agents");
+        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
         const TICK_MS = 5000;
         const CAP = 4000;
+        const LIMIT = Math.max(1, Number(process.env.PI_SUBAGENT_CONCURRENCY) || 2);
+
+        type Background = { job: Job; ctrl: AbortController; done: Promise<unknown>; owner: string };
+        const background = new Map<string, Background>();
+        const waiters: (() => void)[] = [];
+        let busy = 0;
+
+        const acquire = (signal: AbortSignal) =>
+          new Promise<boolean>((done) => {
+            if (signal.aborted) return done(false);
+            if (busy < LIMIT) return (busy++, done(true));
+            const go = () => {
+              signal.removeEventListener("abort", drop);
+              busy++;
+              done(true);
+            };
+            const drop = () => {
+              const i = waiters.indexOf(go);
+              if (i >= 0) waiters.splice(i, 1);
+              done(false);
+            };
+            waiters.push(go);
+            signal.addEventListener("abort", drop, { once: true });
+          });
+
+        const release = () => {
+          busy--;
+          waiters.shift()?.();
+        };
+
+        const emit = (node: Record<string, unknown>) => {
+          try {
+            mkdirSync(dirname(EVENTS), { recursive: true });
+            appendFileSync(EVENTS, JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
+          } catch {}
+        };
+
+        const finished = (j: Job) => j.status === "done" || j.status === "failed";
 
         const head = (s: string, n = 30) => {
           const t = s.replace(/\s+/g, " ").trim();
@@ -1494,6 +2115,43 @@ in
         };
 
         const file = (run: string, ext: string) => join(DIR, run + ext);
+
+        const emitAgent = (job: Job) =>
+          job.nodeId &&
+          job.pipe &&
+          emit({
+            id: job.nodeId,
+            parents: [job.pipe.parent],
+            kind: "agent",
+            label: `''${job.agent}: ''${head(job.task, 40)}`,
+            run: job.pipe.run,
+            ...(job.pipe.phase ? { phase: job.pipe.phase } : {}),
+            cwd: job.cwd,
+            sessionId: job.sessionId,
+            status: finished(job) ? (job.ok ? "ok" : "fail") : "running",
+            ...(job.error ? { detail: head(job.error, 200) } : {}),
+          });
+
+        const emitJoin = (jobs: Job[]) => {
+          const nodes = jobs.filter((j) => j.nodeId && j.pipe && finished(j));
+          if (nodes.length < 2) return;
+          const pipe = nodes[0].pipe!;
+          emit({
+            id: `join-''${randomUUID()}`,
+            parents: nodes.map((j) => j.nodeId),
+            kind: "join",
+            label: `join: ''${nodes.map((j) => j.agent).join(", ")}`,
+            run: pipe.run,
+            ...(pipe.phase ? { phase: pipe.phase } : {}),
+            cwd: nodes[0].cwd,
+            status: nodes.every((j) => j.ok) ? "ok" : "fail",
+          });
+        };
+
+        const expertsFile = (path: string) => {
+          const p = resolve(path.startsWith("~/") ? join(homedir(), path.slice(2)) : path);
+          return basename(p) === "experts.md" && dirname(dirname(p)) === join(homedir(), ".pi", "projects");
+        };
 
         const readText = (path: string) => {
           try {
@@ -1580,6 +2238,7 @@ in
         function childMode(pi: ExtensionAPI) {
           if (process.env.PI_READONLY)
             pi.on("tool_call", (event) => {
+              if (event.toolName === "write" && expertsFile(String((event.input as { path?: unknown }).path ?? ""))) return;
               if (event.toolName === "edit" || event.toolName === "write") return { block: true, reason: "Read-only: the calling agent is in plan mode." };
               if (event.toolName !== "bash") return;
               const check = checkCommand(String((event.input as { command?: unknown }).command ?? ""));
@@ -1610,7 +2269,12 @@ in
           return args;
         };
 
-        const childEnv = (job: Job) => ({ PI_HERDR_DEPTH: "1", PI_HERDR_RUN: job.run, ...(job.readonly ? { PI_READONLY: "1" } : {}) });
+        const childEnv = (job: Job) => ({
+          PI_HERDR_DEPTH: "1",
+          PI_HERDR_RUN: job.run,
+          ...(job.readonly ? { PI_READONLY: "1" } : {}),
+          ...(job.nodeId && job.pipe ? { PI_PIPELINE_RUN: job.pipe.run, PI_PIPELINE_NODE: job.nodeId } : {}),
+        });
 
         async function viaHerdr(job: Job, args: string[], ws: string, outer: AbortSignal, timeoutMs: number, notify: (msg: string) => void) {
           const deadline = Date.now() + timeoutMs;
@@ -1657,7 +2321,7 @@ in
             }
             notified = false;
             if (!sent) {
-              const p = await herdr(["agent", "prompt", name, "--wait", "--until", "idle", "--until", "done", "--until", "blocked", "--timeout", String(left()), "--", job.task], sig);
+              const p = await herdr(["agent", "prompt", name, job.task, "--wait", "--until", "idle", "--until", "done", "--until", "blocked", "--timeout", String(left())], sig);
               if (p.ok || p.code === "agent_prompt_stalled" || p.code === "timeout") sent = true;
               else if (p.code !== "agent_blocked" && !sig.aborted) return keep(`agent prompt failed: ''${p.message}`);
               continue;
@@ -1716,11 +2380,69 @@ in
           "Run tasks in child pi agents (fresh context, each in its own background herdr tab) and return each final answer. " +
           "Tasks run in parallel. For a chain, call again with the previous result. " +
           "Delegate only independent, substantial read-only work. Each task must be self-contained. You do the edits yourself. " +
+          "With background: true the call returns job ids at once; keep working and collect the answers with subagent_wait. " +
           `Agents: ''${[...agents.values()].map((a) => (a.description ? `''${a.name} (''${a.description})` : a.name)).join(", ") || "none"}.`;
+
+        async function runOne(job: Job, agent: Agent | undefined, ws: string | undefined, signal: AbortSignal, timeoutMs: number, notify: (msg: string) => void) {
+          if (!agent) return Object.assign(job, { ok: false, status: "failed", nodeId: undefined, error: `unknown agent, available: ''${[...loadAgents().keys()].join(", ") || "none"}` });
+          emitAgent(job);
+          let held = false;
+          try {
+            held = await acquire(signal);
+            if (!held) return Object.assign(job, { ok: false, error: "aborted" });
+            const args = childArgs(agent, job);
+            job.progress = undefined;
+            if (ws) await viaHerdr(job, args, ws, signal, timeoutMs, notify);
+            else await viaPrint(job, args, signal, timeoutMs);
+          } catch (e) {
+            Object.assign(job, { ok: false, error: String(e) });
+          } finally {
+            if (held) release();
+            job.status = job.ok ? "done" : "failed";
+            for (const ext of [".json", ".progress", ".md"]) rmSync(file(job.run, ext), { force: true });
+            emitAgent(job);
+          }
+          return job;
+        }
+
+        const render = (jobs: Job[]) =>
+          jobs
+            .map((j) => {
+              const body = !finished(j)
+                ? `Still running [''${j.status}''${j.progress ? `, ''${j.progress}` : ""}]. Call subagent_wait again to collect it.`
+                : j.ok
+                  ? (j.answer ?? "").length > CAP
+                    ? `''${j.answer!.slice(0, CAP)}\n[answer truncated at ''${CAP} chars]`
+                    : j.answer
+                  : `No answer: ''${j.error}.''${j.tab ? ` Tab "''${j.tab}" (pane ''${j.pane}) is kept open.` : ""}`;
+              return `### ''${j.agent} ''${j.id}: ''${head(j.task)}\n''${body}\nsession: ''${j.sessionId}`;
+            })
+            .join("\n\n");
+
+        const ticker = (jobs: Job[], onUpdate: ((u: { content: { type: "text"; text: string }[]; details: { jobs: Job[] } }) => void) | undefined) =>
+          setInterval(() => {
+            for (const j of jobs) if (!finished(j)) j.progress = readText(file(j.run, ".progress")) ?? j.progress;
+            const text = jobs.map((j) => `''${j.agent} ''${j.id}: ''${head(j.task)} [''${j.status}''${j.progress ? `, ''${j.progress}` : ""}]`).join("\n");
+            onUpdate?.({ content: [{ type: "text", text }], details: { jobs } });
+          }, TICK_MS);
+
+        const aborted = (signal: AbortSignal) => new Promise<void>((done) => (signal.aborted ? done() : signal.addEventListener("abort", () => done(), { once: true })));
 
         export default function (pi: ExtensionAPI) {
           if (process.env.PI_HERDR_DEPTH) return childMode(pi);
           const agents = loadAgents();
+          let phase: { run: string; phase?: string; nodeId: string } | undefined;
+          pi.events.on("pipeline:phase", (data) => {
+            const p = data as typeof phase | null;
+            phase = p?.nodeId ? p : undefined;
+          });
+          const pipeOf = (): Pipe | undefined =>
+            phase
+              ? { run: phase.run, parent: phase.nodeId, phase: phase.phase }
+              : process.env.PI_PIPELINE_NODE
+                ? { run: process.env.PI_PIPELINE_RUN ?? "", parent: process.env.PI_PIPELINE_NODE }
+                : undefined;
+
           pi.registerTool({
             name: "subagent",
             label: "Subagent",
@@ -1735,14 +2457,11 @@ in
                 { minItems: 1, maxItems: 4 },
               ),
               timeoutMin: Type.Optional(Type.Integer({ description: "Per-task limit in minutes, default 30" })),
+              background: Type.Optional(Type.Boolean({ description: "Return job ids at once, collect answers later with subagent_wait" })),
             }),
             async execute(_id, params, signal, onUpdate, ctx) {
               const outer = signal ?? new AbortController().signal;
               const timeoutMs = Math.max(1, params.timeoutMin ?? 30) * 60000;
-              const notify = (msg: string) => {
-                if (ctx.hasUI) ctx.ui.notify(msg, "warning");
-                onUpdate?.({ content: [{ type: "text", text: msg }], details: { jobs } });
-              };
               let ws = process.env.HERDR_ENV === "1" ? process.env.HERDR_WORKSPACE_ID : undefined;
               if (process.env.HERDR_ENV === "1" && !ws && process.env.HERDR_PANE_ID) {
                 const p = await herdr(["pane", "get", process.env.HERDR_PANE_ID], outer);
@@ -1750,59 +2469,102 @@ in
               }
               type PlanEntry = { type: string; customType?: string; data?: { mode?: string } };
               const inPlan = (ctx.sessionManager.getBranch() as PlanEntry[]).findLast((e) => e.type === "custom" && e.customType === "pi-plan")?.data?.mode === "plan";
-              const jobs: Job[] = params.tasks.map((t) => ({
-                agent: t.agent || "scout",
-                task: t.task,
-                cwd: resolve(ctx.cwd, t.cwd || "."),
-                run: randomUUID(),
-                sessionId: randomUUID(),
-                status: "queued",
-                readonly: inPlan,
-              }));
-              const runOne = async (job: Job) => {
-                const agent = agents.get(job.agent);
-                if (!agent) return Object.assign(job, { ok: false, error: `unknown agent, available: ''${[...agents.keys()].join(", ") || "none"}` });
+              const pipe = pipeOf();
+              const jobs: Job[] = params.tasks.map((t) => {
+                const run = randomUUID();
+                const sessionId = randomUUID();
+                return {
+                  id: run.slice(0, 8),
+                  ...(pipe ? { nodeId: sessionId, pipe } : {}),
+                  agent: t.agent || "scout",
+                  task: t.task,
+                  cwd: resolve(ctx.cwd, t.cwd || "."),
+                  run,
+                  sessionId,
+                  status: "queued",
+                  readonly: inPlan,
+                };
+              });
+              const warn = (msg: string) => {
                 try {
-                  const args = childArgs(agent, job);
-                  job.progress = undefined;
-                  if (ws) await viaHerdr(job, args, ws, outer, timeoutMs, notify);
-                  else await viaPrint(job, args, outer, timeoutMs);
-                } catch (e) {
-                  Object.assign(job, { ok: false, error: String(e) });
-                } finally {
-                  job.status = job.ok ? "done" : "failed";
-                  for (const ext of [".json", ".progress", ".md"]) rmSync(file(job.run, ext), { force: true });
+                  if (ctx.hasUI) ctx.ui.notify(msg, "warning");
+                } catch {}
+              };
+              if (params.background) {
+                const owner = ctx.sessionManager.getSessionId();
+                for (const job of jobs) {
+                  const ctrl = new AbortController();
+                  background.set(job.id, { job, ctrl, owner, done: runOne(job, agents.get(job.agent), ws, ctrl.signal, timeoutMs, warn) });
                 }
+                const text = `Started in background: ''${jobs.map((j) => `''${j.id} (''${j.agent})`).join(", ")}. Keep working, then call subagent_wait to collect the answers.`;
+                return { content: [{ type: "text", text }], details: { jobs: jobs.map((j) => ({ id: j.id, agent: j.agent, sessionId: j.sessionId, nodeId: j.nodeId, status: j.status })) } };
+              }
+              const notify = (msg: string) => {
+                warn(msg);
+                onUpdate?.({ content: [{ type: "text", text: msg }], details: { jobs } });
               };
-              const tick = () => {
-                for (const j of jobs) if (ws && j.status !== "done" && j.status !== "failed") j.progress = readText(file(j.run, ".progress")) ?? j.progress;
-                const text = jobs.map((j) => `''${j.agent}: ''${head(j.task)} [''${j.status}''${j.progress ? `, ''${j.progress}` : ""}]`).join("\n");
-                onUpdate?.({ content: [{ type: "text", text }], details: { jobs } });
-              };
-              const timer = setInterval(tick, TICK_MS);
+              const timer = ticker(jobs, onUpdate);
               try {
-                const queue = [...jobs];
-                const limit = Math.max(1, Number(process.env.PI_SUBAGENT_CONCURRENCY) || 2);
-                await Promise.all(
-                  Array.from({ length: Math.min(limit, jobs.length) }, async () => {
-                    for (let job = queue.shift(); job; job = queue.shift()) await runOne(job);
-                  }),
-                );
+                await Promise.all(jobs.map((job) => runOne(job, agents.get(job.agent), ws, outer, timeoutMs, notify)));
               } finally {
                 clearInterval(timer);
               }
-              const text = jobs
-                .map((j) => {
-                  const body = j.ok
-                    ? (j.answer ?? "").length > CAP
-                      ? `''${j.answer!.slice(0, CAP)}\n[answer truncated at ''${CAP} chars]`
-                      : j.answer
-                    : `No answer: ''${j.error}.''${j.tab ? ` Tab "''${j.tab}" (pane ''${j.pane}) is kept open.` : ""}`;
-                  return `### ''${j.agent}: ''${head(j.task)}\n''${body}\nsession: ''${j.sessionId}`;
-                })
-                .join("\n\n");
-              return { content: [{ type: "text", text }], details: { jobs }, isError: jobs.every((j) => !j.ok) };
+              emitJoin(jobs);
+              return { content: [{ type: "text", text: render(jobs) }], details: { jobs }, isError: jobs.every((j) => !j.ok) };
             },
+          });
+
+          pi.registerTool({
+            name: "subagent_wait",
+            label: "Subagent wait",
+            description: "Wait for background subagent jobs and return their answers. Without ids it waits for every uncollected job of this session.",
+            parameters: Type.Object({
+              ids: Type.Optional(Type.Array(Type.String(), { description: "Job ids from the subagent call, default all" })),
+              timeoutMin: Type.Optional(Type.Integer({ description: "Wait limit in minutes, default 30. Jobs keep running after it." })),
+            }),
+            async execute(_id, params, signal, onUpdate, ctx) {
+              const owner = ctx.sessionManager.getSessionId();
+              const mine = [...background.values()].filter((b) => b.owner === owner);
+              const ids = (params.ids ?? []).map((s) => s.trim()).filter(Boolean);
+              const unknown = ids.filter((id) => !mine.some((b) => b.job.id === id));
+              const picked = ids.length ? mine.filter((b) => ids.includes(b.job.id)) : mine;
+              if (unknown.length || !picked.length) {
+                const known = mine.map((b) => b.job.id).join(", ") || "none";
+                const text = unknown.length
+                  ? `Unknown or already collected job ids: ''${unknown.join(", ")}. Uncollected jobs: ''${known}.`
+                  : "No background subagent jobs to wait for. Start them with subagent and background: true.";
+                return { content: [{ type: "text", text }], details: { jobs: [] }, isError: true };
+              }
+              const jobs = picked.map((b) => b.job);
+              const stop = AbortSignal.any([signal ?? new AbortController().signal, AbortSignal.timeout(Math.max(1, params.timeoutMin ?? 30) * 60000)]);
+              const timer = ticker(jobs, onUpdate);
+              try {
+                await Promise.race([Promise.all(picked.map((b) => b.done)), aborted(stop)]);
+              } finally {
+                clearInterval(timer);
+              }
+              for (const j of jobs) if (finished(j)) background.delete(j.id);
+              emitJoin(jobs);
+              return { content: [{ type: "text", text: render(jobs) }], details: { jobs }, isError: jobs.every((j) => finished(j) && !j.ok) };
+            },
+          });
+
+          pi.on("context", (event, ctx) => {
+            const owner = ctx.sessionManager.getSessionId();
+            const ready = [...background.values()].filter((b) => b.owner === owner && finished(b.job)).map((b) => b.job.id);
+            if (ready.length === 0) return;
+            const note = { role: "custom", customType: "subagent-done", content: `[Subagents] done: ''${ready.join(", ")}, call subagent_wait to read`, display: false, timestamp: Date.now() };
+            return { messages: [...event.messages, note as (typeof event.messages)[number]] };
+          });
+
+          pi.on("session_shutdown", async (_event, ctx) => {
+            const owner = ctx.sessionManager.getSessionId();
+            const mine = [...background.values()].filter((b) => b.owner === owner);
+            for (const b of mine) {
+              b.ctrl.abort();
+              background.delete(b.job.id);
+            }
+            if (mine.length) await Promise.race([Promise.allSettled(mine.map((b) => b.done)), new Promise((done) => setTimeout(done, 10000).unref())]);
           });
         }
       '';
@@ -1826,6 +2588,2427 @@ in
             bash: allow
             edit: deny
             write: deny
+      '';
+
+      gatesFile = pkgs.writeText "gates.ts" /* typescript */ ''
+        import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+        import { Type } from "typebox";
+        import { createHash } from "node:crypto";
+        import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+        import { homedir } from "node:os";
+        import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+
+        type Phase = { run: string; phase: string; nodeId: string } | null;
+        type Result = { name: string; ok: boolean; output: string };
+        type Finding = { ruleId: string; severity: string; message: string; file: string; range: { start: { line: number } } };
+        type Node = { id: string; parents: string[]; kind: "gate"; label: string; run: string; phase?: string; cwd: string; sessionId?: string; status: "running" | "ok" | "fail" | "skipped"; ts: number; pid: number; detail?: string };
+
+        const MUTATORS = new Set(["edit", "write", "apply_patch", "ast_grep_replace", "aft_move", "aft_delete", "aft_import"]);
+        const PATH_KEYS = ["path", "file_path", "filePath", "destination", "from", "to"];
+        const PATCH_FILE = /^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$/gm;
+        const TEST_FILE = /(_test\.go$|\.golden$|(^|\/)testdata\/)/;
+        const QUICK_MS = 5000;
+        const QUICK_LINES = 30;
+        const REPORT_LINES = 40;
+        const MAX_FAILS = 3;
+        const SNAPSHOT_CAP = 5000;
+        const INTERESTING = /^(--- FAIL|FAIL\b|panic:|ok\s)|\.(go|proto|nix):\d+(:\d+)?|error|undefined:|cannot |expected |unexpected /i;
+        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
+        const RULES = join(homedir(), ".pi", "rules");
+        const GOLANGCI = join(RULES, "go", "golangci.yml");
+        const MAX_FINDINGS = 20;
+
+        const clip = (s: string, n: number) => (s.length > n ? `''${s.slice(0, n)}…` : s);
+        const prune = (out: string, max: number) => {
+          const lines = out.split("\n").map((l) => l.trimEnd()).filter(Boolean);
+          const hits = lines.filter((l) => INTERESTING.test(l) && !/^ok\s/.test(l));
+          const pick = (hits.length ? hits : lines).slice(0, max).map((l) => clip(l, 240));
+          const more = (hits.length ? hits : lines).length - pick.length;
+          return pick.join("\n") + (more > 0 ? `\n… ''${more} more lines` : "");
+        };
+        const sha = (f: string) => {
+          try {
+            return createHash("sha256").update(readFileSync(f)).digest("hex");
+          } catch {
+            return "missing";
+          }
+        };
+        const ymls = (dir: string) => {
+          try {
+            return readdirSync(dir).filter((n) => /\.ya?ml$/.test(n) && n !== "golangci.yml").map((n) => join(dir, n));
+          } catch {
+            return [];
+          }
+        };
+        const ruleFiles = (top: string) => {
+          let langs: string[] = [];
+          try {
+            langs = readdirSync(RULES);
+          } catch {}
+          return [...langs.flatMap((l) => ymls(join(RULES, l))), ...ymls(join(homedir(), ".pi", "projects", top.replace(/\//g, "-"), "rules"))];
+        };
+        const upFind = (dir: string, stop: string, names: string[]) => {
+          for (let d = dir; ; d = dirname(d)) {
+            if (names.some((n) => existsSync(join(d, n)))) return d;
+            if (d === stop || d === dirname(d)) return undefined;
+          }
+        };
+        const emit = (node: Node) => {
+          try {
+            mkdirSync(dirname(EVENTS), { recursive: true });
+            appendFileSync(EVENTS, `''${JSON.stringify(node)}\n`);
+          } catch {}
+        };
+
+        export default function (pi: ExtensionAPI) {
+          let phase: Phase = null;
+          let fails = 0;
+          let gaveUp = false;
+          const changed = new Set<string>();
+          const tops = new Map<string, string>();
+          const bins = new Map<string, boolean>();
+          const snapshots = new Map<string, Map<string, string>>();
+          const timeoutMs = () => (Number(process.env.PI_GATES_TIMEOUT_S) || 300) * 1000;
+
+          const run = async (cmd: string, args: string[], cwd: string, timeout: number, signal?: AbortSignal) => {
+            try {
+              const r = await pi.exec(cmd, args, { cwd, timeout, signal });
+              return { code: r.code, out: `''${r.stdout}\n''${r.stderr}`.trim(), stdout: r.stdout, killed: r.killed };
+            } catch (e) {
+              return { code: -1, out: e instanceof Error ? e.message : String(e), stdout: "", killed: false };
+            }
+          };
+          const has = async (bin: string) => {
+            if (!bins.has(bin)) bins.set(bin, (await run("sh", ["-c", `command -v ''${bin}`], homedir(), 3000)).code === 0);
+            return bins.get(bin) === true;
+          };
+          const toplevel = async (dir: string) => {
+            if (!tops.has(dir)) {
+              const r = await run("git", ["rev-parse", "--show-toplevel"], existsSync(dir) ? dir : homedir(), 5000);
+              tops.set(dir, r.code === 0 && existsSync(dir) ? r.out.split("\n")[0] : dir);
+            }
+            return tops.get(dir) as string;
+          };
+          const listTests = async (top: string) => {
+            const r = await run("git", ["ls-files", "--cached", "--others", "--exclude-standard"], top, 10_000);
+            return r.code === 0 ? r.out.split("\n").filter((f) => f && TEST_FILE.test(f)).slice(0, SNAPSHOT_CAP) : [];
+          };
+          const snapshot = async (cwd: string) => {
+            const top = await toplevel(cwd);
+            if (!existsSync(join(top, ".git"))) return;
+            snapshots.set(top, new Map((await listTests(top)).map((f) => [f, sha(join(top, f))])));
+          };
+
+          const pathsOf = (input: Record<string, unknown>, cwd: string) => {
+            const out = new Set<string>();
+            const add = (v: unknown) => {
+              if (typeof v === "string" && v.trim()) out.add(isAbsolute(v) ? v : resolve(cwd, v));
+            };
+            for (const k of PATH_KEYS) add(input[k]);
+            if (Array.isArray(input.files)) for (const f of input.files) add(typeof f === "string" ? f : (f as { path?: unknown })?.path);
+            for (const v of Object.values(input)) if (typeof v === "string") for (const m of v.matchAll(PATCH_FILE)) add(m[1].trim());
+            return [...out];
+          };
+
+          const label = (p: Exclude<Phase, null>, text: string, status: Node["status"], ctx: ExtensionContext, id: string, detail?: string) =>
+            emit({ id, parents: [p.nodeId], kind: "gate", label: text, run: p.run, phase: p.phase, cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId(), status, ts: Date.now(), pid: process.pid, detail });
+          const parentPhase = (): Exclude<Phase, null> | undefined =>
+            phase ?? (process.env.PI_PIPELINE_NODE ? { run: process.env.PI_PIPELINE_RUN ?? "", phase: "", nodeId: process.env.PI_PIPELINE_NODE } : undefined);
+
+          pi.events.on("pipeline:phase", (data) => {
+            const prev = phase;
+            phase = data && typeof data === "object" && typeof (data as { nodeId?: unknown }).nodeId === "string" ? (data as Exclude<Phase, null>) : null;
+            if (prev?.phase === "reproduce" && phase?.phase !== "reproduce") for (const top of snapshots.keys()) void snapshot(top);
+          });
+
+          pi.on("input", () => {
+            fails = 0;
+            gaveUp = false;
+            return { action: "continue" as const };
+          });
+
+          pi.on("agent_start", (_event, ctx) => {
+            void snapshot(ctx.cwd);
+          });
+
+          pi.on("tool_call", (event, ctx) => {
+            if (!phase || !MUTATORS.has(event.toolName)) return;
+            const files = pathsOf(event.input as Record<string, unknown>, ctx.cwd);
+            if (phase.phase === "reproduce") {
+              const code = files.filter((f) => !TEST_FILE.test(f));
+              if (code.length === 0) return;
+              return { block: true, reason: `Blocked: in phase "reproduce" only test files (*_test.go, testdata/, *.golden) may change, not ''${code.map((f) => relative(ctx.cwd, f)).join(", ")}. Write a test that fails because of the bug and leave the fix for the next phase.` };
+            }
+            const tests = files.filter((f) => TEST_FILE.test(f));
+            if (tests.length === 0) return;
+            return { block: true, reason: `Blocked: in phase "''${phase.phase}" test files are read-only (''${tests.map((f) => relative(ctx.cwd, f)).join(", ")}). Change the code under test so the existing tests pass. If a test itself is wrong, call give_up and explain why.` };
+          });
+
+          pi.on("tool_result", async (event, ctx) => {
+            if (event.isError || !MUTATORS.has(event.toolName)) return;
+            const files = pathsOf(event.input, ctx.cwd);
+            for (const f of files) changed.add(f);
+            let syntax = false;
+            const notes = (
+              await Promise.all(
+                files.filter((f) => /\.(go|nix)$/.test(f) && existsSync(f)).map(async (f) => {
+                  const dir = dirname(f);
+                  const name = relative(ctx.cwd, f) || f;
+                  if (f.endsWith(".nix")) {
+                    if (!(await has("nixfmt"))) return "";
+                    const r = await run("nixfmt", ["--check", f], dir, QUICK_MS);
+                    if (r.code === 0 || r.killed) return "";
+                    if (/not formatted/.test(r.out)) return `''${name}: not formatted, run nixfmt on it`;
+                    syntax = true;
+                    return `''${name}: syntax error\n''${r.out}`;
+                  }
+                  const fmt = await run("gofmt", ["-l", "-e", f], dir, QUICK_MS);
+                  if (fmt.killed) return "";
+                  if (fmt.code !== 0) {
+                    syntax = true;
+                    return `''${name}: syntax error\n''${fmt.out}`;
+                  }
+                  const lines = fmt.out ? [`''${name}: not gofmt-formatted, run gofmt -w on it`] : [];
+                  if (await has("gopls")) {
+                    const r = await run("gopls", ["check", f], dir, QUICK_MS);
+                    const own = r.killed || !r.out ? undefined : (await addedLines(await toplevel(dir), [f])).get(f);
+                    const hits = own ? r.out.split("\n").filter((l) => {
+                      const n = Number(/^.+?\.go:(\d+)(?::\d+)?(?:-\S+)?:\s/.exec(l)?.[1] ?? NaN);
+                      return own === "all" || own.has(n);
+                    }) : [];
+                    if (hits.length) lines.push(hits.join("\n"));
+                  }
+                  return lines.join("\n");
+                }),
+              )
+            ).filter(Boolean);
+            if (notes.length === 0) return;
+            const text = `[Gates] Diagnostics after this change:\n''${prune(notes.join("\n"), QUICK_LINES)}\n''${syntax ? "Fix the syntax error before anything else." : "Fix these before you finish."}`;
+            return { content: [...event.content, { type: "text" as const, text }], structuredContent: event.structuredContent, ...(syntax ? { isError: true } : {}) };
+          });
+
+          const testDrift = async (): Promise<Result[]> => {
+            if (!phase || phase.phase === "reproduce") return [];
+            const out: Result[] = [];
+            for (const [top, snap] of snapshots) {
+              const now = await listTests(top);
+              const names = new Set([...snap.keys(), ...now]);
+              const moved = [...names].filter((f) => (snap.get(f) ?? "missing") !== sha(join(top, f)));
+              if (moved.length) out.push({ name: `test files unchanged (''${top})`, ok: false, output: `Test files changed outside phase "reproduce", probably through bash:\n''${moved.slice(0, 20).join("\n")}\nRestore them with git checkout -- <file> (or delete new ones) and fix the code instead.` });
+            }
+            return out;
+          };
+
+          const addedLines = async (top: string, files: string[]) => {
+            const lines = new Map<string, Set<number> | "all">();
+            const diff = await run("git", ["diff", "-U0", "--no-color", "--no-ext-diff", "HEAD", "--", ...files], top, 15_000);
+            let cur: Set<number> | undefined;
+            for (const l of diff.code === 0 ? diff.out.split("\n") : []) {
+              const file = /^\+\+\+ b\/(.+)$/.exec(l);
+              if (file) lines.set(resolve(top, file[1]), (cur = new Set()));
+              const hunk = /^@@ -\S+ \+(\d+)(?:,(\d+))? @@/.exec(l);
+              if (hunk && cur) for (let i = 0, n = hunk[2] === undefined ? 1 : Number(hunk[2]); i < n; i++) cur.add(Number(hunk[1]) + i);
+            }
+            const tracked = await run("git", ["ls-files", "--", ...files], top, 15_000);
+            const known = new Set(tracked.code === 0 ? tracked.out.split("\n").filter(Boolean).map((f) => resolve(top, f)) : []);
+            for (const f of files) if (!lines.has(f) && (!known.has(f) || diff.code !== 0)) lines.set(f, "all");
+            return lines;
+          };
+
+          const standards = async (byTop: Map<string, string[]>, signal?: AbortSignal): Promise<Result | undefined> => {
+            const jobs = [...byTop].map(([top, files]) => ({ top, files: files.filter((f) => existsSync(f)), rules: ruleFiles(top) })).filter((j) => j.files.length && j.rules.length);
+            if (jobs.length === 0) return undefined;
+            if (!(await has("ast-grep"))) return { name: "standards", ok: true, output: "ast-grep is not on PATH, standards rules were skipped." };
+            const found: string[] = [];
+            let errors = 0;
+            for (const { top, files, rules } of jobs) {
+              if (signal?.aborted) return undefined;
+              const inline = rules.map((f) => readFileSync(f, "utf8").trim()).join("\n---\n");
+              const r = await run("ast-grep", ["scan", "--inline-rules", inline, "--json=compact", ...files.map((f) => relative(top, f))], top, timeoutMs(), signal);
+              let hits: Finding[] = [];
+              try {
+                hits = JSON.parse(r.stdout) as Finding[];
+              } catch {
+                found.push(`ast-grep failed in ''${top}: ''${prune(r.out, 5)}`);
+                continue;
+              }
+              const added = await addedLines(top, files);
+              for (const h of hits) {
+                const lines = added.get(resolve(top, h.file));
+                const line = h.range.start.line + 1;
+                if (!lines || (lines !== "all" && !lines.has(line))) continue;
+                if (h.severity === "error") errors++;
+                found.push(`''${h.severity} ''${h.ruleId} ''${h.file}:''${line}: ''${clip(h.message, 200)}`);
+              }
+            }
+            const shown = found.slice(0, MAX_FINDINGS).join("\n") + (found.length > MAX_FINDINGS ? `\n… ''${found.length - MAX_FINDINGS} more findings` : "");
+            return { name: "standards", ok: errors === 0, output: found.length ? `''${shown}''${errors ? "\nFix every error finding on the lines you changed. Warnings and hints are advice." : ""}` : "" };
+          };
+
+          const gate = async (cwd: string, signal?: AbortSignal): Promise<Result[]> => {
+            const results: Result[] = await testDrift();
+            const limit = timeoutMs();
+            const step = async (name: string, cmd: string, args: string[], dir: string) => {
+              if (signal?.aborted) return;
+              const r = await run(cmd, args, dir, limit, signal);
+              const ok = r.code === 0 && !r.killed;
+              results.push({ name, ok, output: ok ? "" : r.killed ? `timed out after ''${limit / 1000}s or aborted\n''${prune(r.out, 10)}` : prune(r.out, REPORT_LINES) });
+            };
+            const byTop = new Map<string, string[]>();
+            for (const f of changed) {
+              const top = await toplevel(existsSync(dirname(f)) ? dirname(f) : cwd);
+              byTop.set(top, [...(byTop.get(top) ?? []), f]);
+            }
+            for (const [top, files] of byTop) {
+              const goMods = new Map<string, Set<string>>();
+              for (const f of files.filter((x) => x.endsWith(".go") && existsSync(dirname(x)))) {
+                const mod = upFind(dirname(f), top, ["go.mod"]);
+                if (!mod) continue;
+                const rel = relative(mod, dirname(f));
+                goMods.set(mod, (goMods.get(mod) ?? new Set()).add(rel ? `./''${rel}` : "."));
+              }
+              for (const [mod, set] of goMods) {
+                const pkgs = [...set];
+                const where = relative(top, mod) || ".";
+                const buildable = pkgs.filter((p) => readdirSync(join(mod, p)).some((n) => n.endsWith(".go") && !n.endsWith("_test.go")));
+                if (buildable.length) {
+                  await step(`go build ''${where}`, "go", ["build", ...buildable], mod);
+                  if (results.at(-1)?.ok === false) continue;
+                }
+                const lintCfg = [mod, top].some((d) => [".golangci.yml", ".golangci.yaml", ".golangci.toml"].some((n) => existsSync(join(d, n))));
+                const lintArgs = lintCfg ? [] : existsSync(GOLANGCI) ? ["--config", GOLANGCI] : undefined;
+                if (lintArgs && (await has("golangci-lint"))) await step(`golangci-lint ''${where}`, "golangci-lint", ["run", "--new-from-rev=HEAD", ...lintArgs, ...pkgs], mod);
+                await step(`go test ''${where}`, "go", ["test", "-count=1", "-shuffle=on", ...(process.env.PI_GATES_RACE === "1" ? ["-race"] : []), ...pkgs], mod);
+              }
+              const bufDirs = new Set(files.filter((f) => f.endsWith(".proto") && existsSync(dirname(f))).map((f) => upFind(dirname(f), top, ["buf.yaml"])).filter((d): d is string => !!d));
+              if (bufDirs.size && (await has("buf"))) for (const d of bufDirs) await step(`buf lint ''${relative(top, d) || "."}`, "buf", ["lint"], d);
+              const nix = files.filter((f) => f.endsWith(".nix") && existsSync(f));
+              if (nix.length && (await has("nixfmt"))) await step(`nixfmt --check ''${top}`, "nixfmt", ["--check", ...nix], top);
+            }
+            const std = await standards(byTop, signal);
+            if (std) results.push(std);
+            return results;
+          };
+
+          const report = (results: Result[]) =>
+            results
+              .filter((r) => !r.ok || r.output)
+              .map((r) => `### ''${r.name}''${r.ok ? " (advice)" : ""}\n''${r.output}`)
+              .join("\n\n");
+
+          const runTracked = async (ctx: ExtensionContext, signal?: AbortSignal) => {
+            const p = parentPhase();
+            const id = `gate-''${process.pid}-''${Date.now()}`;
+            if (p) label(p, "gates", "running", ctx, id);
+            const results = await gate(ctx.cwd, signal);
+            const ok = results.every((r) => r.ok);
+            if (signal?.aborted) {
+              if (p) label(p, "gates", "skipped", ctx, id, "aborted");
+              return undefined;
+            }
+            if (p) label(p, "gates", ok ? "ok" : "fail", ctx, id, results.filter((r) => !r.ok).map((r) => r.name).join(", ") || undefined);
+            if (ok) changed.clear();
+            return { ok, results };
+          };
+
+          pi.on("agent_before_settle", async (event, ctx) => {
+            if (event.outcome !== "completed" || gaveUp || fails >= MAX_FAILS || !event.context.canContinue) return;
+            if (changed.size === 0 && !(phase && phase.phase !== "reproduce" && snapshots.size)) return;
+            const res = await runTracked(ctx, ctx.signal);
+            if (!res || ctx.signal?.aborted) return;
+            if (res.ok) {
+              fails = 0;
+              return;
+            }
+            fails++;
+            const tail =
+              fails >= MAX_FAILS
+                ? `Verification still fails after ''${MAX_FAILS} attempts. Stop editing now. Tell the user honestly that the change is not verified: list the failing checks above, what you tried and what you suspect. Do not claim success.`
+                : `Fix the cause in the code (not in the tests), then finish again. Attempt ''${fails} of ''${MAX_FAILS}. If you are blocked, call give_up with the reason.`;
+            return {
+              entries: [{ type: "custom_message" as const, customType: "gates-report", content: `[Gates] Verification failed after your changes:\n\n''${report(res.results)}\n\n''${tail}`, display: true, details: res }],
+              continue: true,
+            };
+          });
+
+          pi.registerTool({
+            name: "run_gates",
+            label: "run gates",
+            description: "Build, lint and test the packages changed in this run (go build, golangci-lint, go test, buf lint, nixfmt --check). Returns which checks failed with the first error lines. No parameters.",
+            parameters: Type.Object({}),
+            async execute(_id, _params, signal, _onUpdate, ctx) {
+              if (changed.size === 0 && (await testDrift()).length === 0) {
+                return { content: [{ type: "text" as const, text: "No files changed since the last green gate. Nothing to check." }], details: { ok: true, results: [] as Result[] } };
+              }
+              const res = await runTracked(ctx, signal);
+              if (!res) return { content: [{ type: "text" as const, text: "Gates aborted." }], details: { ok: false, results: [] as Result[] }, isError: true };
+              const summary = res.results.map((r) => `''${r.ok ? "ok  " : "FAIL"} ''${r.name}`).join("\n");
+              const text = res.ok ? `All gates passed:\n''${summary}''${report(res.results) ? `\n\n''${report(res.results)}` : ""}` : `Gates failed:\n''${summary}\n\n''${report(res.results)}\nFix the cause in the code, not in the tests, then run run_gates again.`;
+              return { content: [{ type: "text" as const, text }], details: res };
+            },
+          });
+
+          pi.registerTool({
+            name: "give_up",
+            label: "give up",
+            description: "Stop working on the task honestly when you cannot make it pass or are blocked. Give the reason in one or two sentences.",
+            parameters: Type.Object({ reason: Type.String({ description: "What blocks you and what you tried" }) }),
+            async execute(_id, params, _signal, _onUpdate, ctx) {
+              gaveUp = true;
+              pi.appendEntry("gates-give-up", { reason: params.reason, changed: [...changed] });
+              const p = parentPhase();
+              if (p) label(p, "give up", "skipped", ctx, `giveup-''${process.pid}-''${Date.now()}`, clip(params.reason, 300));
+              return {
+                content: [{ type: "text" as const, text: "Recorded. Do not edit any more files. Now explain to the user what blocked you, what you tried, which checks still fail and what state the files are in, then stop." }],
+                details: { reason: params.reason },
+              };
+            },
+          });
+        }
+      '';
+
+      harnessToolsFile = pkgs.writeText "tools.ts" /* typescript */ ''
+        import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+        import { Type } from "typebox";
+        import { randomUUID } from "node:crypto";
+        import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+        import { homedir, tmpdir } from "node:os";
+        import { basename, dirname, join, resolve } from "node:path";
+
+        const HOME = process.env.HOME || homedir();
+        const MAX_LINES = 60;
+        const SAMPLE_LINES = 40;
+        const MAX_NOTES = 60;
+
+        const cap = (lines: string[], n = MAX_LINES) => (lines.length > n ? [...lines.slice(0, n - 1), `… ''${lines.length - n + 1} more lines cut`] : lines).join("\n");
+        const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+        const ok = (text: string, details: unknown = {}) => ({ content: [{ type: "text" as const, text }], details });
+        const fail = (text: string) => ({ content: [{ type: "text" as const, text: "Error: " + text }], details: { error: true } });
+
+        const emit = (node: Record<string, unknown>) => {
+          try {
+            const dir = join(HOME, ".pi", "agent", "pipeline");
+            mkdirSync(dir, { recursive: true });
+            appendFileSync(join(dir, "events.jsonl"), JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
+          } catch {}
+        };
+
+        const stripGoComments = (src: string) => {
+          let out = "";
+          let i = 0;
+          while (i < src.length) {
+            const c = src[i];
+            const d = src[i + 1];
+            if (c === "/" && d === "/") {
+              while (i < src.length && src[i] !== "\n") i++;
+            } else if (c === "/" && d === "*") {
+              const end = src.indexOf("*/", i + 2);
+              const body = end < 0 ? src.slice(i) : src.slice(i, end + 2);
+              out += body.includes("\n") ? "\n" : " ";
+              i = end < 0 ? src.length : end + 2;
+            } else if (c === '"' || c === "'" || c === "`") {
+              let j = i + 1;
+              while (j < src.length && src[j] !== c) {
+                if (src[j] === "\\" && c !== "`") j++;
+                if (c !== "`" && src[j] === "\n") break;
+                j++;
+              }
+              out += src.slice(i, j + 1);
+              i = j + 1;
+            } else {
+              out += c;
+              i++;
+            }
+          }
+          return out.split("\n").map((l) => l.replace(/\s+$/, "")).join("\n").replace(/\n{3,}/g, "\n\n");
+        };
+
+        type Decl = { name: string; kind: string; text: string };
+
+        const goDecls = (src: string): Decl[] => {
+          const lines = stripGoComments(src).split("\n");
+          const out: Decl[] = [];
+          let i = 0;
+          while (i < lines.length) {
+            const m = lines[i].match(/^(func|type)\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)/);
+            if (!m) {
+              i++;
+              continue;
+            }
+            let j = i;
+            if (/[{(]\s*$/.test(lines[i])) {
+              j = i + 1;
+              while (j < lines.length && !/^[})]/.test(lines[j])) j++;
+            }
+            out.push({ name: m[2], kind: m[1] === "func" && /^func\s*\(/.test(lines[i]) ? "method" : m[1], text: lines.slice(i, j + 1).join("\n") });
+            i = j + 1;
+          }
+          return out;
+        };
+
+        const tokens = (s: string) => new Set(s.replace(/([a-z0-9])([A-Z])/g, "$1 $2").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+
+        export default function (pi: ExtensionAPI) {
+          const git = (cwd: string, args: string[], signal?: AbortSignal, timeout = 60000) => pi.exec("git", args, { cwd, signal, timeout });
+
+          const slugOf = async (cwd: string) => {
+            const r = await git(cwd, ["rev-parse", "--show-toplevel"]);
+            const top = r.code === 0 ? r.stdout.trim() : cwd;
+            return { top, slug: top.replace(/\//g, "-") };
+          };
+
+          pi.registerTool({
+            name: "why",
+            label: "Why",
+            description: "Show the git history of a file or line range: commits, authors, dates, messages, MR/issue refs and the changed lines. Use before changing code whose purpose is unclear.",
+            parameters: Type.Object({
+              path: Type.String({ description: "File path relative to the repository" }),
+              lines: Type.Optional(Type.String({ description: 'Line range like "40-80"; omit for whole-file history' })),
+            }),
+            async execute(_id, params, signal, _u, ctx) {
+              const { top } = await slugOf(ctx.cwd);
+              const file = resolve(ctx.cwd, params.path);
+              if (!existsSync(file)) return fail(`file not found: ''${params.path}. Pass a path relative to the repo root.`);
+              const rel = file.startsWith(top + "/") ? file.slice(top.length + 1) : params.path;
+              const fmt = "--format=@@@%h%x1f%as%x1f%an%x1f%s%x1f%b%x1e";
+              let args: string[];
+              if (params.lines) {
+                const m = params.lines.match(/^(\d+)(?:-(\d+))?$/);
+                if (!m) return fail('lines must look like "40-80"');
+                args = ["log", "-n", "6", `-L''${m[1]},''${m[2] ?? m[1]}:''${rel}`, fmt];
+              } else {
+                args = ["log", "--follow", "-n", "8", fmt, "--", rel];
+              }
+              const r = await git(top, args, signal);
+              if (r.code !== 0) return fail(clip(r.stderr.trim() || "git log failed", 300) + ". Is the file tracked and the range inside it?");
+              const commits = r.stdout.split("@@@").slice(1);
+              if (!commits.length) return ok("No history: file is new or untracked.");
+              const refs = new Set<string>();
+              const out: string[] = [];
+              for (const c of commits) {
+                const [meta, rest = ""] = c.split("\x1e");
+                const [hash, date, author, subject, body = ""] = meta.split("\x1f");
+                out.push(`''${hash} ''${date} ''${author}: ''${clip(subject, 100)}`);
+                for (const l of body.split("\n").filter((x) => x.trim()).slice(0, 2)) out.push("    " + clip(l.trim(), 110));
+                for (const x of (subject + "\n" + body).match(/![0-9]+|#\d+|\b[A-Z][A-Z0-9]+-\d+\b/g) ?? []) refs.add(x);
+                if (params.lines) {
+                  const changed = rest.split("\n").filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l));
+                  for (const l of changed.slice(0, 6)) out.push("    " + clip(l, 110));
+                  if (changed.length > 6) out.push(`    … ''${changed.length - 6} more changed lines`);
+                }
+              }
+              if (refs.size) out.push(`Refs: ''${[...refs].join(", ")}`);
+              return ok(cap(out), { commits: commits.length });
+            },
+          });
+
+          pi.registerTool({
+            name: "exemplars",
+            label: "Exemplars",
+            description: "Find 2-3 existing code samples of the same kind (comments stripped) to imitate before writing new code. Pass an existing or planned file path (e.g. internal/user/user_repo.go) or a kind hint (e.g. handler, _repo.go).",
+            parameters: Type.Object({ target: Type.String({ description: "File path or kind hint" }) }),
+            async execute(_id, params, signal, _u, ctx) {
+              const { top } = await slugOf(ctx.cwd);
+              const ls = await git(top, ["ls-files", "*.go"], signal);
+              if (ls.code !== 0) return fail("not a git repository with Go files.");
+              const files = ls.stdout.split("\n").filter(Boolean);
+              const abs = resolve(ctx.cwd, params.target);
+              const isPath = /\.go$/.test(params.target);
+              const rel = isPath ? (abs.startsWith(top + "/") ? abs.slice(top.length + 1) : params.target) : "";
+              const name = isPath ? basename(rel) : params.target;
+              const suffix = isPath ? (name.includes("_") ? name.slice(name.lastIndexOf("_")) : name) : params.target.endsWith(".go") ? params.target : `''${params.target.replace(/^_/, "")}`;
+              const matches = (f: string) => (isPath || params.target.endsWith(".go") ? basename(f).endsWith(suffix) : basename(f).includes(suffix));
+              const dir = isPath ? dirname(rel) : ".";
+              const hist = await git(top, ["log", "--name-only", "--format=@%ct", "-n", "400", "--", "*.go"], signal);
+              const recency = new Map<string, number>();
+              let ts = 0;
+              for (const l of hist.stdout.split("\n")) {
+                if (l.startsWith("@")) ts = Number(l.slice(1));
+                else if (l && !recency.has(l)) recency.set(l, ts);
+              }
+              let pool = files.filter((f) => f !== rel && matches(f) && (isPath || !/_test\.go$/.test(f) || suffix.includes("test")));
+              if (!pool.length && isPath) pool = files.filter((f) => f !== rel && dirname(f) === dir && !/_test\.go$/.test(f));
+              if (!pool.length) return fail(`no files matching "''${suffix}". Try a broader hint like "handler" or "service".`);
+              const score = (f: string) => (dirname(f) === dir ? 1e12 : 0) + (recency.get(f) ?? 0);
+              const picked = pool.sort((a, b) => score(b) - score(a)).slice(0, 3);
+              const want = new Set<string>();
+              if (existsSync(abs) && isPath) for (const d of goDecls(readFileSync(abs, "utf8"))) tokens(d.name).forEach((t) => want.add(t));
+              for (const t of tokens(basename(name, ".go"))) want.add(t);
+              const out: string[] = [];
+              for (const f of picked) {
+                let decls: Decl[] = [];
+                try {
+                  decls = goDecls(readFileSync(join(top, f), "utf8"));
+                } catch {}
+                if (!decls.length) continue;
+                const sim = (d: Decl) => [...tokens(d.name)].filter((t) => want.has(t)).length * 100 + (/^[A-Z]/.test(d.name) ? 10 : 0) + Math.min(d.text.split("\n").length, 30);
+                const best = decls.sort((a, b) => sim(b) - sim(a))[0];
+                const body = best.text.split("\n");
+                out.push(`--- ''${f} (''${best.kind} ''${best.name})`);
+                out.push(...body.slice(0, SAMPLE_LINES));
+                if (body.length > SAMPLE_LINES) out.push(`… ''${body.length - SAMPLE_LINES} more lines`);
+              }
+              return ok(out.length ? cap(out, 130) : "Matching files have no top-level func/type.", { files: picked });
+            },
+          });
+
+          pi.registerTool({
+            name: "project_notes",
+            label: "Project notes",
+            description: "Personal notes about this project, kept outside the repo. Use action read to recall build/test quirks, add to save a short durable learning (one line).",
+            parameters: Type.Object({
+              action: Type.Union([Type.Literal("read"), Type.Literal("add")]),
+              text: Type.Optional(Type.String({ description: "One-line note, required for add" })),
+            }),
+            async execute(_id, params, _s, _u, ctx) {
+              const { slug } = await slugOf(ctx.cwd);
+              const dir = join(HOME, ".pi", "projects", slug);
+              const file = join(dir, "notes.md");
+              let lines: string[] = [];
+              try {
+                lines = readFileSync(file, "utf8").split("\n").filter((l) => l.startsWith("- "));
+              } catch {}
+              if (params.action === "read") return ok(lines.length ? cap(lines) : "No notes yet.");
+              const text = (params.text ?? "").replace(/\s+/g, " ").trim();
+              if (!text) return fail('add needs "text" with one short line.');
+              const body = text.length > 300 ? text.slice(0, 299) + "…" : text;
+              if (lines.some((l) => l.replace(/^- \S+ /, "") === body)) return ok("Already noted.");
+              lines.push(`- ''${new Date().toISOString().slice(0, 10)} ''${body}`);
+              lines = lines.slice(-MAX_NOTES);
+              mkdirSync(dir, { recursive: true });
+              writeFileSync(file, lines.join("\n") + "\n");
+              return ok(`Saved (''${lines.length}/''${MAX_NOTES} notes).`);
+            },
+          });
+
+          pi.registerTool({
+            name: "bisect",
+            label: "Bisect",
+            description: "Find the first commit where a test command starts failing. Runs in a temporary git worktree; your working tree is untouched. Build failures are skipped, each step is retried to filter flaky tests.",
+            parameters: Type.Object({
+              good: Type.String({ description: "Known good ref (tag, branch or hash)" }),
+              command: Type.String({ description: "Shell command, exit 0 means good, e.g. go test ./pkg -run TestX" }),
+              bad: Type.Optional(Type.String({ description: "Known bad ref, default HEAD" })),
+            }),
+            async execute(_id, params, signal, onUpdate, ctx) {
+              const { top, slug } = await slugOf(ctx.cwd);
+              const bad = params.bad || "HEAD";
+              for (const ref of [params.good, bad]) {
+                const v = await git(top, ["rev-parse", "--verify", "--quiet", ref + "^{commit}"]);
+                if (v.code !== 0) return fail(`unknown ref "''${ref}". Use a tag, branch or commit hash from git log.`);
+              }
+              const root = join(HOME, ".pi", "worktrees");
+              mkdirSync(root, { recursive: true });
+              const id = `''${slug}-bisect-''${randomUUID().slice(0, 8)}`;
+              const wt = join(root, id);
+              const cmdFile = wt + ".cmd.sh";
+              const runFile = wt + ".run.sh";
+              const logFile = wt + ".out";
+              const node = id;
+              const run = process.env.PI_PIPELINE_RUN || id;
+              const parents = process.env.PI_PIPELINE_NODE ? [process.env.PI_PIPELINE_NODE] : [];
+              const ev = (status: string, detail?: string) => emit({ id: node, parents, kind: "step", label: "bisect " + clip(params.command, 40), run, cwd: top, status, detail });
+              const timeoutS = Number(process.env.PI_BISECT_TIMEOUT_S) || 1800;
+              ev("running");
+              onUpdate?.({ content: [{ type: "text", text: "bisect started in " + wt }], details: {} });
+              let verdict = "";
+              try {
+                const add = await git(top, ["worktree", "add", "--detach", wt, bad]);
+                if (add.code !== 0) throw new Error("worktree add failed: " + clip(add.stderr.trim(), 200));
+                writeFileSync(cmdFile, params.command + "\n");
+                writeFileSync(
+                  runFile,
+                  [
+                    "for i in 1 2 3; do",
+                    `  sh ''${cmdFile} > ''${logFile} 2>&1; rc=$?`,
+                    "  [ $rc -eq 0 ] && exit 0",
+                    "done",
+                    `grep -Eq '\\[build failed\\]|\\[setup failed\\]|^# [A-Za-z./]|build failed|cannot find package' ''${logFile} && exit 125`,
+                    "exit 1",
+                    "",
+                  ].join("\n"),
+                );
+                const start = await git(wt, ["bisect", "start", bad, params.good]);
+                if (start.code !== 0) throw new Error(clip((start.stderr || start.stdout).trim(), 300) + " Good ref must be an ancestor of bad.");
+                const res = await pi.exec("git", ["bisect", "run", "sh", runFile], { cwd: wt, signal, timeout: timeoutS * 1000 });
+                if (res.killed) throw new Error(`timed out or aborted after ''${timeoutS}s (PI_BISECT_TIMEOUT_S)`);
+                const m = res.stdout.match(/([0-9a-f]{7,40}) is the first bad commit/);
+                if (!m) {
+                  const tail = res.stdout.trim().split("\n").slice(-6).join("\n");
+                  throw new Error("no culprit found. The command may fail on both refs or only by build errors.\n" + tail);
+                }
+                const show = await git(wt, ["show", "--stat", "--format=%h %as %an%n%s%n%b", m[1]]);
+                verdict = "First bad commit:\n" + cap(show.stdout.trim().split("\n"), 30);
+                ev("ok", m[1].slice(0, 12));
+              } catch (e: any) {
+                ev("fail", clip(String(e?.message ?? e), 200));
+                verdict = "Error: " + String(e?.message ?? e);
+              } finally {
+                await git(top, ["worktree", "remove", "--force", wt]);
+                rmSync(wt, { recursive: true, force: true });
+                await git(top, ["worktree", "prune"]);
+                for (const f of [cmdFile, runFile, logFile]) rmSync(f, { force: true });
+              }
+              return ok(verdict, { error: verdict.startsWith("Error") });
+            },
+          });
+
+          pi.registerTool({
+            name: "flaky",
+            label: "Flaky",
+            description: "Run a Go test many times with shuffle and report whether each test is stable-pass, stable-fail or flaky.",
+            parameters: Type.Object({
+              package: Type.String({ description: "Go package, e.g. ./internal/user" }),
+              test: Type.String({ description: "Test name regex, e.g. TestCreate" }),
+              count: Type.Optional(Type.Integer({ description: "Runs, default 10", minimum: 2, maximum: 100 })),
+            }),
+            async execute(_id, params, signal, _u, ctx) {
+              const n = Math.min(100, Math.max(2, params.count ?? 10));
+              const goArgs = ["test", "-count=" + n, "-shuffle=on", "-run", params.test, ...(process.env.PI_GATES_RACE === "1" ? ["-race"] : []), params.package];
+              const have = await pi.exec("sh", ["-c", "command -v gotestsum"], { cwd: ctx.cwd });
+              let raw: string;
+              let res;
+              if (have.code === 0) {
+                const jf = join(tmpdir(), `flaky-''${randomUUID()}.jsonl`);
+                res = await pi.exec("gotestsum", ["--jsonfile", jf, "--format", "dots", "--", ...goArgs.slice(1)], { cwd: ctx.cwd, signal, timeout: 1200000 });
+                try {
+                  raw = readFileSync(jf, "utf8");
+                } catch {
+                  raw = "";
+                }
+                rmSync(jf, { force: true });
+              } else {
+                res = await pi.exec("go", [goArgs[0], "-json", ...goArgs.slice(1)], { cwd: ctx.cwd, signal, timeout: 1200000 });
+                raw = res.stdout;
+              }
+              if (res.killed) return fail("go test timed out or was aborted. Lower count or narrow the test regex.");
+              const stats = new Map<string, { pass: number; fail: number }>();
+              const outputs: string[] = [];
+              for (const l of raw.split("\n")) {
+                if (!l.startsWith("{")) continue;
+                let e: any;
+                try {
+                  e = JSON.parse(l);
+                } catch {
+                  continue;
+                }
+                if (e.Action === "output" && !e.Test && /build failed|\[setup failed\]|^#|\.go:\d+/.test(e.Output)) outputs.push(e.Output.trimEnd());
+                if (!e.Test || (e.Action !== "pass" && e.Action !== "fail")) continue;
+                const s = stats.get(e.Test) ?? { pass: 0, fail: 0 };
+                s[e.Action as "pass" | "fail"]++;
+                stats.set(e.Test, s);
+              }
+              if (!stats.size) {
+                const why = outputs.length ? outputs : (res.stderr || res.stdout).trim().split("\n");
+                return fail("no tests ran (build error or wrong package/regex):\n" + cap(why.slice(0, 15), 15));
+              }
+              const rows = [...stats].map(([name, s]) => ({ name, ...s, kind: s.fail === 0 ? "stable-pass" : s.pass === 0 ? "stable-fail" : "flaky" }));
+              rows.sort((a, b) => ({ flaky: 0, "stable-fail": 1, "stable-pass": 2 })[a.kind as "flaky"] - ({ flaky: 0, "stable-fail": 1, "stable-pass": 2 })[b.kind as "flaky"]);
+              const out = [`''${params.package} -run ''${params.test} x''${n}''${process.env.PI_GATES_RACE === "1" ? " -race" : ""}`];
+              for (const r of rows) out.push(`''${r.kind.padEnd(11)} pass=''${r.pass} fail=''${r.fail}  ''${r.name}`);
+              if (rows.some((r) => r.kind === "flaky")) out.push("Flaky: likely shared state, ordering, time or goroutine race; rerun with PI_GATES_RACE=1.");
+              return ok(cap(out), { results: rows });
+            },
+          });
+        }
+      '';
+
+      pipelineFile = pkgs.writeText "pipeline.ts" /* typescript */ ''
+        import type { ExtensionAPI, ExtensionContext, ExtensionToolContext } from "@earendil-works/pi-coding-agent";
+        import { Type } from "typebox";
+        import { createHash, randomUUID } from "node:crypto";
+        import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+        import { homedir } from "node:os";
+        import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+        import { checkCommand } from "${piPlan}/src/safety.ts";
+
+        const PHASES = ["triage", "localize", "reproduce", "design", "checkpoint", "plan", "implement", "verify", "review", "regress", "report", "retro"] as const;
+        type Phase = (typeof PHASES)[number];
+        type Status = "running" | "ok" | "fail" | "skipped";
+        type Kind = "arch" | "scenario" | "rival" | "expect" | "local" | "constraint";
+        type DItem = { id: string; kind: Kind; src: string; text: string; open: boolean };
+        type Found = { tag: "arch" | "local"; src: string; text: string };
+        type State = {
+          run: string;
+          task: string;
+          issue?: string;
+          root: string;
+          phase: Phase;
+          node: string;
+          parent: string;
+          seq: number;
+          fails: number;
+          snapshot: Record<string, string>;
+          mark?: Record<string, string>;
+          kind?: string;
+          criteria?: string[];
+          files?: string[];
+          localized?: string;
+          repros: string[];
+          hypotheses?: string;
+          skip?: string;
+          brief?: string;
+          plan?: string;
+          touched?: string[];
+          design?: string;
+          checked?: boolean;
+          estimate?: number;
+          planEstimate?: number;
+          round: number;
+          items: DItem[];
+          ideas: string[];
+          rival?: number;
+          experts?: boolean;
+          decision?: string;
+          questions?: string;
+          pending?: string;
+          inputs: number;
+          dups: { id: string; name: string; of: string }[];
+          news: { id: string; what: string }[];
+          answers: Record<string, string>;
+          findings?: Found[];
+          fixing?: boolean;
+          localRound: number;
+          reviewLines?: number;
+          reviewFiles?: string[];
+          mutation?: string;
+          res: Res[];
+          read: string[];
+          calls: string[];
+          used: string[];
+          skips: Record<string, string>;
+          down: string[];
+          log: { k: string; phase: Phase; text: string; resolved?: boolean }[];
+          timeline: { phase: Phase; at: number }[];
+          facts?: Fact[];
+          hfacts?: Fact[];
+          enforced?: Record<string, Phase>;
+          gates?: Record<string, { ok: boolean; sig: string }>;
+          resolution?: string;
+          report?: string;
+          gaveUp?: boolean;
+        };
+        type Item = { type: string; evidence: string; gap: string; proposal: string; target: string };
+        type Msg = {
+          role?: string;
+          toolName?: string;
+          isError?: boolean;
+          model?: string;
+          stopReason?: string;
+          errorMessage?: string;
+          usage?: { input?: number; cacheRead?: number; reasoning?: number };
+          content?: { type: string; name?: string; arguments?: unknown; text?: string }[] | string;
+        };
+        type Fact = { text: string; resolved: boolean };
+        type Res = { kind: "skill" | "mcp"; name: string; desc: string; path?: string; off?: boolean; manual?: boolean };
+        type Pick = { res: Res; why: string; must?: boolean; fixed?: boolean };
+        type Check = { ok: false; why: string } | { ok: true; note?: string; next?: Phase; status?: Status; wait?: string };
+        type Job = { id?: string; agent?: string; task?: string; sessionId?: string; status?: string; ok?: boolean; answer?: string; error?: string };
+        type Entry = { type: string; customType?: string; modelId?: string; data?: { state?: State | null; mode?: string; cutoff?: unknown }; message?: Msg };
+
+        const READONLY = new Set<Phase>(["triage", "localize", "design", "checkpoint", "plan", "report", "retro"]);
+        const AGENTS = ["scout", "reviewer", "critic", "tester", "rival", "psychologist", "gopnik"];
+        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
+        const MAX_FAILS = 5;
+        const MAX_ROUNDS = 3;
+        const MAX_LOCAL = 2;
+        const EVERY = 8;
+        const TEST_CMD = /\b(go test|gotestsum|pytest|py\.test|cargo test|cargo nextest|jest|vitest|npm (run )?test|pnpm (run )?test|yarn test|make test|bats|ctest|mvn test|gradle test)\b/;
+        const NOT_RUN = /command not found|no test files|matched no packages|\[setup failed\]|cannot find package|no required module provides|no tests to run|collected 0 items|ERROR: file or directory not found/i;
+        const PREFIX: Record<Kind, string> = { arch: "A", scenario: "S", rival: "R", expect: "E", local: "L", constraint: "K" };
+
+        const GUIDE: Record<Phase, string> = {
+          triage:
+            "Work as the skill triage does for this one ticket: gather context, verify the claim against the code (for a bug, the code path that produces it) and write its agent brief. Skip its tracker steps (labels, states, comments, setup) and never ask the user. Edits are blocked. Call advance_phase with summary: the type (bug, feature, refactor or docs) as the first word, then the brief in at most 12 lines (summary, current and desired behavior, key interfaces, out of scope, verification result), then a line `Acceptance criteria:` followed by a numbered list (`1. ...`) of checkable criteria taken from the task.",
+          localize:
+            "Find the code that must change with aft_search, aft_outline, aft_zoom and lsp_references. A bug follows phase 1 of the skill diagnosing-bugs: find the code path of the symptom and the seam a red test can reach, no theories yet. A feature or refactor names the public seams of the skill tdd. Edits are blocked. Call advance_phase with summary: each file to change as a repo-relative path with one line why, then the seams.",
+          reproduce:
+            "Only test files may be edited. A bug follows phases 1-3 of the skill diagnosing-bugs: the feedback loop is a failing Go test at the seam that reaches the bug, run and minimised; then rank 3-5 falsifiable hypotheses in the summary, one per line `1. If <X> is the cause, then <changing Y> makes the test pass`. A feature or refactor follows the skill tdd: one failing table-driven Go test at the first seam, red before green. Check it fails for the expected reason, not a build error elsewhere. Call advance_phase with evidence: the exact narrow test command you already ran, for example `go test ./pkg/x -run TestY -count=1`. For refactor or docs tasks you may pass evidence `skip: <why no behavior changes>` instead.",
+          design:
+            "You are the designer. Edits are blocked. Think the change through with the vocabulary of the skill codebase-design (module, interface, depth, seam, adapter, leverage, locality): name the seam, keep the interface small. The rival agent designs it a second time under a different constraint, as in its DESIGN-IT-TWICE. Call advance_phase with summary = the design doc, each section starting with its heading line:\n" +
+            "Approach: what changes and how, with a line `Estimated diff: <N> lines` (non-test lines).\n" +
+            "Why this is the right one:\n" +
+            "Rejected alternatives: at least 2 bullets, one `minimal change` and one `reuse existing code`, each `- <alternative>: <concrete reason it loses>`.\n" +
+            "Impact: callers, contracts (proto, swagger, migrations, config), concurrency, error and partial-failure paths, backward compatibility. Write `none` where nothing changes.\n" +
+            "Test strategy: bullets mapping every criterion C<n> to a test at a named seam.\n" +
+            "Anticipated objections: what a tester and a teammate at the daily would raise, each with your answer.\n" +
+            "Critic, tester, rival and psychologist agents then check the design. A rejected design is reworked and resubmitted whole, answering every listed item by id.",
+          checkpoint:
+            "This is the only time the run asks the user. Follow the skill grilling for exactly one round: the frontier is every open decision of this run (unresolved items, the approach against its rejected alternatives, the test seams, scope). Facts are yours to find with read-only tools, only decisions go to the user. Edits are blocked. Call advance_phase with summary: the questions, each `Q<n>: <question worded so that yes accepts your recommendation>` followed by a line `Recommended: <your answer>`. The pipeline then returns the checkpoint screen with your questions: show it to the user as is and end your turn. The user's reply settles the whole frontier.",
+          plan:
+            "Edits are blocked. Slice the work as the skill to-tickets does, locally: tracer-bullet vertical slices, each a complete verifiable path with its blocking edges; a proto, swagger or migration change goes expand–contract (add the new form, migrate the callers, then remove the old). Nothing is published and the user is not quizzed. Call advance_phase with summary: a numbered plan of at most 5 slices (`1. ...`), each naming the file, how it is verified and `blocked by: <n or none>`, a line `Estimated diff: <N> lines` (non-test lines), and a line `E<n>: adopt <how>` or `E<n>: decline <why>` for every open expert expectation.",
+          implement:
+            "Follow the skill implement with the skill tdd, slice by slice in plan order: red before green, no test at a seam the checkpoint did not confirm, refactoring is not part of the loop. Its commit and code-review steps are the pipeline's. Run lsp_diagnostics after each edit, never weaken the reproduce tests and remove every `[DEBUG-...]` log you added. When the repro commands pass, call advance_phase with summary: what changed (path:line), and evidence: one line per acceptance criterion, `C1: TestName` or `C1: path/file.go:40 because <one line>`. The pipeline checks new exported names, files, packages and dependencies, then runs the gates, the repro commands, stress and mutation tests and the review.",
+          verify: "Fix the failures above, then call advance_phase again with summary: what you fixed and the answers the pipeline asked for, and evidence: one line per acceptance criterion, `C1: TestName` or `C1: path/file.go:40 because <one line>`.",
+          review:
+            "The review follows the skill code-review on two axes: Spec by gopnik (also line by line) and Standards by psychologist (a documented repo standard overrides the baseline). Findings stay per axis as written, do not merge or rerank them. Fix each [local] finding in place now (edits are allowed while findings are open) or dismiss it. Then call advance_phase with summary: one line per finding, `F1: fix <what you changed>` or `F1: dismiss <why it is not a problem>`. The changed hunks are reviewed again (at most 2 rounds). Fixes larger than 30% of the diff send the task back to design.",
+          regress: "Fix real regressions and call advance_phase again. If a failure looks unrelated to the change, run the flaky tool on that test first. If flaky confirms it, call advance_phase with evidence `flaky: <TestNames>`.",
+          report:
+            "Edits are blocked. Write the final report in the template of the skill pr, for the chat only (nothing is pushed or published): `## Summary` with the smallest sketch or tree of the change (path:line), `## Evidence` with Before (the repro failing) and After (repro, gates and regress passing), `## Merge Danger` with `Door: one-way` or `Door: two-way`, `Blast Radius: <one word>` and what is left. Call advance_phase with summary: that report.",
+          retro:
+            "Edits are blocked. Using only the facts above, write what the agents of this run and the harness lacked, sorted as the skill retro does: a mechanical gap gets a deterministic check (rule or tool), a judgement call gets a standard (skill, agents_md or doc), a steering line that changes nothing is a no-op to remove. Skill and AGENTS.md text follows the skill writing-for-agents. Every `design missed` fact needs an item whose gap says why the design missed it. Call advance_phase with summary: at most 7 items, each exactly these lines:\ntype: skill|agents_md|doc|tool|rule|harness\nevidence: F<n>[,H<m>]\ngap: one line\nproposal: the concrete text to add (SKILL.md section, AGENTS.md line, doc paragraph, ast-grep rule or harness change), at most 15 lines\ntarget: path\nNo item without evidence. agents_md only for facts that cannot be read from the code. harness items cite H facts and target a concrete file and setting (pi.nix <extension> <what>, ~/.pi/rules/<file>, mcp.json <server>). If nothing caused friction, the summary is just `none`.",
+        };
+
+        const NEED: Record<Phase, string> = {
+          triage: "summary starting with bug, feature, refactor or docs, with a numbered `Acceptance criteria:` list.",
+          localize: "summary naming the existing files to change.",
+          reproduce: "evidence = a test command that fails now, or `skip: <reason>` for refactor or docs; for a bug, 3-5 ranked `If ... then ...` hypotheses in the summary.",
+          design: "summary = the design doc with all six sections, answering every open item by id.",
+          checkpoint: "one round of `Q<n>:` questions, each with `Recommended:`, then the user's decision; while waiting for it, end your turn.",
+          plan: "summary with a numbered plan of at most 5 slices, each with `blocked by:`, `Estimated diff: <N> lines` and an answer for every open E<n>.",
+          implement: "a changed non-test file, passing repro commands, answers to every D<n>/N<n> and evidence mapping every criterion C<n> to a test or path:line.",
+          verify: "gates ok, repro commands passing, no tagged debug logs, stable tests, no surviving mutants in changed code and evidence mapping every criterion C<n>.",
+          review: "every finding F<n> marked `fix` or `dismiss` in the summary.",
+          regress: "go tests of the changed and dependent packages passing.",
+          report: "summary with the report in the pr template: Summary, Evidence, Merge Danger with the door and the blast radius.",
+          retro: "retro items (type, evidence, gap, proposal, target) citing fact ids, or `none`.",
+        };
+
+        const STOP = new Set(["добавл", "создан", "измене", "сервис", "исполь", "пользо", "говори", "когда", "напиши", "тригге", "задача", "service", "create", "update", "should", "with", "from", "that", "this", "when", "which", "core", "protei", "files", "file", "code"]);
+        const IMPORTS = /^\+\s*(import\b|(\w+\s+)?"[\w.-]+\.[a-z]{2,}\/[^"]*"\s*$|from\s+\S+\s+import\b|.*\brequire\()/m;
+        const SKILL_PHASES = new Set<Phase>(["reproduce", "implement", "report"]);
+
+        const SKILL_HINTS: { phases: Phase[]; paths?: RegExp; match: RegExp; why: string }[] = [
+          { phases: ["reproduce"], match: /test|тест/i, why: "this phase writes a test" },
+          { phases: ["implement"], paths: /\.proto$/, match: /proto|контракт/i, why: ".proto files" },
+          { phases: ["implement"], paths: /swagger|openapi|(^|\/)api\/|handler/i, match: /swagger|openapi|api-command/i, why: "API or swagger files" },
+          { phases: ["implement"], paths: /migrat|\.sql$/i, match: /migrat|миграц/i, why: "migrations" },
+          { phases: ["implement"], paths: /uc-config|(^|\/)configs?\/|config[^/]*\.ya?ml$/i, match: /config|конфиг/i, why: "config files" },
+          { phases: ["implement"], paths: /logger\.ya?ml|logs-collector/i, match: /logger|логи/i, why: "logger config" },
+          { phases: ["implement", "report"], paths: /(^|\/)docs\/|\.md$/i, match: /docs|документац/i, why: "docs files" },
+          { phases: ["report"], match: /docs|документац/i, why: "docs for the change" },
+        ];
+
+        const notDocs = (st: State) => st.kind !== "docs";
+        const FIXED: { phases: Phase[]; skill: string; why: string; when?: (st: State) => boolean }[] = [
+          { phases: ["triage"], skill: "triage", why: "verify the claim, agent brief" },
+          { phases: ["localize", "reproduce"], skill: "diagnosing-bugs", why: "bug: feedback loop, hypotheses", when: (st) => st.kind === "bug" },
+          { phases: ["localize", "reproduce"], skill: "tdd", why: "seams, red before green", when: (st) => st.kind !== "bug" && notDocs(st) },
+          { phases: ["design"], skill: "codebase-design", why: "deep modules, seams" },
+          { phases: ["checkpoint"], skill: "grilling", why: "one round of decisions" },
+          { phases: ["plan"], skill: "to-tickets", why: "vertical slices, blocking edges" },
+          { phases: ["implement"], skill: "implement", why: "slice by slice" },
+          { phases: ["implement"], skill: "tdd", why: "red before green at confirmed seams", when: notDocs },
+          { phases: ["report"], skill: "pr", why: "report template" },
+          { phases: ["retro"], skill: "retro", why: "retro categories" },
+        ];
+        const FIXED_NAMES = new Set([...FIXED.map((f) => f.skill), "writing-for-agents"]);
+
+        type McpHint = { phases: Phase[]; server: string; why: string; must?: boolean; when?: (st: State, paths: string[], diff: string) => boolean };
+        const MCP_HINTS: McpHint[] = [
+          { phases: ["triage"], server: "youtrack", why: "read the ticket", must: true, when: (st) => !!st.issue },
+          { phases: ["triage"], server: "rag", why: "team knowledge base", must: true },
+          { phases: ["triage"], server: "gitlab", why: "related merge requests" },
+          { phases: ["localize"], server: "codebase_memory", why: "code graph" },
+          { phases: ["localize"], server: "gitlab", why: "merge requests that touched these files" },
+          { phases: ["reproduce", "implement"], server: "context7", why: "external library imports changed", when: (_st, _p, diff) => IMPORTS.test(diff) },
+          { phases: ["reproduce", "implement"], server: "postgres", why: "SQL, migrations or repositories", when: (_st, paths) => paths.some((p) => /\.sql$|migrat|repositor|_repo\.go$|(^|\/)(storage|dao|db)\//i.test(p)) },
+          { phases: ["regress"], server: "gitlab", why: "CI pipelines for these packages" },
+        ];
+
+        const SECTIONS: [string, RegExp][] = [
+          ["approach", /^approach\b/i],
+          ["why", /^why( this is the right one)?\b/i],
+          ["rejected", /^rejected alternatives\b/i],
+          ["impact", /^impact\b/i],
+          ["tests", /^test strategy\b/i],
+          ["objections", /^anticipated objections\b/i],
+        ];
+        const IMPACT: [string, RegExp][] = [
+          ["callers", /caller/i],
+          ["contracts (proto, swagger, migrations, config)", /contract|proto|swagger|migrat|config/i],
+          ["concurrency", /concurren|race|lock|goroutine|parallel/i],
+          ["error and partial-failure paths", /error|fail/i],
+          ["backward compatibility", /backward|compatib/i],
+        ];
+
+        const norm = (n: string) => n.replace(/[^A-Za-z0-9_]/g, "_");
+
+        const stems = (t: string) => new Set((t.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? []).map((w) => w.slice(0, 6)).filter((w) => !STOP.has(w)));
+
+        const pathsOf = (st: State) => st.touched ?? (st.files ?? []).map((f) => (f.startsWith(st.root + "/") ? f.slice(st.root.length + 1) : f));
+
+        const relevant = (st: State, phase: Phase, paths: string[], diff = ""): Pick[] => {
+          const words = stems(noSkips([st.task, st.brief ?? "", st.plan ?? "", ...(st.criteria ?? []), ...paths].join("\n")));
+          const out: Pick[] = FIXED.filter((f) => f.phases.includes(phase) && (!f.when || f.when(st))).flatMap((f) => {
+            const res = st.res.find((r) => r.kind === "skill" && r.name === f.skill);
+            return res ? [{ res, why: f.why, must: true, fixed: true }] : [];
+          });
+          for (const kind of ["skill", "mcp"] as const) {
+            const scored = st.res
+              .filter((r) => r.kind === kind && !r.off && !r.manual && !FIXED_NAMES.has(r.name))
+              .map((r) => {
+                const text = `''${r.name} ''${r.desc}`;
+                const hint =
+                  kind === "skill"
+                    ? SKILL_HINTS.find((h) => h.phases.includes(phase) && h.match.test(text) && (!h.paths || paths.some((p) => h.paths!.test(p))))
+                    : MCP_HINTS.find((h) => h.phases.includes(phase) && h.server === norm(r.name) && (!h.when || h.when(st, paths, diff)));
+                const hit = [...stems(`''${r.name.replace(/[-_]/g, " ")} ''${r.desc}`)].filter((w) => words.has(w));
+                const why = hint?.why ?? (hit.length >= 2 ? `matches ''${hit.slice(0, 3).join(", ")}` : undefined);
+                return why ? { res: r, why, must: (hint as McpHint | undefined)?.must, rank: (hint ? 10 : 0) + hit.length } : undefined;
+              })
+              .filter((x) => x !== undefined)
+              .sort((a, b) => Number(!!b.must) - Number(!!a.must) || b.rank - a.rank);
+            out.push(...scored.filter((x, i) => x.must || i < 3).map(({ res, why, must }) => ({ res, why, must })));
+          }
+          return out;
+        };
+
+        const noSkips = (t: string) => t.replace(/^.*\bskip\s+[\w.-]+\s*:.*$/gim, "");
+
+        const done = (st: State, p: Pick) => (p.res.kind === "skill" ? st.read.includes(p.res.name) : st.calls.includes(p.res.name));
+
+        const enforced = (phase: Phase, p: Pick) => (p.fixed ? true : p.res.kind === "skill" ? SKILL_PHASES.has(phase) : !["verify", "checkpoint", "retro"].includes(phase));
+
+        const pickLine = (st: State, p: Pick) =>
+          `- ''${p.res.kind === "skill" ? `skill ''${p.res.name}: read ''${p.res.path}` : p.res.name === "context7" ? "mcp context7: call resolve-library-id, then query-docs" : `mcp ''${p.res.name}: call its tools mcp__''${norm(p.res.name)}__*`} (''${p.why}''${p.must ? ", required, no skip" : ""})''${done(st, p) ? " [done]" : st.skips[p.res.name] && !p.must ? " [skipped]" : ""}`;
+
+        const GLOBAL_SKILLS = join(homedir(), ".agents", "skills");
+
+        const resText = (st: State, picks: Pick[]) =>
+          picks.length
+            ? `\nUse these before acting, they override your general habits:\n''${picks.map((p) => pickLine(st, p)).join("\n")}\nRead each SKILL.md and follow it exactly.''${picks.some((p) => p.res.path && !p.res.path.startsWith(GLOBAL_SKILLS)) && picks.some((p) => p.res.path?.startsWith(GLOBAL_SKILLS)) ? " Where a project skill and a global skill overlap, the project skill wins." : ""} Call MCP tools directly when declared, otherwise from codemode as tools.mcp__<server>__<tool> (describeNamespace("mcp__<server>") lists them). To skip one, write \`skip <name>: <reason>\` in the advance_phase summary.`
+            : "";
+
+        const AGENT_DIR = process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent");
+
+        const findSkills = (dir: string, depth = 3): string[] => {
+          try {
+            return readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isFile() && d.name === "SKILL.md" ? [join(dir, d.name)] : d.isDirectory() && depth > 0 ? findSkills(join(dir, d.name), depth - 1) : []));
+          } catch {
+            return [];
+          }
+        };
+
+        const discover = (cwd: string, root: string, tools: string[]): Res[] => {
+          const dirs: string[] = [];
+          for (let d = resolve(cwd); ; d = dirname(d)) {
+            dirs.push(join(d, ".agents", "skills"));
+            if (d === root || !d.startsWith(root) || d === dirname(d)) break;
+          }
+          dirs.push(GLOBAL_SKILLS);
+          const out = new Map<string, Res>();
+          for (const path of dirs.flatMap((d) => findSkills(d))) {
+            const meta = readFileSync(path, "utf8").match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? "";
+            const field = (k: string) => meta.match(new RegExp(`^''${k}:\\s*(.+)$`, "m"))?.[1]?.trim().replace(/^["']|["']$/g, "");
+            const name = field("name") ?? basename(dirname(path));
+            if (!out.has(name)) out.set(name, { kind: "skill", name, desc: field("description") ?? "", path, manual: field("disable-model-invocation") === "true" });
+          }
+          const servers = new Map<string, { description?: string; enabled?: boolean; exposure?: string }>();
+          for (const file of [join(AGENT_DIR, "mcp.json"), join(root, ".pi", "mcp.json")])
+            try {
+              const cfg = JSON.parse(readFileSync(file, "utf8")) as { mcpServers?: Record<string, { description?: string; enabled?: boolean; exposure?: string }> };
+              for (const [name, v] of Object.entries(cfg.mcpServers ?? {})) servers.set(norm(name), { ...servers.get(norm(name)), ...v, description: v.description ?? servers.get(norm(name))?.description });
+            } catch {}
+          for (const [name, v] of servers) if (v.enabled !== false && v.exposure !== "hidden") out.set(`mcp:''${name}`, { kind: "mcp", name, desc: v.description ?? "" });
+          if (tools.includes("query-docs")) out.set("mcp:context7", { kind: "mcp", name: "context7", desc: "Library and API documentation, current versions" });
+          return [...out.values()];
+        };
+
+        const serverOf = (tool: string, input: { server?: unknown }) =>
+          tool.startsWith("mcp__") ? tool.slice(5).split("__")[0] : tool === "mcp" ? norm(String(input.server ?? "")) : tool === "resolve-library-id" || tool === "query-docs" ? "context7" : undefined;
+
+        const scriptServers = (code: unknown) => [...new Set([...String(code ?? "").matchAll(/\bmcp__([A-Za-z0-9_]+?)__\w/g)].map((m) => m[1]))];
+        const ITEM_TYPES = ["skill", "agents_md", "doc", "tool", "rule", "harness"];
+        const COULD_NOT = /could not|couldn't|cannot|can't|unable to|failed to|не удалось|не смог|не могу|нет доступа|не найден/i;
+        const DOWN = /connect|unavailable|not available|ECONN|refused|timed? ?out|disconnected|fetch failed|\b50[234]\b|socket|ENOTFOUND/i;
+
+        const couldNot = (text: string) => text.split(/(?<=[.!?])\s+|\n+/).filter((x) => COULD_NOT.test(x)).slice(0, 3).map((x) => head(x, 160));
+
+        const textOf = (m?: Msg) => (typeof m?.content === "string" ? m.content : (m?.content ?? []).map((c) => (c.type === "text" ? c.text ?? "" : "")).join("\n"));
+
+        const childMessages = (id: string): Msg[] => {
+          try {
+            for (const d of readdirSync(join(AGENT_DIR, "sessions"))) {
+              const f = readdirSync(join(AGENT_DIR, "sessions", d)).find((n) => n.endsWith(`_''${id}.jsonl`));
+              if (f)
+                return readFileSync(join(AGENT_DIR, "sessions", d, f), "utf8")
+                  .split("\n")
+                  .flatMap((l) => {
+                    try {
+                      const m = (JSON.parse(l) as { message?: Msg }).message;
+                      return m ? [m] : [];
+                    } catch {
+                      return [];
+                    }
+                  });
+            }
+          } catch {}
+          return [];
+        };
+
+        const tally = () => {
+          const map = new Map<string, { n: number; resolved: boolean }>();
+          const put = (text: string, resolved = false) => {
+            const x = map.get(text);
+            if (x) x.n++;
+            else map.set(text, { n: 1, resolved });
+          };
+          const list = (cap: number): Fact[] => [...map].sort((a, b) => b[1].n - a[1].n).slice(0, cap).map(([text, { n, resolved }]) => ({ text: n > 1 ? `(''${n}x) ''${text}` : text, resolved }));
+          return { put, list };
+        };
+
+        const parseItems = (text: string): Item[] => {
+          const items: Record<string, string>[] = [];
+          let key = "";
+          for (const line of text.split("\n")) {
+            const m = line.match(/^\s*[-*]?\s*(type|evidence|gap|proposal|target)\s*:\s?(.*)$/i);
+            if (m) {
+              key = m[1].toLowerCase();
+              if (key === "type" || !items.length) items.push({});
+              items[items.length - 1][key] = m[2];
+            } else if (key && items.length) items[items.length - 1][key] += "\n" + line;
+          }
+          return items.map((i) => ({ type: (i.type ?? "").trim().toLowerCase(), evidence: (i.evidence ?? "").trim(), gap: (i.gap ?? "").trim(), proposal: (i.proposal ?? "").replace(/^\s*\n|\s+$/g, ""), target: (i.target ?? "").trim() }));
+        };
+
+        const ISSUE = /^\s*([A-Z][A-Z0-9_]+-\d+)\b/;
+
+        const issueOf = (task: string) => (task.match(/https?:\/\/\S*\/issue\/([A-Za-z][A-Za-z0-9_]*-\d+)/)?.[1] ?? task.match(ISSUE)?.[1])?.toUpperCase();
+
+        const listCriteria = (c?: string[]) => (c?.length ? `\nAcceptance criteria:\n''${c.map((x, i) => `C''${i + 1} ''${x}`).join("\n")}` : "");
+
+        const head = (s: string, n = 60) => {
+          const t = s.replace(/\s+/g, " ").trim();
+          return t.length > n ? t.slice(0, n - 1) + "…" : t;
+        };
+
+        const tail = (s: string, lines = 30, chars = 3000) => {
+          const t = s.trim().split("\n").slice(-lines).join("\n");
+          return t.length > chars ? "…" + t.slice(-chars) : t;
+        };
+
+        const q = (s: string) => `''\'''${s.replace(/'/g, `'\\'''`)}'`;
+
+        const isTest = (f: string) => /(_test\.go|\.(test|spec)\.[cm]?[jt]sx?|_test\.py|(^|\/)test_[^/]*\.py|_test\.rs)$/.test(f) || /(^|\/)(tests?|__tests__|testdata)\//.test(f);
+
+        const sectionsOf = (doc: string) => {
+          const out: Record<string, string> = {};
+          let cur = "";
+          for (const line of doc.split("\n")) {
+            const t = line.replace(/^[\s#*_]+/, "");
+            const hit = SECTIONS.find(([, re]) => re.test(t));
+            const rest = hit ? t.replace(hit[1], "").replace(/^[\s*_]*/, "") : "";
+            if (hit && (rest === "" || rest.startsWith(":"))) {
+              cur = hit[0];
+              out[cur] = (out[cur] ?? "") + rest.replace(/^:[\s*_]*/, "") + "\n";
+            } else if (cur) out[cur] += line + "\n";
+          }
+          return out;
+        };
+
+        const bullets = (t: string) => t.split("\n").filter((l) => /^\s*([-*]|\d+[.)])\s+\S/.test(l)).map((l) => l.replace(/^\s*([-*]|\d+[.)])\s+/, "").trim());
+
+        const estimateOf = (t: string) => {
+          const m = t.match(/estimated diff\D{0,20}(\d+)/i);
+          return m ? Number(m[1]) : undefined;
+        };
+
+        const answerOf = (doc: string, id: string) => doc.match(new RegExp(`^[\\s*_-]*''${id}\\b[*_]*\\s*[:.)-]\\s*(\\S.*)$`, "m"))?.[1]?.trim() ?? "";
+
+        const tagged = (answer: string, src: string): Found[] =>
+          bullets(answer)
+            .map((l) => ({ tag: /\[arch\]/i.test(l) ? ("arch" as const) : ("local" as const), src, text: head(l.replace(/\[(arch|local)\]\s*/i, ""), 300) }))
+            .slice(0, 8);
+
+        const blocks = (answer: string) => /^\s*VERDICT:\s*BLOCK\b/im.test(answer);
+
+        const tokens = (name: string) => (name.match(/[A-Z]+(?![a-z])|[A-Z]?[a-z]+|\d+/g) ?? []).map((t) => t.toLowerCase());
+
+        const sigOf = (params: string, results: string) => {
+          const parts = params.split(",").map((p) => p.trim().split(/\s+/)).filter((p) => p[0]);
+          const named = parts.some((p) => p.length > 1);
+          const types: string[] = [];
+          let next = "";
+          for (const p of [...parts].reverse()) {
+            if (named && p.length > 1) next = p.slice(1).join(" ");
+            types.unshift(named ? next : p.join(" "));
+          }
+          return `''${types.join(",")}>''${results.replace(/\s+/g, "")}`;
+        };
+
+        const ranges = (diff: string) =>
+          [...diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)].map((m) => [Number(m[1]), Number(m[1]) + Math.max(Number(m[2] ?? 1), 1) - 1] as [number, number]).filter((r) => r[1] >= r[0]);
+
+        const emit = (node: { id: string; parents: string[]; kind: string; label: string; run: string; phase?: string; cwd: string; sessionId?: string; status: Status; detail?: string }) => {
+          try {
+            mkdirSync(dirname(EVENTS), { recursive: true });
+            appendFileSync(EVENTS, JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
+          } catch {}
+        };
+
+        const planMode = (ctx: ExtensionContext) =>
+          (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pi-plan")?.data?.mode ?? "normal";
+
+        const load = (ctx: ExtensionContext) => {
+          const st = (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pipeline")?.data?.state ?? undefined;
+          return st ? { repros: [], round: 0, items: [], ideas: [], inputs: 0, dups: [], news: [], answers: {}, localRound: 0, used: [], ...(st as Partial<State>) } as State : undefined;
+        };
+
+        const projDir = (st: State) => join(homedir(), ".pi", "projects", st.root.replace(/\//g, "-"));
+
+        export default function (pi: ExtensionAPI) {
+          if (process.env.PI_HERDR_DEPTH) return;
+          let s: State | undefined;
+          let blocked = false;
+          let shown = 0;
+          let flaky = false;
+          const blockedIds = new Set<string>();
+
+          const sh = async (cmd: string, cwd: string, timeout: number, signal?: AbortSignal) => {
+            const r = await pi.exec("bash", ["-c", cmd], { cwd, timeout, signal });
+            return { code: r.killed ? 124 : r.code, stdout: r.stdout, out: r.stdout + "\n" + r.stderr };
+          };
+
+          const hash = (root: string, f: string) => {
+            try {
+              return createHash("sha1").update(readFileSync(join(root, f))).digest("hex");
+            } catch {
+              return "-";
+            }
+          };
+
+          const dirty = async (root: string) => {
+            const r = await sh("git diff --name-only HEAD; git ls-files --others --exclude-standard", root, 30000);
+            return [...new Set(r.stdout.split("\n").map((l) => l.trim()).filter(Boolean))];
+          };
+
+          const snapshot = async (root: string) => Object.fromEntries((await dirty(root)).map((f) => [f, hash(root, f)]));
+
+          const changed = async (st: State, since = st.snapshot) => (await dirty(st.root)).filter((f) => since[f] !== hash(st.root, f));
+
+          const untracked = async (st: State, files: string[]) => {
+            if (!files.length) return [];
+            const tracked = new Set((await sh(`git ls-files -- ''${files.map(q).join(" ")}`, st.root, 30000)).stdout.split("\n"));
+            return files.filter((f) => !tracked.has(f) && existsSync(join(st.root, f)));
+          };
+
+          const lines = (st: State, f: string) => {
+            try {
+              return readFileSync(join(st.root, f), "utf8").split("\n").length;
+            } catch {
+              return 0;
+            }
+          };
+
+          const diffLines = async (st: State, files: string[]) => {
+            if (!files.length) return 0;
+            const fresh = await untracked(st, files);
+            const r = await sh(`git diff HEAD --numstat -- ''${files.map(q).join(" ")}`, st.root, 30000);
+            return r.stdout.split("\n").reduce((n, l) => n + l.split("\t").slice(0, 2).reduce((a, x) => a + (Number(x) || 0), 0), 0) + fresh.reduce((n, f) => n + lines(st, f), 0);
+          };
+
+          const fullDiff = async (st: State, files: string[]) => {
+            if (!files.length) return "";
+            const fresh = await untracked(st, files);
+            const tracked = (await sh(`git diff HEAD -- ''${files.map(q).join(" ")}`, st.root, 30000)).stdout;
+            const added = await Promise.all(fresh.map(async (f) => (await sh(`git diff --no-index -- /dev/null ''${q(f)}`, st.root, 30000)).stdout));
+            return (tracked + added.join("")).slice(0, 12000);
+          };
+
+          const publish = (ctx: ExtensionContext) => {
+            pi.events.emit("pipeline:phase", s ? { run: s.run, phase: s.phase, nodeId: s.node } : null);
+            if (ctx.hasUI) ctx.ui.setStatus("pipeline", s?.phase);
+            if (s) {
+              process.env.PI_PIPELINE_NODE = s.node;
+              process.env.PI_PIPELINE_RUN = s.run;
+            } else {
+              delete process.env.PI_PIPELINE_NODE;
+              delete process.env.PI_PIPELINE_RUN;
+            }
+          };
+
+          const save = () => pi.appendEntry("pipeline", { state: s ?? null });
+
+          const refresh = (st: State, strict: boolean) => {
+            const names = pi.getAllTools().filter((t) => t.exposure !== "hidden").map((t) => t.name);
+            for (const r of st.res) if (r.kind === "mcp") r.off = st.down.includes(r.name) || (strict && r.name !== "context7" && !names.some((n) => n.startsWith(`mcp__''${norm(r.name)}__`)));
+          };
+
+          const openItems = (st: State, kinds: Kind[]) => st.items.filter((i) => i.open && kinds.includes(i.kind));
+
+          const addItem = (st: State, kind: Kind, src: string, text: string) => {
+            const id = `''${PREFIX[kind]}''${st.items.filter((i) => i.kind === kind).length + 1}`;
+            st.items.push({ id, kind, src, text: head(text, 400), open: true });
+            return id;
+          };
+
+          const itemsText = (st: State) => {
+            const open = openItems(st, ["constraint", "arch", "scenario", "rival", "expect"]);
+            const how: Record<Kind, string> = {
+              constraint: "hard constraint, answer `<id>: <how the design meets it>`",
+              arch: "answer `<id>: <what you changed in the approach>`",
+              scenario: "cover it in Test strategy by id",
+              rival: "answer `<id>: adopt` or `<id>: refute <concrete reason>`",
+              expect: "answer `<id>: adopt <how>` or `<id>: decline <why>`",
+              local: "",
+            };
+            const ideas = st.ideas.length ? `\nIdeas to evaluate as rivals on the next submission: ''${st.ideas.map((x) => head(x, 120)).join("; ")}` : "";
+            return (open.length ? `\nOpen items:\n''${open.map((i) => `''${i.id} (''${i.src}) ''${i.text} -> ''${how[i.kind]}`).join("\n")}` : "") + ideas;
+          };
+
+          const baseGuide = (st: State) =>
+            st.phase === "triage" && st.issue
+              ? `First read YouTrack issue ''${st.issue} with the youtrack MCP tools (codemode namespace mcp__youtrack): summary, description, comments and fields. ''${GUIDE.triage} The summary must contain ''${st.issue}, restate the expected behavior and take the criteria from the issue.`
+              : ["reproduce", "design", "plan", "implement", "verify"].includes(st.phase)
+                ? GUIDE[st.phase] + listCriteria(st.criteria) + (st.phase === "design" || st.phase === "plan" ? itemsText(st) : "")
+                : GUIDE[st.phase];
+
+          const guide = (st: State) => {
+            refresh(st, false);
+            return baseGuide(st) + resText(st, relevant(st, st.phase, pathsOf(st)));
+          };
+
+          const fact = (st: State, k: string, text: string, resolved = false) => {
+            if (st.log.length < 300) st.log.push({ k, phase: st.phase, text: head(text, 200), resolved });
+          };
+
+          const node = (st: State, status: Status, detail?: string) =>
+            emit({ id: st.node, parents: [st.parent], kind: "phase", label: st.phase, run: st.run, phase: st.phase, cwd: st.root, status, detail });
+
+          const gate = (st: State, name: string, status: Status, detail?: string) =>
+            emit({ id: `''${st.node}:gate:''${name}`, parents: [st.node], kind: "gate", label: name, run: st.run, phase: st.phase, cwd: st.root, status, detail: detail && head(detail, 200) });
+
+          const enter = async (st: State, phase: Phase, ctx: ExtensionContext) => {
+            const from = st.phase;
+            st.timeline.push({ phase, at: Date.now() });
+            Object.assign(st, { phase, seq: st.seq + 1, fails: 0, calls: [], parent: st.node, node: `''${st.run}:''${st.seq + 1}:''${phase}` });
+            if (phase === "implement") st.mark = await snapshot(st.root);
+            if (phase === "design" && from !== "design") st.round = 0;
+            if (phase === "checkpoint") Object.assign(st, { decision: undefined, questions: undefined });
+            if (phase === "review") Object.assign(st, { fixing: false, localRound: 0, findings: undefined });
+            flaky = false;
+            node(st, "running");
+            save();
+            publish(ctx);
+          };
+
+          const finish = (status: Status, ctx: ExtensionContext, detail?: string) => {
+            if (!s) return;
+            node(s, status, detail);
+            emit({ id: s.run, parents: [], kind: "run", label: s.issue ?? head(s.task), run: s.run, cwd: s.root, sessionId: ctx.sessionManager.getSessionId(), status, detail });
+            s = undefined;
+            save();
+            publish(ctx);
+          };
+
+          const start = async (task: string, ctx: ExtensionContext) => {
+            const top = await sh("git rev-parse --show-toplevel", ctx.cwd, 10000);
+            const root = top.code === 0 ? top.stdout.trim() : ctx.cwd;
+            const run = randomUUID();
+            const issue = issueOf(task);
+            s = {
+              run, task, issue, root, phase: "triage", node: `''${run}:0:triage`, parent: run, seq: 0, fails: 0, snapshot: await snapshot(root),
+              res: discover(ctx.cwd, root, pi.getAllTools().map((t) => t.name)), read: [], calls: [], used: [], skips: {}, down: [], log: [],
+              timeline: [{ phase: "triage", at: Date.now() }], repros: [], round: 0, items: [], ideas: [], inputs: 0, dups: [], news: [], answers: {}, localRound: 0,
+            };
+            emit({ id: run, parents: [], kind: "run", label: issue ?? head(task), run, cwd: root, sessionId: ctx.sessionManager.getSessionId(), status: "running" });
+            node(s, "running");
+            save();
+            publish(ctx);
+            return `[Pipeline] Phases: ''${PHASES.join(" → ")}. Finish each phase with advance_phase, it checks the result and gives the next step.\nThe user is asked once per run, at the checkpoint phase. Otherwise never ask the user, decide yourself.\nPhase triage: ''${guide(s)}`;
+          };
+
+          const goPackages = async (st: State, files: string[], signal?: AbortSignal) => {
+            const dirs = [...new Set(files.filter((f) => f.endsWith(".go") && existsSync(join(st.root, dirname(f)))).map((f) => "./" + dirname(f)))];
+            if (!dirs.length) return [];
+            const own = await sh(`go list ''${dirs.map(q).join(" ")}`, st.root, 120000, signal);
+            if (own.code !== 0) return dirs;
+            const mine = new Set(own.stdout.split("\n").map((l) => l.trim()).filter(Boolean));
+            const all = await sh(`go list -f '{{.ImportPath}} {{join .Deps " "}} {{join .TestImports " "}} {{join .XTestImports " "}}' ./...`, st.root, 120000, signal);
+            if (all.code !== 0) return [...mine];
+            const users = all.stdout
+              .split("\n")
+              .map((l) => l.trim().split(/\s+/))
+              .filter(([p, ...deps]) => p && (mine.has(p) || deps.some((d) => mine.has(d))))
+              .map(([p]) => p);
+            return users.length > 0 && users.length <= 60 ? users : [...mine];
+          };
+
+          const recordJobs = (st: State, jobs: Job[]) => {
+            for (const j of jobs.filter((x) => x.sessionId && x.ok !== undefined)) {
+              if (!j.ok) fact(st, "subagent", `subagent ''${j.agent} failed: ''${j.error ?? "no answer"}`);
+              const msgs = childMessages(j.sessionId!).filter((m) => m.role === "assistant");
+              for (const x of couldNot(j.answer || textOf(msgs[msgs.length - 1]))) fact(st, "subagent", `subagent ''${j.agent} said: ''${x}`);
+              const u = msgs[0]?.usage;
+              if (u) fact(st, "harness", `subagent ''${j.agent} cold start: first turn prefilled ''${(u.input ?? 0) + (u.cacheRead ?? 0)} tokens, ''${u.cacheRead ?? 0} from cache, ''${msgs.length} turns`, !!u.cacheRead);
+            }
+          };
+
+          const batch = async (st: State, ctx: ExtensionToolContext, tasks: { agent: string; task: string }[], key: string, signal?: AbortSignal): Promise<Job[] | undefined> => {
+            if (!ctx.tools.some((t) => t.name === "subagent")) {
+              fact(st, "harness", `subagent tool missing, ''${key} agents skipped`);
+              return undefined;
+            }
+            const bg = ctx.tools.some((t) => t.name === "subagent_wait");
+            const r = await ctx.executeTool("subagent", bg ? { tasks, timeoutMin: 20, background: true } : { tasks, timeoutMin: 20 }, { signal });
+            let jobs = (r.result.details as { jobs?: Job[] } | undefined)?.jobs ?? [];
+            if (bg && jobs.length) {
+              const ids = jobs.map((j) => j.id).filter((x): x is string => !!x);
+              const w = await ctx.executeTool("subagent_wait", { ids, timeoutMin: 40 }, { signal });
+              const got = (w.result.details as { jobs?: Job[] } | undefined)?.jobs ?? [];
+              const err = w.result.content.map((c) => (c.type === "text" ? c.text : "")).join(" ");
+              jobs = jobs.map((j) => got.find((g) => g.id === j.id) ?? { ...j, ok: false, error: head(err || "no result from subagent_wait", 120) });
+            }
+            if (!jobs.length) {
+              fact(st, "harness", `subagent call for ''${key} returned no jobs: ''${head(r.result.content.map((c) => (c.type === "text" ? c.text : "")).join(" "), 120)}`);
+              return undefined;
+            }
+            recordJobs(st, jobs);
+            const parents = jobs.map((j) => j.sessionId ?? j.id).filter((x): x is string => !!x);
+            emit({ id: `''${st.node}:join:''${key}`, parents: parents.length ? parents : [st.node], kind: "join", label: `join ''${key}`, run: st.run, phase: st.phase, cwd: st.root, status: jobs.every((j) => j.ok) ? "ok" : "fail" });
+            return tasks.map((t, i) => jobs[i] ?? { agent: t.agent, ok: false, error: "missing" });
+          };
+
+          const skillPaths = (st: State, files: string[]) => [...new Set((["reproduce", "implement"] as Phase[]).flatMap((ph) => relevant(st, ph, files).filter((p) => p.res.kind === "skill" && !p.fixed).map((p) => p.res.path!)))];
+
+          const unmet = async (st: State, summary: string, ev: string, signal?: AbortSignal) => {
+            for (const m of `''${summary}\n''${ev}`.matchAll(/\bskip\s+([\w.-]+)\s*:\s*(\S[^\n]{4,})/gi)) st.skips[m[1]] = m[2].trim();
+            const paths = ["triage", "localize", "design", "checkpoint", "plan"].includes(st.phase) ? pathsOf(st) : (st.touched = await changed(st));
+            const diff = (st.phase === "reproduce" || st.phase === "implement") && paths.length ? (await sh(`git diff HEAD -- ''${paths.map(q).join(" ")}`, st.root, 30000, signal)).stdout : "";
+            const skipRepro = st.phase === "reproduce" && /^skip:/i.test(ev);
+            refresh(st, true);
+            const open = relevant(st, st.phase, paths, diff).filter((p) => enforced(st.phase, p) && !done(st, p) && (p.must || !st.skips[p.res.name]) && !(skipRepro && p.res.kind === "skill"));
+            if (!open.length) return undefined;
+            st.enforced = { ...st.enforced, ...Object.fromEntries(open.map((p) => [p.res.name, st.phase])) };
+            return `Required in phase ''${st.phase} and not done yet:\n''${open.map((p) => pickLine(st, p)).join("\n")}\nRead each SKILL.md with read and follow it, call each MCP server at least once, then call advance_phase again. To skip one that does not apply, add \`skip <name>: <reason>\` to the summary.`;
+          };
+
+          const common = (st: State) =>
+            `Repository: ''${st.root}\nTask: ''${st.task}\n''${listCriteria(st.criteria).trim()}\n` +
+            (st.repros.length ? `Repro tests (fail before the change): ''${st.repros.join(" ; ")}\n` : st.skip ? `Reproduce skipped: ''${st.skip}\n` : "") +
+            (st.hypotheses ? `Ranked hypotheses:\n''${st.hypotheses}\n` : "");
+
+          const designTasks = (st: State, doc: string) => {
+            const skills = skillPaths(st, pathsOf(st));
+            const base = common(st) + (skills.length ? `Project skills, read them: ''${skills.join(", ")}\n` : "") + `Design:\n''${doc}\n`;
+            const tasks: { agent: string; task: string; role: string; idea?: string }[] = [
+              {
+                role: "critic",
+                agent: "critic",
+                task: `You are the critic of this design. Find what makes the approach wrong, risky or bigger than needed. Read the code and skills you need.\n''${base}Reply exactly in this format, at most 10 lines, nothing else:\nVERDICT: PASS or BLOCK\n- [arch] <objection that needs a different approach, and why>\n- [local] <objection fixable inside this approach>`,
+              },
+              {
+                role: "tester",
+                agent: "tester",
+                task: `You are an adversarial tester. List the scenarios you would use to break this change: edge cases, error and partial-failure paths, concurrency, backward compatibility. Check each against the Test strategy section.\n''${base}Reply at most 10 lines, nothing else, one per scenario:\n- COVERED: <scenario> -> <test strategy line>\n- MISSING: <scenario and the input that breaks it>`,
+              },
+            ];
+            const rival = (idea?: string) => ({
+              role: "rival",
+              agent: "rival",
+              idea,
+              task:
+                (idea ? `Evaluate this idea as a solution of the task and develop it into an approach: ''${idea}\n` : "Design your own solution of this task independently. Design constraint: minimize the interface, 1-3 entry points, maximum leverage per entry point, reuse existing code.\n") +
+                `''${common(st)}Files located for the change: ''${pathsOf(st).join(", ") || "none"}\nLocalize notes:\n''${st.localized ?? ""}\nReply exactly, nothing else:\nAPPROACH: <one paragraph>\nDIFF: <estimated changed non-test lines, a number>\nWHY: <one line>`,
+            });
+            if (st.rival === undefined) tasks.push(rival());
+            if (!st.experts)
+              tasks.push({
+                role: "psychologist",
+                agent: "psychologist",
+                task: `Identify the experts who own the touched code (git log and blame of the paths) and predict what they expect from this change: strategy, structure, naming, error handling, tests. Expert profiles file: ''${join(projDir(st), "experts.md")}, reuse it if it exists, otherwise write it.\nRepository: ''${st.root}\nTask: ''${st.task}\nTouched paths: ''${pathsOf(st).join(", ") || "none"}\nReply exactly, at most 12 lines, nothing else:\nEXPERT: <name> - <one line profile>\n- <concrete expectation of that expert>`,
+              });
+            for (const idea of st.ideas) if (tasks.length < 4) tasks.push(rival(idea));
+            return tasks;
+          };
+
+          const validate = (st: State, doc: string) => {
+            const secs = sectionsOf(doc);
+            const errs: string[] = [];
+            for (const [name] of SECTIONS) if ((secs[name] ?? "").trim().length < 15) errs.push(`section ''${name === "why" ? "Why this is the right one" : name === "rejected" ? "Rejected alternatives" : name === "tests" ? "Test strategy" : name === "objections" ? "Anticipated objections" : name[0].toUpperCase() + name.slice(1)} is missing or empty`);
+            if (errs.length) return errs;
+            if (estimateOf(secs.approach) === undefined) errs.push("Approach needs a line `Estimated diff: <N> lines`");
+            const alts = bullets(secs.rejected);
+            if (alts.length < 2) errs.push("Rejected alternatives needs at least 2 bullets");
+            if (!alts.some((a) => /minimal/i.test(a))) errs.push("Rejected alternatives must include `minimal change`");
+            if (!alts.some((a) => /reuse|existing code/i.test(a))) errs.push("Rejected alternatives must include `reuse existing code`");
+            for (const a of alts) if (!/(because|since|:|—|–| - )\s*\S.{19,}/i.test(a)) errs.push(`give a concrete reason for the alternative "''${head(a, 50)}"`);
+            for (const [name, re] of IMPACT) if (!re.test(secs.impact)) errs.push(`Impact must cover ''${name} (write none if nothing changes)`);
+            (st.criteria ?? []).forEach((_, i) => {
+              if (!new RegExp(`\\bC''${i + 1}\\b`).test(secs.tests)) errs.push(`Test strategy must map C''${i + 1}`);
+            });
+            const obj = bullets(secs.objections);
+            if (obj.length < 2 || !obj.some((o) => /tester|qa\b/i.test(o)) || !obj.some((o) => /teammate|daily|colleague|team/i.test(o))) errs.push("Anticipated objections needs bullets for a tester and a teammate at the daily, each with your answer");
+            for (const i of openItems(st, ["constraint", "arch", "rival", "expect"])) {
+              const a = answerOf(doc, i.id);
+              if (i.kind === "rival" ? !/^adopt\b/i.test(a) && a.length < 40 : i.kind === "expect" ? !/^adopt\b/i.test(a) && !/^decline\b.{15,}/i.test(a) : a.length < 30)
+                errs.push(`answer ''${i.id} on its own line: ''${i.kind === "rival" ? "`adopt` or a concrete refutation of at least 40 chars" : i.kind === "expect" ? "`adopt <how>` or `decline <why>`" : "at least 30 chars on how the design handles it"}`);
+            }
+            for (const i of openItems(st, ["scenario"])) if (!new RegExp(`\\b''${i.id}\\b`).test(secs.tests)) errs.push(`Test strategy must cover ''${i.id}`);
+            if (openItems(st, ["arch"]).length && st.design) {
+              const o = sectionsOf(st.design);
+              const flat = (x?: string) => (x ?? "").replace(/\s+/g, " ").trim();
+              if (flat(o.approach) === flat(secs.approach) && flat(o.impact) === flat(secs.impact)) errs.push("rework, not patch: [arch] objections need a changed Approach or Impact, not only answers");
+            }
+            return errs;
+          };
+
+          const designCheck = async (st: State, doc: string, ctx: ExtensionToolContext, signal?: AbortSignal): Promise<Check> => {
+            const errs = validate(st, doc);
+            if (errs.length) return { ok: false, why: `The design doc is incomplete:\n- ''${errs.join("\n- ")}` };
+            for (const i of openItems(st, ["constraint", "arch", "rival", "expect", "scenario"])) i.open = false;
+            st.design = doc.slice(0, 8000);
+            st.estimate = estimateOf(sectionsOf(doc).approach);
+            st.round++;
+            const tasks = designTasks(st, st.design);
+            const jobs = await batch(st, ctx, tasks.map(({ agent, task }) => ({ agent, task })), `design''${st.round}`, signal);
+            if (!jobs) return { ok: true, status: "skipped", note: "Design agents unavailable, design accepted unchecked." };
+            const fresh: string[] = [];
+            let block = false;
+            jobs.forEach((j, n) => {
+              const t = tasks[n];
+              if (!j.ok) return fact(st, "subagent", `''${t.role} unavailable in design round ''${st.round}: ''${j.error ?? "error"}`);
+              const a = j.answer ?? "";
+              if (t.role === "critic") {
+                const found = tagged(a, "critic");
+                for (const f of found) fresh.push(addItem(st, f.tag, "critic", f.text));
+                if (blocks(a) && !found.some((f) => f.tag === "arch")) fresh.push(addItem(st, "arch", "critic", `BLOCK: ''${head(a.replace(/^\s*VERDICT:.*$/im, ""), 300)}`));
+                block = blocks(a) || found.some((f) => f.tag === "arch");
+              } else if (t.role === "tester") {
+                for (const l of bullets(a).filter((x) => /^MISSING\b/i.test(x))) fresh.push(addItem(st, "scenario", "tester", l.replace(/^MISSING:?\s*/i, "")));
+              } else if (t.role === "rival") {
+                const diff = Number(a.match(/DIFF:\D*(\d+)/i)?.[1] ?? NaN);
+                const approach = a.match(/APPROACH:\s*([\s\S]*?)(?:\n\s*DIFF:|$)/i)?.[1] ?? a;
+                if (t.idea) {
+                  st.ideas = st.ideas.filter((x) => x !== t.idea);
+                  fresh.push(addItem(st, "rival", "idea", `idea "''${head(t.idea, 120)}", estimated ''${Number.isNaN(diff) ? "?" : diff} lines vs yours ''${st.estimate}: ''${head(approach, 250)}`));
+                } else {
+                  st.rival = Number.isNaN(diff) ? Infinity : diff;
+                  if (diff < (st.estimate ?? 0)) fresh.push(addItem(st, "rival", "rival", `rival approach with ''${diff} estimated lines vs yours ''${st.estimate}: ''${head(approach, 300)}`));
+                }
+              } else if (t.role === "psychologist") {
+                st.experts = true;
+                for (const l of bullets(a).slice(0, 6)) addItem(st, "expect", "psychologist", l);
+              }
+            });
+            const rejecting = st.items.filter((i) => i.open && fresh.includes(i.id) && ["arch", "scenario", "rival"].includes(i.kind));
+            const locals = openItems(st, ["local"]);
+            const expects = openItems(st, ["expect"]);
+            if (block || rejecting.length) {
+              fact(st, "design", `design round ''${st.round} rejected: ''${rejecting.map((i) => `''${i.id} ''${head(i.text, 60)}`).join("; ")}`);
+              emit({ id: `''${st.node}:round:''${st.round}`, parents: [`''${st.node}:join:design''${st.round}`], kind: "step", label: `design round ''${st.round} rejected`, run: st.run, phase: "design", cwd: st.root, status: "fail" });
+              if (st.round >= MAX_ROUNDS) return { ok: true, status: "fail", note: `Design not accepted after ''${MAX_ROUNDS} rounds. ''${st.checked ? "The unresolved items stay in the facts, the user already decided at the checkpoint." : "The unresolved items go to the user at the checkpoint."}` };
+              save();
+              return { ok: true, wait: `Design rejected (round ''${st.round}/''${MAX_ROUNDS}). Rework the approach (not a patch) and submit the whole design doc again with advance_phase.''${itemsText(st)}` };
+            }
+            return {
+              ok: true,
+              note:
+                `Design accepted in round ''${st.round}.` +
+                (locals.length ? `\nCritic notes for the plan:\n''${locals.map((i) => `''${i.id} ''${i.text}`).join("\n")}` : "") +
+                (expects.length ? `\nExpert expectations to answer in the plan:\n''${expects.map((i) => `''${i.id} ''${i.text}`).join("\n")}` : ""),
+            };
+          };
+
+          const screen = (st: State) => {
+            const secs = sectionsOf(st.design ?? "");
+            const open = openItems(st, ["arch", "scenario", "rival"]);
+            const mcp = st.used.filter((u) => u.startsWith("mcp ")).map((u) => u.slice(4));
+            const skills = st.used.filter((u) => u.startsWith("skill ")).map((u) => u.slice(6));
+            return [
+              `CHECKPOINT ''${st.issue ?? head(st.task, 80)}`,
+              listCriteria(st.criteria).trim() || "Acceptance criteria: none",
+              `Approach: ''${head(secs.approach ?? "none", 600)}`,
+              `Rejected alternatives:\n''${bullets(secs.rejected ?? "").map((a) => `- ''${head(a, 200)}`).join("\n") || "none"}`,
+              `Repro: ''${st.repros.join(" ; ") || (st.skip ? `skipped: ''${st.skip}` : "none")}`,
+              `Skills: ''${skills.join(", ") || "none"} | MCP: ''${mcp.join(", ") || "none"}`,
+              `Unresolved: ''${open.length ? "\n" + open.map((i) => `''${i.id} (''${i.src}) ''${head(i.text, 200)}`).join("\n") : "none"}`,
+              ...(st.questions ? [`Decisions (reply yes to accept every recommendation, or answer by Q<n>):\n''${st.questions}`] : []),
+            ].join("\n");
+          };
+
+          const skipCheckpoint = (st: State): Check => {
+            for (const i of openItems(st, ["arch", "scenario", "rival"])) {
+              i.open = false;
+              fact(st, "design", `design went on after the checkpoint with ''${i.id} unresolved: ''${head(i.text, 120)}`);
+            }
+            return { ok: true, status: "skipped", note: "The user already decided at this run's checkpoint, checkpoint skipped." };
+          };
+
+          const runGates = async (ctx: ExtensionToolContext, signal?: AbortSignal) => {
+            if (!ctx.tools.some((t) => t.name === "run_gates")) return { ok: true, text: "run_gates is not installed, gates skipped." };
+            const g = await ctx.executeTool("run_gates", {}, { signal });
+            const text = g.result.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
+            const gd = g.result.details as { ok?: boolean } | undefined;
+            return g.isError || gd?.ok !== true ? { ok: false, text: `Gates failed:\n''${tail(text, 30)}` } : { ok: true, text: "Gates ok." };
+          };
+
+          const runRepros = async (st: State, signal?: AbortSignal) => {
+            for (const c of st.repros) {
+              const r = await sh(c, st.root, 600000, signal);
+              if (r.code !== 0) return `The repro command still fails: ''${c}\n''${tail(r.out, 20)}`;
+            }
+            return undefined;
+          };
+
+          const hate = async (st: State, summary: string, signal?: AbortSignal): Promise<Check | undefined> => {
+            for (const m of summary.matchAll(/^[\s*_-]*([DN]\d+)\b[*_]*\s*[:.)-]\s*(\S.{9,})$/gm)) st.answers[m[1]] = m[2].trim();
+            const src = (await changed(st)).filter((f) => !isTest(f));
+            const size = await diffLines(st, src);
+            if (st.planEstimate && size > 2 * st.planEstimate && size > 20) {
+              const id = addItem(st, "constraint", "size", `the diff grew to ''${size} non-test lines, more than 2x the plan estimate of ''${st.planEstimate}: find a smaller approach or justify the size`);
+              fact(st, "design-miss", `design missed the size: ''${size} diff lines vs plan estimate ''${st.planEstimate}`);
+              gate(st, "size", "fail", `''${size} lines vs estimate ''${st.planEstimate}`);
+              st.planEstimate = undefined;
+              return { ok: true, status: "fail", next: "design", note: `The diff is ''${size} non-test lines, more than 2x the plan estimate. Back to design with ''${id}.` };
+            }
+            const fresh = await untracked(st, src);
+            const whats = fresh.map((f) => `new file ''${f}`);
+            for (const d of new Set(fresh.filter((f) => f.endsWith(".go")).map((f) => dirname(f)))) {
+              const known = (await sh(`git ls-files -- ''${q(d)}`, st.root, 30000, signal)).stdout.split("\n").filter((f) => f.endsWith(".go") && dirname(f) === d);
+              if (!known.length) whats.push(`new package ''${d}`);
+            }
+            if (src.includes("go.mod")) {
+              const g = (await sh("git diff HEAD -U0 -- go.mod", st.root, 30000, signal)).stdout;
+              const mods = (sign: string) => new Set([...g.matchAll(new RegExp(`^\\''${sign}\\s*(?:require\\s+)?([\\w.-]+\\.[a-z]{2,}/\\S+)\\s+v\\d`, "gm"))].map((m) => m[1]));
+              const gone = mods("-");
+              for (const m of mods("+")) if (!gone.has(m)) whats.push(`new go.mod dependency ''${m}`);
+            }
+            for (const w of whats) if (!st.news.some((n) => n.what === w)) st.news.push({ id: `N''${st.news.length + 1}`, what: w });
+            const goSrc = src.filter((f) => f.endsWith(".go") && existsSync(join(st.root, f)));
+            if (goSrc.length) {
+              const freshGo = new Set(fresh);
+              const tracked = goSrc.filter((f) => !freshGo.has(f));
+              const added = [
+                ...(tracked.length ? (await sh(`git diff HEAD -U0 -- ''${tracked.map(q).join(" ")}`, st.root, 30000, signal)).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")).map((l) => l.slice(1)) : []),
+                ...goSrc.filter((f) => freshGo.has(f)).flatMap((f) => readFileSync(join(st.root, f), "utf8").split("\n")),
+              ];
+              const decl = /^func\s+(?:\(([^)]*)\)\s*)?([A-Z]\w*)\s*(?:\[[^\]]*\])?\(([^)]*)\)\s*([^{]*)|^type\s+([A-Z]\w*)\s/;
+              const existing = (await sh(`git grep -n -E '^(func (\\([^)]*\\) ?)?[A-Z][A-Za-z0-9_]*(\\[[^]]*\\])?\\(|type [A-Z][A-Za-z0-9_]* )' HEAD -- '*.go' ':!:*_test.go' | head -20000`, st.root, 60000, signal)).stdout
+                .split("\n")
+                .map((l) => l.match(/^HEAD:([^:]+):(\d+):(.*)$/))
+                .filter((m): m is RegExpMatchArray => !!m)
+                .map((m) => {
+                  const d = m[3].match(decl);
+                  return d ? { path: m[1], line: m[2], name: d[2] ?? d[5], sig: d[2] ? sigOf(d[3], d[4]) : "" } : undefined;
+                })
+                .filter((x) => x !== undefined);
+              for (const l of added) {
+                const d = l.match(decl);
+                const name = d && (d[2] ?? d[5]);
+                if (!d || !name || st.dups.some((x) => x.name === name) || existing.some((e) => e.name === name && goSrc.includes(e.path))) continue;
+                const sig = d[2] ? sigOf(d[3], d[4]) : "";
+                const mine = tokens(name);
+                const best = existing
+                  .map((e) => {
+                    const other = tokens(e.name);
+                    const shared = mine.filter((t) => other.includes(t)).length;
+                    const jac = shared / new Set([...mine, ...other]).size;
+                    const score = e.name === name ? 3 : shared >= 2 && jac >= 0.5 ? 2 : shared >= 1 && sig && sig === e.sig ? 1 : 0;
+                    return { e, score };
+                  })
+                  .filter((x) => x.score > 0)
+                  .sort((a, b) => b.score - a.score)[0];
+                if (best && st.dups.length < 8) st.dups.push({ id: `D''${st.dups.length + 1}`, name, of: `''${best.e.name} at ''${best.e.path}:''${best.e.line}` });
+              }
+            }
+            const open = [...st.dups.map((d) => [d.id, `possible duplicate: new ''${d.name} vs existing ''${d.of}`]), ...st.news.map((n) => [n.id, n.what])].filter(([id]) => !st.answers[id]);
+            gate(st, "new-code", open.length ? "fail" : "ok", open.map(([id, t]) => `''${id} ''${t}`).join("; "));
+            if (open.length) return { ok: false, why: `Answer each of these in the summary, one line each:\n''${open.map(([id, t]) => `''${id} ''${t}`).join("\n")}\nWrite \`D1: <why it is not a duplicate, or reuse the existing one instead>\` and \`N1: <why the new file, package or dependency is needed>\`.` };
+            return undefined;
+          };
+
+          const stress = async (st: State, signal?: AbortSignal): Promise<string | undefined> => {
+            if (!existsSync(join(st.root, "go.mod"))) return undefined;
+            const files = (await changed(st)).filter((f) => f.endsWith(".go") && existsSync(join(st.root, f)));
+            const fresh = new Set(await untracked(st, files));
+            const tests = new Map<string, Set<string>>();
+            for (const f of files.filter((x) => x.endsWith("_test.go"))) {
+              const text = fresh.has(f) ? readFileSync(join(st.root, f), "utf8") : (await sh(`git diff HEAD -U0 -- ''${q(f)}`, st.root, 30000, signal)).stdout;
+              const re = fresh.has(f) ? /^func (Test\w+)\(/gm : /^(?:\+func |@@[^@]*@@ func )(Test\w+)\(/gm;
+              for (const m of text.matchAll(re)) tests.set(dirname(f), (tests.get(dirname(f)) ?? new Set()).add(m[1]));
+            }
+            const pkgs = [...new Set(files.filter((f) => !isTest(f)).map((f) => "./" + dirname(f)))];
+            const cmds = [...[...tests].map(([d, names]) => `go test -race -count=3 -shuffle=on -run ''${q(`^(''${[...names].join("|")})$`)} ''${q("./" + d)}`), ...(pkgs.length ? [`go test -race -count=1 ''${pkgs.map(q).join(" ")}`] : [])];
+            for (let cmd of cmds) {
+              let r = await sh(cmd, st.root, 900000, signal);
+              if (r.code !== 0 && /requires cgo|-race is not supported|race detector/i.test(r.out)) {
+                fact(st, "harness", `go test -race unavailable here: ''${head(r.out.match(/.*(requires cgo|not supported|race detector).*/i)?.[0] ?? "", 120)}`);
+                cmd = cmd.replace("-race ", "");
+                r = await sh(cmd, st.root, 900000, signal);
+              }
+              gate(st, cmd.includes("-shuffle") ? "stress" : "race", r.code === 0 ? "ok" : "fail", cmd);
+              if (r.code !== 0) {
+                fact(st, "hate", `unstable or racy tests: ''${head(cmd, 120)}`, true);
+                return `New or changed tests are not stable or race free (''${cmd}):\n''${tail(r.out.split("\n").filter((l) => /^(--- FAIL|FAIL|panic:|WARNING: DATA RACE|\s+\S+\.go:\d+)/.test(l)).join("\n") || r.out, 30)}`;
+              }
+            }
+            return undefined;
+          };
+
+          const mutate = async (st: State, signal?: AbortSignal): Promise<string | undefined> => {
+            if (!existsSync(join(st.root, "go.mod"))) return undefined;
+            if ((await sh("command -v gremlins", st.root, 10000, signal)).code !== 0) {
+              if (!st.mutation) fact(st, "harness", "gremlins is not on PATH, mutation testing skipped");
+              st.mutation = "skip";
+              gate(st, "mutation", "skipped", "gremlins not on PATH");
+              return undefined;
+            }
+            const files = (await changed(st)).filter((f) => f.endsWith(".go") && !isTest(f) && existsSync(join(st.root, f)));
+            const fresh = new Set(await untracked(st, files));
+            const span = new Map<string, [number, number][]>();
+            for (const f of files) span.set(f, fresh.has(f) ? [[1, Infinity]] : ranges((await sh(`git diff HEAD -U0 -- ''${q(f)}`, st.root, 30000, signal)).stdout));
+            const lived: string[] = [];
+            for (const d of new Set(files.map((f) => dirname(f)))) {
+              const r = await sh(`gremlins unleash ''${q("./" + d)}`, st.root, 1800000, signal);
+              for (const m of r.out.matchAll(/\bLIVED\s+(\S+)\s+at\s+(\S+?):(\d+):(\d+)/g)) {
+                const f = files.find((x) => x === m[2] || x.endsWith("/" + m[2]) || m[2].endsWith("/" + x) || join(d, m[2]) === x);
+                const n = Number(m[3]);
+                if (f && span.get(f)!.some(([a, b]) => n >= a && n <= b)) lived.push(`LIVED ''${m[1]} at ''${f}:''${n}:''${m[4]}: ''${head(readFileSync(join(st.root, f), "utf8").split("\n")[n - 1] ?? "", 120)}`);
+              }
+            }
+            st.mutation = lived.length ? "fail" : "ok";
+            gate(st, "mutation", lived.length ? "fail" : "ok", lived.join("; "));
+            if (!lived.length) return undefined;
+            fact(st, "hate", `''${lived.length} mutant(s) survived in changed code: ''${head(lived[0], 120)}`, true);
+            return `Mutation testing: ''${lived.length} mutant(s) survived in changed code:\n''${lived.slice(0, 8).join("\n")}\nAdd or strengthen a test so each mutant fails, then call advance_phase again.`;
+          };
+
+          const reviewDir = (st: State) => join(projDir(st), "review", st.run);
+
+          const keep = async (st: State) => {
+            const dir = reviewDir(st);
+            rmSync(dir, { recursive: true, force: true });
+            const files = await changed(st);
+            for (const f of files)
+              if (existsSync(join(st.root, f))) {
+                mkdirSync(dirname(join(dir, f)), { recursive: true });
+                writeFileSync(join(dir, f), readFileSync(join(st.root, f)));
+              }
+            st.reviewFiles = files;
+          };
+
+          const since = async (st: State, stat: boolean) => {
+            const dir = reviewDir(st);
+            const files = [...new Set([...(st.reviewFiles ?? []), ...(await changed(st))])];
+            let n = 0;
+            let text = "";
+            for (const f of files) {
+              const a = existsSync(join(dir, f)) ? join(dir, f) : "/dev/null";
+              const b = existsSync(join(st.root, f)) ? join(st.root, f) : "/dev/null";
+              const r = await sh(`git diff --no-index ''${stat ? "--numstat" : "-U3"} -- ''${q(a)} ''${q(b)}`, st.root, 30000);
+              if (stat) n += r.stdout.split("\n").reduce((x, l) => x + l.split("\t").slice(0, 2).reduce((y, v) => y + (Number(v) || 0), 0), 0);
+              else text += r.stdout.split(dir.slice(1) + "/").join("").split(st.root.slice(1) + "/").join("");
+            }
+            return { n, text: text.slice(0, 12000) };
+          };
+
+          const reviewRun = async (st: State, ctx: ExtensionToolContext, diff: string, signal?: AbortSignal): Promise<Check> => {
+            const files = await changed(st);
+            st.touched = files;
+            const skills = skillPaths(st, files);
+            const base = common(st) + (skills.length ? `Project skills for this kind of change, read them: ''${skills.join(", ")}\n` : "") + `''${st.localRound ? "Changed hunks since the last review" : "Diff"}:\n\`\`\`diff\n''${diff}\n\`\`\`\n`;
+            const jobs = await batch(
+              st,
+              ctx,
+              [
+                { agent: "gopnik", task: `Review the Spec axis of code-review: criteria missing or partial, scope creep, looks implemented but wrong, each quoting its criterion C<n>. Then go through this diff line by line and attack it: bugs, wrong edge cases, missing error and nil handling, races, broken callers, hidden contract changes. Read callers and surrounding code to confirm each finding.\n''${base}Reply exactly, at most 12 lines, nothing else:\nVERDICT: PASS or BLOCK\n- [arch] path:line: <problem that needs a different approach>\n- [local] path:line: <problem fixable in place>` },
+                { agent: "psychologist", task: `Review the Standards axis of code-review: this diff as the experts who own this code would, style and business logic; a documented repo standard overrides their habits and the smell baseline. Expert profiles: ''${join(projDir(st), "experts.md")}, reuse them, otherwise identify the experts from git log and blame.\n''${base}Reply exactly, at most 10 lines, nothing else, or NONE if they would accept it as is:\n- [arch] path:line: <what they would reject in the approach>\n- [local] path:line: <what they would change in place>` },
+              ],
+              `review''${st.localRound}`,
+              signal,
+            );
+            if (!jobs || !jobs.some((j) => j.ok)) return { ok: true, status: "skipped", note: "Review agents unavailable, review skipped." };
+            const g = jobs[0];
+            const found = [...(g.ok ? tagged(g.answer ?? "", "gopnik") : []), ...(jobs[1].ok && !/^\s*NONE\b/i.test(jobs[1].answer ?? "") ? tagged(jobs[1].answer ?? "", "psychologist") : [])];
+            const arch = found.filter((f) => f.tag === "arch");
+            if ((g.ok && blocks(g.answer ?? "")) || arch.length) {
+              const list = arch.length ? arch : [{ tag: "arch" as const, src: "gopnik", text: `BLOCK: ''${head((g.answer ?? "").replace(/^\s*VERDICT:.*$/im, ""), 300)}` }];
+              const ids = list.map((f) => {
+                fact(st, "design-miss", `design missed: review [arch] ''${f.src}: ''${head(f.text, 150)}`);
+                return addItem(st, "constraint", `review ''${f.src}`, f.text);
+              });
+              st.fixing = false;
+              return { ok: true, status: "fail", next: "design", note: `Review found [arch] problems, back to design. They are hard constraints now: ''${ids.join(", ")}.` };
+            }
+            if (!found.length) return { ok: true, note: "Review found nothing." };
+            st.findings = found;
+            st.fixing = true;
+            await keep(st);
+            save();
+            return { ok: true, wait: `Phase review, round ''${st.localRound + 1}/''${MAX_LOCAL}. Findings:\n''${found.map((f, i) => `F''${i + 1} (''${f.src}) ''${f.text}`).join("\n")}\n''${GUIDE.review}` };
+          };
+
+          const reviewCheck = async (st: State, summary: string, ctx: ExtensionToolContext, signal?: AbortSignal): Promise<Check> => {
+            const found = st.findings ?? [];
+            if (!st.fixing || !found.length) return { ok: true };
+            const how = (i: number) => summary.match(new RegExp(`\\bF''${i + 1}\\b\\s*[:.)-]?\\s*(fix|dismiss)\\b([^\\n]*)`, "i"));
+            const missing = found.map((_, i) => (how(i) ? "" : `F''${i + 1}`)).filter(Boolean);
+            if (missing.length) return { ok: false, why: `Mark each finding: ''${missing.join(", ")} need a line \`F<n>: fix <what>\` or \`F<n>: dismiss <why>\`.` };
+            st.resolution = [st.resolution, summary.slice(0, 1500)].filter(Boolean).join("\n");
+            found.forEach((f, i) => fact(st, "review", `review finding (''${f.src}) ''${head(f.text, 100)} -> ''${head(how(i)![0], 100)}`, /fix/i.test(how(i)![1])));
+            const fixes = found.filter((_, i) => /fix/i.test(how(i)![1])).length;
+            const churn = (await since(st, true)).n;
+            if (fixes && !churn) return { ok: false, why: "You marked findings as fix but changed nothing since the review. Fix them in place or dismiss them." };
+            if (!churn) {
+              st.fixing = false;
+              return { ok: true, note: "All findings dismissed." };
+            }
+            if (st.reviewLines && churn > 0.3 * st.reviewLines) {
+              const id = addItem(st, "constraint", "review", `local review fixes changed ''${churn} of ''${st.reviewLines} diff lines, more than 30%: ''${found.map((f) => head(f.text, 80)).join("; ")}`);
+              fact(st, "design-miss", `design missed: local review fixes grew to ''${churn} of ''${st.reviewLines} lines`);
+              st.fixing = false;
+              return { ok: true, status: "fail", next: "design", note: `The review fixes are larger than 30% of the diff, treated as [arch]. Back to design with ''${id}.` };
+            }
+            const g = await runGates(ctx, signal);
+            if (!g.ok) return { ok: false, why: g.text };
+            const rp = await runRepros(st, signal);
+            if (rp) return { ok: false, why: rp };
+            st.localRound++;
+            if (st.localRound >= MAX_LOCAL) {
+              st.fixing = false;
+              fact(st, "review", `review stopped after ''${MAX_LOCAL} local rounds, the last fixes were not re-reviewed`);
+              return { ok: true, note: `''${g.text} Review closed after ''${MAX_LOCAL} local rounds.` };
+            }
+            return reviewRun(st, ctx, (await since(st, false)).text, signal);
+          };
+
+          const check = async (st: State, summary: string, evidence: string | undefined, ctx: ExtensionToolContext, signal?: AbortSignal): Promise<Check> => {
+            const ev = (evidence ?? "").trim();
+            if (!["verify", "checkpoint", "review"].includes(st.phase)) {
+              const open = await unmet(st, summary, ev, signal);
+              if (open) return { ok: false, why: open };
+            }
+            switch (st.phase) {
+              case "triage": {
+                const kind = summary.match(/\b(bug|feature|refactor|docs)\b/i)?.[1]?.toLowerCase();
+                if (!kind) return { ok: false, why: "Start the summary with the task type: bug, feature, refactor or docs." };
+                if (st.issue && !summary.toUpperCase().includes(st.issue)) return { ok: false, why: `Read issue ''${st.issue} with the youtrack MCP tools, then name ''${st.issue} in the summary and restate its expected behavior.` };
+                if (st.issue && summary.replace(/\s+/g, " ").trim().length < 60) return { ok: false, why: `Restate the expected behavior from ''${st.issue} in 1-3 lines.` };
+                const lines = summary.split("\n");
+                const at = lines.findIndex((l) => /acceptance criteria/i.test(l));
+                const criteria: string[] = [];
+                for (const l of at < 0 ? [] : lines.slice(at + 1)) {
+                  const m = l.match(/^\s*(?:[-*]\s*)?(?:C?\d+[.):])\s+(\S.*)$/);
+                  if (m) criteria.push(head(m[1], 200));
+                  else if (l.trim() && criteria.length) break;
+                }
+                if (!criteria.length) return { ok: false, why: "Add a line `Acceptance criteria:` followed by a numbered list `1. ...`, at least one checkable criterion from the task." };
+                st.criteria = [...criteria.slice(0, 8), ...(st.criteria ?? [])];
+                st.kind = kind;
+                st.brief = summary.slice(0, 1500);
+                return { ok: true, note: `Criteria stored:''${listCriteria(st.criteria)}` };
+              }
+              case "localize": {
+                const files = [
+                  ...new Set(
+                    summary
+                      .split(/[\s,;()`'"<>\[\]]+/)
+                      .map((t) => t.replace(/(:\d+)+$/, "").replace(/[.:]+$/, ""))
+                      .filter((t) => /[./]/.test(t))
+                      .map((t) => (isAbsolute(t) ? t : resolve(st.root, t)))
+                      .filter((p) => {
+                        try {
+                          return statSync(p).isFile();
+                        } catch {
+                          return false;
+                        }
+                      }),
+                  ),
+                ];
+                if (!files.length) return { ok: false, why: `The summary names no existing file. Write repo-relative paths, for example internal/foo/bar.go, relative to ''${st.root}.` };
+                st.files = files;
+                st.localized = summary.slice(0, 1500);
+                return { ok: true, note: `Located: ''${files.map((f) => f.replace(st.root + "/", "")).join(", ")}` };
+              }
+              case "reproduce": {
+                const skip = ev.match(/^skip:\s*(.+)/is)?.[1]?.trim();
+                if (skip) {
+                  if (st.kind !== "refactor" && st.kind !== "docs") return { ok: false, why: `Only refactor or docs tasks may skip reproduce, this task is a ''${st.kind}. Write a failing test.` };
+                  if (skip.length < 10) return { ok: false, why: "Give a real reason why no behavior changes after `skip:`." };
+                  st.skip = skip;
+                  return { ok: true, status: "skipped", note: `Reproduce skipped: ''${skip}` };
+                }
+                if (!TEST_CMD.test(ev)) return { ok: false, why: "Pass evidence: the exact test command, for example `go test ./pkg/x -run TestY -count=1`." };
+                const hyps = summary.split("\n").filter((l) => /^\s*(\d+[.)]|[-*])\s+.*\bif\b.+\bthen\b/i.test(l));
+                if (st.kind === "bug" && !st.hypotheses && (hyps.length < 3 || hyps.length > 5))
+                  return { ok: false, why: `Rank 3-5 falsifiable hypotheses in the summary (found ''${hyps.length}), one per line: \`1. If <X> is the cause, then <changing Y> makes the test pass\`.` };
+                const r = await sh(ev, st.root, 600000, signal);
+                if (r.code === 0) return { ok: false, why: `The command passes now, so it reproduces nothing. Make the test fail for the expected reason.\n''${tail(r.out, 10)}` };
+                if (r.code === 124) return { ok: false, why: "The command timed out after 10 minutes. Narrow it with -run or a single package." };
+                if (NOT_RUN.test(r.out)) return { ok: false, why: `The command did not run the test.\n''${tail(r.out, 15)}` };
+                if (/\[build failed\]|^# \S+/m.test(r.out)) {
+                  const near = new Set([...(st.files ?? []), ...(await changed(st)).map((f) => join(st.root, f))].map((f) => dirname(f)));
+                  const errs = [...r.out.matchAll(/^(?:\.\/)?(\S+\.go):\d+(?::\d+)?:/gm)].map((m) => dirname(resolve(st.root, m[1])));
+                  if (!errs.some((d) => near.has(d))) return { ok: false, why: `Build fails in code you did not localize or touch. Fix the command or the test setup.\n''${tail(r.out, 15)}` };
+                }
+                st.repros = [...new Set([...st.repros, ev])];
+                if (hyps.length >= 3) st.hypotheses = hyps.slice(0, 5).map((l) => head(l, 200)).join("\n");
+                return { ok: true, note: `Repro fails as expected:\n''${tail(r.out, 8, 800)}` };
+              }
+              case "design":
+                return designCheck(st, summary, ctx, signal);
+              case "checkpoint": {
+                if (!st.decision && st.questions) return { ok: true, wait: `The pipeline waits for the user's decision.\n''${screen(st)}\nShow this screen to the user and end your turn.` };
+                if (!st.decision) {
+                  const open = await unmet(st, summary, ev, signal);
+                  if (open) return { ok: false, why: open };
+                  const qs = summary.split(/^(?=[\s*_#>❓-]*Q\d+\b)/m).filter((b) => /^[\s*_#>❓-]*Q\d+\b/.test(b));
+                  if (!qs.length) return { ok: false, why: "Write one round of questions, each `Q<n>: <question worded so that yes accepts your recommendation>` followed by a line `Recommended: <your answer>`." };
+                  if (qs.length > 8) return { ok: false, why: `''${qs.length} questions: ask only the decisions on the frontier, at most 8, and find the facts yourself.` };
+                  const bare = qs.filter((b) => !/recommend|➡/i.test(b)).map((b) => b.match(/Q\d+/)![0]);
+                  if (bare.length) return { ok: false, why: `Give your recommended answer for ''${bare.join(", ")} on a line \`Recommended: <answer>\`.` };
+                  st.questions = qs.map((b) => b.trim()).join("\n").slice(0, 3000);
+                  return { ok: true, wait: `Phase checkpoint.\n''${screen(st)}\nShow this screen to the user as is and end your turn now. Do not call tools. The user's next message is the decision.` };
+                }
+                const route = summary.match(/route:\s*(design|plan)\b/i)?.[1]?.toLowerCase();
+                if (!route) return { ok: false, why: `User decision: "''${head(st.decision, 300)}". A plain yes accepts every recommended answer. Call advance_phase with summary \`route: design\` if it changes the approach or the acceptance criteria, else \`route: plan\`, plus one line why.` };
+                const d = st.decision;
+                st.decision = undefined;
+                st.checked = true;
+                if (route === "design") {
+                  const id = addItem(st, "constraint", "user", d);
+                  fact(st, "design-miss", `design missed the user's checkpoint decision: ''${head(d, 150)}`);
+                  return { ok: true, next: "design", note: `Back to design with the user's decision as hard constraint ''${id}.` };
+                }
+                for (const i of openItems(st, ["arch", "scenario", "rival"])) {
+                  i.open = false;
+                  fact(st, "design", `user accepted the design with ''${i.id} unresolved: ''${head(i.text, 120)}`);
+                }
+                fact(st, "checkpoint", `user decision: ''${head(d, 150)}`, true);
+                return { ok: true, note: `User decision: ''${head(d, 200)}` };
+              }
+              case "plan": {
+                const steps = summary.split("\n").filter((l) => /^\s*\d+[.)]\s+\S/.test(l));
+                if (!steps.length) return { ok: false, why: "Write the plan as a numbered list, one step per line: `1. ...`." };
+                if (steps.length > 5) return { ok: false, why: `The plan has ''${steps.length} steps, merge them into at most 5.` };
+                const loose = steps.filter((l) => !/blocked by/i.test(l)).map((l) => head(l, 40));
+                if (loose.length) return { ok: false, why: `Give each slice its blocking edges, \`blocked by: <n or none>\` on its line: ''${loose.join("; ")}.` };
+                if (pathsOf(st).some((f) => /\.proto$|swagger|openapi|migrat/i.test(f)) && !(/expand/i.test(summary) && /contract/i.test(summary)))
+                  return { ok: false, why: "The change touches proto, swagger or migrations: sequence it expand–contract, slices that expand (add the new form), migrate the callers and contract (remove the old form)." };
+                const est = estimateOf(summary);
+                if (est === undefined || est < 1) return { ok: false, why: "Add a line `Estimated diff: <N> lines` with the expected non-test diff size." };
+                const open = openItems(st, ["expect"]).filter((i) => {
+                  const a = answerOf(summary, i.id);
+                  return !/^adopt\b/i.test(a) && !/^decline\b.{15,}/i.test(a);
+                });
+                if (open.length) return { ok: false, why: `Answer each expert expectation: ''${open.map((i) => `''${i.id} ''${head(i.text, 100)}`).join("; ")}. Write \`E1: adopt <how>\` or \`E1: decline <why>\`.` };
+                for (const i of openItems(st, ["local"])) i.open = false;
+                for (const i of openItems(st, ["expect"])) {
+                  i.open = false;
+                  fact(st, "design", `''${i.id} ''${head(i.text, 80)} -> ''${head(answerOf(summary, i.id), 80)}`, true);
+                }
+                st.planEstimate = est;
+                st.plan = summary.slice(0, 1500);
+                return { ok: true };
+              }
+              case "implement": {
+                const files = (await changed(st, st.mark ?? st.snapshot)).filter((f) => !isTest(f));
+                if (!files.length) return { ok: false, why: "No non-test file changed in this phase. Make the change from the plan first." };
+                const h = await hate(st, summary, signal);
+                if (h) return h;
+                return { ok: true, note: `Changed: ''${files.join(", ")}` };
+              }
+              case "verify": {
+                const missing: string[] = [];
+                for (const [i] of (st.criteria ?? []).entries()) {
+                  const id = `C''${i + 1}`;
+                  const m = ev.match(new RegExp(`^\\s*[-*]?\\s*''${id}\\s*[:=-]\\s*(.+)$`, "im"))?.[1]?.trim() ?? "";
+                  const loc = m.match(/^(\S+?):(\d+)\b\s*(.*)$/);
+                  const test = m.match(/^`?((?:Test|Benchmark|Example|Fuzz|test_)\w*)`?/)?.[1];
+                  if (loc) {
+                    if (!existsSync(isAbsolute(loc[1]) ? loc[1] : join(st.root, loc[1]))) missing.push(`''${id} (no file ''${loc[1]})`);
+                    else if (loc[3].replace(/^(because|:|-)\s*/i, "").length < 10) missing.push(`''${id} (justify ''${loc[1]}:''${loc[2]} in one line)`);
+                  } else if (test) {
+                    if ((await sh(`git grep --untracked -qw ''${q(test)}`, st.root, 30000, signal)).code !== 0) missing.push(`''${id} (test ''${test} not found)`);
+                  } else missing.push(id);
+                }
+                if (missing.length) return { ok: false, why: `Evidence must map every acceptance criterion to a test or path:line, one per line (\`C1: TestName\` or \`C1: path/file.go:40 because ...\`). Missing or invalid: ''${missing.join(", ")}.` };
+                const h = await hate(st, summary, signal);
+                if (h) return h;
+                const dbg = [
+                  ...(await sh("git diff HEAD -U0", st.root, 30000, signal)).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")),
+                  ...(await sh("git ls-files --others --exclude-standard -z | xargs -0r grep -HnF '[DEBUG-' --", st.root, 30000, signal)).stdout.split("\n"),
+                ].filter((l) => /\[DEBUG-\w+\]/.test(l));
+                if (dbg.length) return { ok: false, why: `Remove the tagged debug logs before verify:\n''${dbg.slice(0, 8).map((l) => head(l, 160)).join("\n")}` };
+                const g = await runGates(ctx, signal);
+                if (!g.ok) return { ok: false, why: g.text };
+                const rp = await runRepros(st, signal);
+                if (rp) return { ok: false, why: rp };
+                const sx = await stress(st, signal);
+                if (sx) return { ok: false, why: sx };
+                const mx = await mutate(st, signal);
+                if (mx) return { ok: false, why: mx };
+                return { ok: true, note: [g.text, st.repros.length ? `Repro passes: ''${st.repros.join(" ; ")}` : "", "Stress and race runs ok.", st.mutation === "skip" ? "Mutation testing skipped (no gremlins)." : st.mutation === "ok" ? "No surviving mutants in changed code." : ""].filter(Boolean).join(" ") };
+              }
+              case "review":
+                return reviewCheck(st, summary, ctx, signal);
+              case "regress": {
+                if (!existsSync(join(st.root, "go.mod"))) return { ok: true, status: "skipped", note: "No go.mod at the repo root, regress skipped." };
+                const pkgs = await goPackages(st, await changed(st), signal);
+                if (!pkgs.length) return { ok: true, status: "skipped", note: "No Go package changed, regress skipped." };
+                const r = await sh(`go test -count=1 ''${pkgs.map(q).join(" ")}`, st.root, 900000, signal);
+                if (r.code === 0) return { ok: true, note: `Regress ok: go test -count=1 on ''${pkgs.length} package(s).` };
+                const failed = [...new Set([...r.out.matchAll(/--- FAIL: (\S+)/g)].map((m) => m[1]))];
+                const listed = ev.match(/^flaky:\s*(.+)/is)?.[1] ?? "";
+                if (flaky && failed.length && failed.every((t) => listed.includes(t))) return { ok: true, note: `Regress ok except flaky: ''${failed.join(", ")}` };
+                const lines = r.out.split("\n").filter((l) => /^(--- FAIL|FAIL|panic:|\S+\.go:\d+)/.test(l));
+                return { ok: false, why: `Regress failed (go test -count=1 ''${head(pkgs.join(" "), 200)}):\n''${tail(lines.join("\n") || r.out, 30)}\nRun the flaky tool on a failing test before you call it unrelated.` };
+              }
+              case "report": {
+                if (!summary.trim()) return { ok: false, why: "Write the final report in the summary." };
+                const gaps = [/^#*\s*summary\b/im.test(summary) ? "" : "## Summary", /^#*\s*evidence\b/im.test(summary) ? "" : "## Evidence", /^#*\s*merge danger\b/im.test(summary) ? "" : "## Merge Danger", /\b(one|two)-way\b/i.test(summary) ? "" : "Door: one-way or two-way", /blast radius/i.test(summary) ? "" : "Blast Radius: <one word>"].filter(Boolean);
+                if (gaps.length) return { ok: false, why: `Write the report in the pr template, missing: ''${gaps.join(", ")}.` };
+                st.report = summary.trim();
+                return { ok: true };
+              }
+              case "retro":
+                return retroCheck(st, summary);
+            }
+          };
+
+          const collectFacts = (st: State, ctx: ExtensionContext) => {
+            const F = tally();
+            const H = tally();
+            for (const l of st.log) (l.k === "harness" ? H : F).put(l.text, !!l.resolved);
+            for (const [name, why] of Object.entries(st.skips)) {
+              F.put(`skipped ''${name}: ''${why}`);
+              if (st.enforced?.[name]) H.put(`''${name} was required in ''${st.enforced[name]}, then skipped: ''${head(why, 100)}`);
+            }
+            if (st.skip) F.put(`reproduce skipped: ''${st.skip}`);
+            for (const d of st.dups) F.put(`possible duplicate ''${d.name} of ''${d.of} -> ''${head(st.answers[d.id] ?? "unanswered", 100)}`, !!st.answers[d.id]);
+            for (const n of st.news) F.put(`''${n.what} -> ''${head(st.answers[n.id] ?? "unanswered", 100)}`, !!st.answers[n.id]);
+            for (const i of st.items) if (i.open && i.kind !== "local") F.put(`design item ''${i.id} (''${i.src}) left open: ''${head(i.text, 120)}`);
+            const rejects = new Map<string, number>();
+            for (const l of st.log) if (l.k === "advance") rejects.set(head(l.text, 90), (rejects.get(head(l.text, 90)) ?? 0) + 1);
+            for (const [t, n] of rejects) if (n >= 3) H.put(`''${n} rejections on the same criterion: ''${t}`);
+            const quit = st.log.find((l) => l.k === "give_up")?.phase;
+            if (quit) for (const l of st.log) if (l.k === "blocked" && l.phase === quit) H.put(`before give_up: ''${l.text}`);
+            const branch = ctx.sessionManager.getBranch() as Entry[];
+            const from = branch.findIndex((e) => e.type === "custom" && e.customType === "pipeline" && e.data?.state?.run === st.run);
+            let phase: Phase = "triage";
+            const turns: Record<string, number> = {};
+            const calls = new Map<string, number>();
+            let turn = 0;
+            let peak = 0;
+            let compactions = 0;
+            let masks = 0;
+            let cut: unknown;
+            let model: string | undefined;
+            let between: string[] = [];
+            for (const e of branch.slice(Math.max(0, from))) {
+              if (e.type === "custom" && e.customType === "pipeline" && e.data?.state?.run === st.run) phase = e.data.state.phase;
+              if (e.type === "compaction") compactions++, between.push("compaction");
+              if (e.type === "model_change") between.push(`model_change ''${e.modelId}`);
+              if (e.type === "custom_message") between.push(`custom_message ''${e.customType}`);
+              if (e.type === "custom" && e.customType === "context-keeper") {
+                if (e.data?.cutoff !== undefined && e.data.cutoff !== cut) masks++, between.push("context-keeper mask");
+                cut = e.data?.cutoff;
+              }
+              const m = e.type === "message" ? e.message : undefined;
+              if (m?.role === "toolResult") {
+                const text = textOf(m);
+                if (m.isError && (m.toolName === "edit" || /^aft_(?!outline|zoom|search)/.test(m.toolName ?? ""))) H.put(`''${m.toolName} failed in ''${phase}: ''${head(text, 100)}`);
+                if (/^(Blocked: this|Skipped: you already ran)/.test(text)) H.put(`loop guard triggered on ''${m.toolName} in ''${phase}`);
+                between.push(`tool ''${m.toolName}`);
+              }
+              if (m?.role === "user") between.push("user message");
+              if (m?.role !== "assistant") continue;
+              turn++;
+              turns[phase] = (turns[phase] ?? 0) + 1;
+              for (const c of Array.isArray(m.content) ? m.content : []) if (c.type === "toolCall") calls.set(`''${c.name} ''${JSON.stringify(c.arguments)}`, (calls.get(`''${c.name} ''${JSON.stringify(c.arguments)}`) ?? 0) + 1);
+              const u = m.usage ?? {};
+              const seen = (u.input ?? 0) + (u.cacheRead ?? 0);
+              peak = Math.max(peak, seen);
+              if (turn > 1 && seen > 8000 && (u.cacheRead ?? 0) < seen / 2) H.put(`turn ''${turn} in ''${phase}: cache read ''${u.cacheRead ?? 0} of ''${seen} tokens, after ''${head([...new Set(between)].join(", ") || "nothing", 120)}`);
+              if (m.model && model && m.model !== model) H.put(`model switched ''${model} -> ''${m.model} at turn ''${turn} in ''${phase}`);
+              if (m.stopReason === "length" || m.stopReason === "error") H.put(`turn ''${turn} in ''${phase} stopped with ''${m.stopReason}''${m.errorMessage ? `: ''${head(m.errorMessage, 80)}` : ""}`);
+              const budget = [2048, 4096, 6144].find((b) => Math.abs((u.reasoning ?? 0) - b) <= b * 0.05);
+              if (budget) H.put(`turn ''${turn} in ''${phase}: thinking used ''${u.reasoning} tokens, the whole ''${budget} budget`);
+              model = m.model ?? model;
+              between = [];
+            }
+            for (const [k, n] of calls) if (n >= 3) F.put(`identical call repeated ''${n} times: ''${head(k, 120)}`);
+            H.put(`context: peak ''${peak} tokens, ''${compactions} compactions, ''${masks} context-keeper masks`, compactions + masks === 0);
+            const wall: Record<string, number> = {};
+            st.timeline.forEach((t, i) => (wall[t.phase] = (wall[t.phase] ?? 0) + ((st.timeline[i + 1]?.at ?? Date.now()) - t.at)));
+            const stats = PHASES.filter((p) => p !== "retro" && (wall[p] || turns[p])).map((p) => `''${p} ''${turns[p] ?? 0} turns ''${Math.round((wall[p] ?? 0) / 60000)} min`);
+            st.facts = [...F.list(40), ...(stats.length ? [{ text: `phases: ''${stats.join(", ")}`, resolved: true }] : [])];
+            st.hfacts = H.list(20);
+          };
+
+          const factsText = (st: State) =>
+            `Facts of this run:\n''${(st.facts ?? []).map((f, i) => `F''${i + 1} ''${f.text}''${f.resolved ? " [resolved]" : ""}`).join("\n") || "none"}\n` +
+            `Harness facts (pi setup and this pipeline):\n''${(st.hfacts ?? []).map((f, i) => `H''${i + 1} ''${f.text}''${f.resolved ? " [resolved]" : ""}`).join("\n") || "none"}`;
+
+          const saveRetro = (st: State, items: Item[]) => {
+            const dir = join(projDir(st), "retro");
+            const jsonl = join(dir, "items.jsonl");
+            const seen = new Map<string, number>();
+            try {
+              for (const l of readFileSync(jsonl, "utf8").split("\n").filter(Boolean)) {
+                const o = JSON.parse(l) as Item;
+                seen.set(`''${o.type}|''${o.target}`, (seen.get(`''${o.type}|''${o.target}`) ?? 0) + 1);
+              }
+            } catch {}
+            const date = new Date().toLocaleDateString("sv-SE");
+            const label = (st.issue ?? st.run.slice(0, 8)).replace(/[^\w.-]/g, "_");
+            const file = join(dir, `''${date}-''${label}.md`);
+            const global = join(homedir(), ".pi", "retro", "harness.jsonl");
+            const hseen = new Map<string, number>();
+            try {
+              for (const l of readFileSync(global, "utf8").split("\n").filter(Boolean)) {
+                const o = JSON.parse(l) as Item;
+                hseen.set(o.target, (hseen.get(o.target) ?? 0) + 1);
+              }
+            } catch {}
+            const times = items.map((it) => (it.type === "harness" ? (hseen.get(it.target) ?? 0) : (seen.get(`''${it.type}|''${it.target}`) ?? 0)) + 1);
+            const seenText = (i: number) => (times[i] > 1 ? ` (seen ''${times[i]} times)` : "");
+            const md =
+              `# Retro ''${label} ''${date}\n\nTask: ''${st.task}\n\n## Facts\n''${factsText(st)}\n\n## Items\n` +
+              (items.map((it, i) => `### ''${i + 1}. ''${it.type} -> ''${it.target}''${seenText(i)}\n- evidence: ''${it.evidence}\n- gap: ''${it.gap}\n\n''${it.proposal}\n`).join("\n") || "none\n");
+            try {
+              mkdirSync(dir, { recursive: true });
+              writeFileSync(file, md);
+              if (items.length) appendFileSync(jsonl, items.map((it) => JSON.stringify({ ...it, run: st.run, label, date, root: st.root })).join("\n") + "\n");
+              const harness = items.filter((it) => it.type === "harness");
+              if (harness.length) {
+                mkdirSync(dirname(global), { recursive: true });
+                appendFileSync(global, harness.map((it) => JSON.stringify({ ...it, project: st.root.replace(/\//g, "-"), run: st.run, label, date })).join("\n") + "\n");
+              }
+            } catch (e) {
+              return `Retro could not be saved: ''${String(e)}`;
+            }
+            items.forEach((it, i) => emit({ id: `''${st.node}:item:''${i + 1}`, parents: [st.node], kind: "step", label: `''${it.type}: ''${head(it.gap, 40)}`, run: st.run, phase: "retro", cwd: st.root, status: "ok", detail: it.target }));
+            const order = items.map((_, i) => i).sort((a, b) => times[b] - times[a]);
+            return `Retro saved to ''${file}.''${order.map((i) => `\n''${i + 1}. ''${items[i].type} -> ''${items[i].target}: ''${items[i].gap}''${seenText(i)}`).join("")}`;
+          };
+
+          const retroCheck = (st: State, summary: string): Check => {
+            const facts = st.facts ?? [];
+            const hfacts = st.hfacts ?? [];
+            if (/^\s*(none|нет)\.?\s*$/i.test(summary)) {
+              const open = [...facts.map((f, i) => (f.resolved ? "" : `F''${i + 1}`)), ...hfacts.map((f, i) => (f.resolved ? "" : `H''${i + 1}`))].filter(Boolean);
+              return open.length ? { ok: false, why: `\`none\` is accepted only when every fact is resolved. Write items for ''${open.join(", ")}.` } : { ok: true, note: saveRetro(st, []) };
+            }
+            const items = parseItems(summary);
+            const errs: string[] = [];
+            if (!items.length) errs.push("No items found. Start each item with a line `type: ...`.");
+            if (items.length > 7) errs.push(`''${items.length} items, keep at most 7.`);
+            const cited = new Set<string>();
+            items.forEach((it, i) => {
+              const n = `Item ''${i + 1}`;
+              if (!ITEM_TYPES.includes(it.type)) errs.push(`''${n}: type must be one of ''${ITEM_TYPES.join(", ")}.`);
+              const ids = [...it.evidence.matchAll(/\b([FH])(\d+)\b/g)].map((m) => ({ k: m[1], n: Number(m[2]) }));
+              for (const x of ids) cited.add(x.k + x.n);
+              if (!ids.length) errs.push(`''${n}: evidence must cite fact ids like F1,H2.`);
+              const bad = ids.filter((x) => x.n < 1 || x.n > (x.k === "F" ? facts.length : hfacts.length));
+              if (bad.length) errs.push(`''${n}: unknown facts ''${bad.map((x) => x.k + x.n).join(", ")}, the facts are F1..F''${facts.length} and H1..H''${hfacts.length}.`);
+              if (it.type === "harness" && !ids.some((x) => x.k === "H")) errs.push(`''${n}: a harness item must cite H facts.`);
+              if (it.type === "harness" && !/pi\.nix|\.pi\/rules|mcp\.json|\.pi\/agent\/|settings\.json/.test(it.target))
+                errs.push(`''${n}: a harness target must name a concrete file and setting: pi.nix <extension> <what>, ~/.pi/rules/<file> or mcp.json <server>.`);
+              if (!it.gap || it.gap.includes("\n")) errs.push(`''${n}: gap must be exactly one line.`);
+              if (!it.proposal) errs.push(`''${n}: proposal is empty, write the concrete text to add.`);
+              else if (it.proposal.split("\n").length > 15) errs.push(`''${n}: proposal has more than 15 lines.`);
+              if (!it.target) errs.push(`''${n}: target path is missing.`);
+              if (it.type === "agents_md" && /\b(is|are) (located|defined|implemented|stored) in\b|\blives in\b|находится в|расположен|лежит в|определ[её]н в/i.test(it.proposal))
+                errs.push(`''${n}: an AGENTS.md line must state a rule or constraint that cannot be read from the code, not where code lives.`);
+            });
+            const missed = facts.map((f, i) => (/design missed/.test(f.text) && !cited.has(`F''${i + 1}`) ? `F''${i + 1}` : "")).filter(Boolean);
+            const style = st.res.find((r) => r.kind === "skill" && r.name === "writing-for-agents");
+            if (style && items.some((it) => it.type === "skill" || it.type === "agents_md") && !st.read.includes(style.name)) errs.push(`Skill and AGENTS.md items follow the skill writing-for-agents: read ''${style.path} first.`);
+            if (missed.length) errs.push(`Every \`design missed\` fact needs an item that says why the design missed it: ''${missed.join(", ")} are not cited.`);
+            return errs.length ? { ok: false, why: errs.join("\n") } : { ok: true, note: saveRetro(st, items) };
+          };
+
+          const advance = async (st: State, summary: string, evidence: string | undefined, ctx: ExtensionToolContext, signal?: AbortSignal) => {
+            const out: string[] = [];
+            let r = await check(st, summary, evidence, ctx, signal);
+            while (true) {
+              if (!r.ok) {
+                st.fails++;
+                fact(st, "advance", `advance_phase failed in ''${st.phase}: ''${r.why.split("\n")[0]}`, true);
+                if (st.fails >= MAX_FAILS) {
+                  const phase = st.phase;
+                  finish("fail", ctx, head(r.why, 200));
+                  out.push(`''${r.why}\nPipeline stopped after ''${MAX_FAILS} failed attempts in ''${phase}. Tell the user what blocks you.`);
+                } else {
+                  save();
+                  out.push(`Not done: ''${r.why}\nPhase ''${st.phase} (attempt ''${st.fails}/''${MAX_FAILS}) needs ''${NEED[st.phase]}''${st.phase === "verify" || st.phase === "regress" ? "\n" + guide(st) : ""}`);
+                }
+                return out.join("\n\n");
+              }
+              if (r.wait) {
+                save();
+                return [...out, r.wait].join("\n\n");
+              }
+              if (r.note) out.push(r.note);
+              node(st, r.status ?? "ok", head(summary || r.note || "", 200));
+              if (st.phase === "retro") {
+                finish(st.gaveUp ? "fail" : "ok", ctx);
+                out.push(`Pipeline ''${st.gaveUp ? "stopped after give_up" : "done"}. Now give the user the final report from the report phase, then the retro items, recurring ones first.\nReport:\n''${st.report ?? ""}`);
+                return out.join("\n\n");
+              }
+              await enter(st, r.next ?? PHASES[PHASES.indexOf(st.phase) + 1], ctx);
+              summary = "";
+              const now = st.phase as Phase;
+              if (now === "verify" || now === "regress") r = await check(st, "", now === "verify" ? evidence : undefined, ctx, signal);
+              else if (now === "review") {
+                const files = await changed(st);
+                st.reviewLines = await diffLines(st, files);
+                r = await reviewRun(st, ctx, await fullDiff(st, files), signal);
+              } else if (now === "checkpoint") {
+                if (!st.checked) {
+                  save();
+                  return [...out, `Phase checkpoint: ''${guide(st)}\nState of the run:\n''${screen(st)}`].join("\n\n");
+                }
+                r = skipCheckpoint(st);
+              } else if (now === "retro") {
+                collectFacts(st, ctx);
+                save();
+                return [...out, `Phase retro. ''${factsText(st)}\n''${GUIDE.retro}`].join("\n\n");
+              } else return [...out, `Phase ''${st.phase}: ''${guide(st)}`].join("\n\n");
+            }
+          };
+
+          const triageInput = async (st: State, type: string, text: string, ctx: ExtensionContext) => {
+            st.inputs++;
+            st.pending = undefined;
+            fact(st, "design-miss", `design missed ''${type} from outside: ''${head(text, 150)}`);
+            emit({ id: `''${st.node}:input:''${st.inputs}`, parents: [st.node], kind: "step", label: `input ''${type}`, run: st.run, phase: st.phase, cwd: st.root, status: "ok", detail: head(text, 200) });
+            const at = PHASES.indexOf(st.phase);
+            let target: Phase | undefined;
+            let note: string;
+            if (type === "bug") {
+              st.criteria = [...(st.criteria ?? []), head(text, 200)];
+              note = `New acceptance criterion C''${st.criteria.length}: ''${head(text, 200)}. Write a failing test for it; the design must cover it in Test strategy.`;
+              if (at > PHASES.indexOf("reproduce")) target = "reproduce";
+            } else if (type === "idea") {
+              st.ideas.push(head(text, 300));
+              note = "The idea is evaluated as a rival on the next design submission against the current approach.";
+              if (at > PHASES.indexOf("design")) target = "design";
+            } else {
+              const id = addItem(st, "constraint", type, text);
+              note = `Recorded as hard constraint ''${id} for the design.`;
+              if (at > PHASES.indexOf("design")) target = "design";
+            }
+            if (!target) {
+              save();
+              return `''${note}\nContinue phase ''${st.phase}: ''${guide(st)}`;
+            }
+            node(st, "skipped", `input ''${type}`);
+            await enter(st, target, ctx);
+            return `''${note}\nPhase ''${st.phase}: ''${guide(st)}`;
+          };
+
+          const restore = (ctx: ExtensionContext) => {
+            s = load(ctx);
+            shown = 0;
+            blocked = false;
+            publish(ctx);
+          };
+          pi.on("session_start", (_event, ctx) => restore(ctx));
+          pi.on("session_tree", (_event, ctx) => restore(ctx));
+
+          pi.on("input", (event) => {
+            if (!s) return { action: "continue" as const };
+            const text = event.text.trim();
+            const m = text.match(/^input:\s*([\s\S]+)$/i);
+            if (m) {
+              s.pending = m[1].trim().slice(0, 2000);
+              blocked = true;
+              save();
+            } else if (s.phase === "checkpoint" && !s.decision && event.source !== "extension" && text) {
+              s.decision = text.slice(0, 2000);
+              blocked = true;
+              save();
+            }
+            return { action: "continue" as const };
+          });
+
+          pi.registerCommand("task", {
+            description: "Run a task (text, YouTrack URL or issue ID) through the pipeline: triage, localize, reproduce, design, checkpoint, plan, implement, verify, review, regress, report",
+            handler: async (args, ctx) => {
+              const task = args.trim();
+              if (!task) return ctx.ui.notify("Usage: /task <description>", "warning");
+              if (planMode(ctx) !== "normal") return ctx.ui.notify("Plan mode is on, leave it with /plan first", "warning");
+              if (s) return ctx.ui.notify(`A pipeline is running (''${s.phase}), use /task-abort first`, "warning");
+              const guide = await start(task, ctx);
+              pi.sendUserMessage(`''${task}\n\n''${guide}`, ctx.isIdle() ? undefined : { deliverAs: "followUp" });
+            },
+          });
+
+          pi.registerCommand("task-input", {
+            description: "Feed outside news into the running pipeline: a bug, an idea, a rewrite request or a constraint",
+            handler: async (args, ctx) => {
+              const text = args.trim();
+              if (!text) return ctx.ui.notify("Usage: /task-input <text>", "warning");
+              if (!s) return ctx.ui.notify("No pipeline is running", "warning");
+              pi.sendUserMessage(`input: ''${text}`, ctx.isIdle() ? undefined : { deliverAs: "followUp" });
+            },
+          });
+
+          pi.registerCommand("task-abort", {
+            description: "Abort the running task pipeline",
+            handler: async (_args, ctx) => {
+              if (!s) return ctx.ui.notify("No pipeline is running", "info");
+              finish("fail", ctx, "aborted by user");
+            },
+          });
+
+          pi.registerTool({
+            name: "pipeline_start",
+            label: "Pipeline start",
+            description: "Start the task pipeline for a code task: triage, localize, reproduce, design, checkpoint, plan, implement, verify, review, regress, report. Each phase is finished with advance_phase.",
+            parameters: Type.Object({ task: Type.String({ description: "The task in 1-3 sentences, or a YouTrack issue URL or ID" }) }),
+            async execute(_id, params, _signal, _onUpdate, ctx) {
+              const fail = (text: string) => ({ content: [{ type: "text" as const, text }], details: {}, isError: true });
+              if (planMode(ctx) !== "normal") return fail("Plan mode is on, the pipeline cannot start. Plan in plan mode instead.");
+              if (s) return fail(`A pipeline is already running, phase ''${s.phase}. Continue it with advance_phase.`);
+              if (!params.task.trim()) return fail("Pass the task text.");
+              return { content: [{ type: "text", text: await start(params.task.trim(), ctx) }], details: {} };
+            },
+          });
+
+          pi.registerTool({
+            name: "advance_phase",
+            label: "Advance phase",
+            description: "Finish the current task pipeline phase. The pipeline checks the exit criteria in code and returns the next phase's instructions, or what is still missing.",
+            parameters: Type.Object({
+              summary: Type.String({ description: "What this phase produced, as the phase instructions ask" }),
+              evidence: Type.Optional(Type.String({ description: "reproduce: the failing test command or `skip: <reason>`. implement/verify: `C1: TestName` lines. regress: `flaky: <TestNames>` after the flaky tool confirmed them" })),
+            }),
+            async execute(_id, params, signal, _onUpdate, ctx) {
+              if (!s) return { content: [{ type: "text", text: "No pipeline is running. Start one with pipeline_start." }], details: {}, isError: true };
+              const st = s;
+              const text = await advance(st, params.summary ?? "", params.evidence, ctx, signal);
+              return { content: [{ type: "text", text }], details: { run: st.run, phase: s?.phase ?? null } };
+            },
+          });
+
+          pi.registerTool({
+            name: "pipeline_input_triage",
+            label: "Pipeline input triage",
+            description: "Classify outside news that arrived during the task pipeline (a message starting with `input:`). The pipeline routes it.",
+            parameters: Type.Object({
+              type: Type.Union([Type.Literal("bug"), Type.Literal("idea"), Type.Literal("rewrite"), Type.Literal("constraint")], { description: "bug: a defect someone found; idea: another way to solve it; rewrite: a request to redo the approach; constraint: a new requirement" }),
+              summary: Type.String({ description: "The news restated in one checkable line" }),
+            }),
+            async execute(_id, params, _signal, _onUpdate, ctx) {
+              if (!s?.pending) return { content: [{ type: "text", text: "No outside input is pending. Continue with advance_phase." }], details: {}, isError: true };
+              const st = s;
+              const text = await triageInput(st, params.type, params.summary.trim() || st.pending!, ctx);
+              return { content: [{ type: "text", text }], details: { run: st.run, phase: st.phase } };
+            },
+          });
+
+          const use = (st: State, r: Res) => {
+            const list = r.kind === "skill" ? st.read : st.calls;
+            if (!st.used.includes(`''${r.kind} ''${r.name}`)) st.used.push(`''${r.kind} ''${r.name}`);
+            if (list.includes(r.name)) return;
+            list.push(r.name);
+            emit({ id: `''${st.node}:''${r.kind}:''${r.name}`, parents: [st.node], kind: "step", label: `''${r.kind}: ''${r.name}`, run: st.run, phase: st.phase, cwd: st.root, status: "ok" });
+            save();
+          };
+
+          pi.on("tool_call", (event) => {
+            if (!s) return;
+            const st = s;
+            const server = serverOf(event.toolName, event.input as { server?: unknown });
+            const servers = event.toolName === "codemode" ? scriptServers((event.input as { code?: unknown }).code) : server ? [server] : [];
+            for (const r of st.res) if (r.kind === "mcp" && servers.includes(norm(r.name))) use(st, r);
+            const block = (reason: string) => {
+              blocked = true;
+              fact(st, "blocked", `''${event.toolName} blocked in ''${st.phase}: ''${reason}`);
+              blockedIds.add(event.toolCallId);
+              save();
+              return { block: true, reason: `Pipeline phase ''${st.phase}: ''${reason} To advance: ''${NEED[st.phase]}` };
+            };
+            const name = event.toolName;
+            const input = event.input as { command?: unknown; path?: unknown; tasks?: { agent?: string }[] };
+            if (st.pending && name !== "pipeline_input_triage") return block(`outside input is pending: "''${head(st.pending, 120)}". Call pipeline_input_triage first.`);
+            if (st.phase === "checkpoint" && (st.questions || st.decision) && !["advance_phase", "pipeline_input_triage"].includes(name))
+              return block(st.decision ? "the user answered. Call advance_phase with the route." : "the pipeline waits for the user. Show the checkpoint screen with the questions and end your turn.");
+            if (READONLY.has(st.phase) || (st.phase === "review" && !st.fixing)) {
+              if (name === "edit" || name === "write") return block("file edits are blocked.");
+              if (name === "bash") {
+                const c = checkCommand(String(input.command ?? ""));
+                if (!c.safe) return block(`''${(c.reason ?? "mutating command.").replace(/^Plan mode:\s*/, "")} Only read-only commands are allowed.`);
+              }
+              if (name === "subagent" && (input.tasks ?? []).some((t) => !AGENTS.includes(t.agent ?? "scout"))) return block(`only ''${AGENTS.join(", ")} subagents are allowed.`);
+            }
+            if (st.phase === "reproduce" && (name === "edit" || name === "write") && !isTest(String(input.path ?? ""))) return block("only test files may be edited until the failing test exists.");
+          });
+
+          pi.on("tool_result", (event, ctx) => {
+            if (!s) return;
+            if (event.toolName === "flaky" && !event.isError) flaky = true;
+            if (event.toolName === "give_up" && !event.isError) {
+              const st = s;
+              fact(st, "give_up", `give_up in ''${st.phase}: ''${String((event.input as { reason?: unknown }).reason ?? "")}`);
+              st.gaveUp = true;
+              if (st.phase === "retro") return void save();
+              return void enter(st, "retro", ctx).then(() => {
+                collectFacts(st, ctx);
+                blocked = true;
+                save();
+              });
+            }
+            if (event.isError && !blockedIds.has(event.toolCallId)) {
+              const text = event.content.map((c) => (c.type === "text" ? c.text : "")).join(" ");
+              const server = serverOf(event.toolName, event.input as { server?: unknown });
+              const r = server ? s.res.find((x) => x.kind === "mcp" && norm(x.name) === server) : undefined;
+              if (r && DOWN.test(text)) {
+                if (!s.down.includes(r.name)) s.down.push(r.name);
+                fact(s, "mcp", `server ''${r.name} unavailable: ''${head(text, 120)}`);
+              } else fact(s, r ? "mcp" : "tool", `''${event.toolName} error in ''${s.phase}: ''${head(text, 150)}`);
+              save();
+            }
+            if (!event.isError && ["read", "aft_zoom", "aft_outline", "bash"].includes(event.toolName)) {
+              const vals = Object.values(event.input).flatMap((v) => (Array.isArray(v) ? v : [v])).filter((v): v is string => typeof v === "string");
+              for (const r of s.res)
+                if (r.path && vals.some((v) => v.includes(r.path!) || resolve(ctx.cwd, v) === r.path || v.includes(`.agents/skills/''${basename(dirname(r.path!))}/SKILL.md`))) use(s, r);
+            }
+            if ((event.toolName === "subagent" || event.toolName === "subagent_wait") && !event.parentToolCallId) recordJobs(s, (event.details as { jobs?: Job[] } | undefined)?.jobs ?? []);
+          });
+
+          pi.on("tool_result", async (event) => {
+            if (!s || event.toolName !== "run_gates") return;
+            const st = s;
+            const sig = createHash("sha1").update(JSON.stringify(await snapshot(st.root))).digest("hex");
+            for (const x of (event.details as { results?: { name: string; ok: boolean }[] } | undefined)?.results ?? []) {
+              const last = st.gates?.[x.name];
+              if (!x.ok) fact(st, "gate", `gate ''${x.name} failed in ''${st.phase}`, true);
+              if (last && last.ok !== x.ok && last.sig === sig) fact(st, "harness", `gate ''${x.name} flipped ''${last.ok ? "ok -> fail" : "fail -> ok"} without a code change`);
+              st.gates = { ...st.gates, [x.name]: { ok: x.ok, sig } };
+            }
+            save();
+          });
+
+          pi.on("context", (event, ctx) => {
+            if (!s || planMode(ctx) === "plan") return;
+            let since = 0;
+            let seq = -1;
+            for (const e of ctx.sessionManager.getBranch() as Entry[]) {
+              if (e.type === "custom" && e.customType === "pipeline") {
+                if ((e.data?.state?.seq ?? -1) !== seq) since = 0;
+                seq = e.data?.state?.seq ?? -1;
+              } else if (e.type === "message" && e.message?.role === "toolResult") since = e.message.toolName === "advance_phase" ? 0 : since + 1;
+            }
+            const bucket = Math.floor(since / EVERY);
+            const show = blocked || bucket > shown;
+            shown = bucket;
+            blocked = false;
+            if (!show) return;
+            const extra = s.pending
+              ? `\nOutside input arrived: "''${head(s.pending, 300)}". Call pipeline_input_triage with its type (bug, idea, rewrite or constraint) and a one-line summary before anything else.`
+              : s.phase === "checkpoint"
+                ? s.decision
+                  ? `\nThe user's checkpoint decision: "''${head(s.decision, 400)}". A plain yes accepts every recommended answer. Call advance_phase with summary \`route: design\` if it changes the approach or the acceptance criteria, else \`route: plan\`, plus one line why.`
+                  : s.questions
+                    ? "\nShow the checkpoint screen with the questions to the user and end your turn."
+                    : `\n''${GUIDE.checkpoint}`
+                : "";
+            const content =
+              `[Pipeline] Task: ''${s.issue ? s.issue + " " : ""}''${head(s.task, 200)}\nPhase ''${s.phase} (''${PHASES.indexOf(s.phase) + 1}/''${PHASES.length})''${READONLY.has(s.phase) || (s.phase === "review" && !s.fixing) ? ", edits blocked" : ""}. ` +
+              `To advance: ''${NEED[s.phase]} Then call advance_phase.` +
+              extra +
+              (s.phase === "retro" ? `\n''${factsText(s)}\n''${GUIDE.retro}` : (refresh(s, false), resText(s, relevant(s, s.phase, pathsOf(s)).filter((p) => !done(s!, p) && (p.must || !s!.skips[p.res.name])))));
+            const reminder = { role: "custom", customType: "pipeline-reminder", content, display: false, timestamp: Date.now() };
+            return { messages: [...event.messages, reminder as (typeof event.messages)[number]] };
+          });
+        }
       '';
 
       appendSystemFile = pkgs.writeText "pi-append-system.md" /* markdown */ ''
@@ -1926,7 +5109,10 @@ in
         home.packages = [
           piNvimWrapped
           piStats
+          piPipelineView
+          piEval
           (pkgs.callPackage mkPiAcp { })
+          pkgs.ast-grep
           pkgs.gopls
           pkgs.nixd
           pkgs.pyright
@@ -1964,7 +5150,243 @@ in
           Your final message is the only thing the caller sees. Keep it to at most 40 lines. Rank the findings by severity (critical, major, minor). For each give its path:line, the problem and the input or case that breaks, in one or two sentences. If you find nothing, say so in one line.
         '';
 
-        programs.zsh.shellAliases.pig = "pi -e ${piAgentDir}/npm/node_modules/${lib.removePrefix "npm:" grillMePackage}";
+        home.file.".pi/agent/agents/critic.md".text = ''
+          ---
+          name: critic
+          description: antagonist of a proposed design, returns VERDICT PASS or BLOCK
+          model: Protei/agent_proteya_slow
+          ${subagentReadOnly}---
+          You are critic, a read-only antagonist of the solution designer, started by another agent. The first user message is your task and the only context you get: the task, its acceptance criteria and the proposed design.
+
+          Your goal is to tear the design apart. Judge depth, seams and locality in the vocabulary of ${agentSkillsDir}/codebase-design/SKILL.md. Check it against the real code: architectural flaws, the wrong layer, hidden coupling, contract breaks (proto, swagger, DB migrations, config), concurrency, error and partial-failure paths, rollout and backward compatibility, and what a teammate or tester will hit later. Never modify files, never run commands that change state, and never ask the user questions.
+
+          Every objection must carry a concrete failing scenario (input, state, sequence of events) and the path:line it hits. An objection without a concrete scenario is worthless: do not write it.
+
+          Your final message is the only thing the caller sees: at most 10 lines, nothing else. The first line is exactly `VERDICT: PASS` or `VERDICT: BLOCK`. Then one line per objection, most severe first, `- [arch] <objection that needs a different approach, scenario, path:line>` or `- [local] <objection fixable inside this approach, scenario, path:line>`. BLOCK only when there is an `[arch]` objection. If the task gives a different reply format, follow the task.
+        '';
+
+        home.file.".pi/agent/agents/tester.md".text = ''
+          ---
+          name: tester
+          description: adversarial QA, scenarios that break a design, COVERED or MISSING
+          model: Protei/agent_proteya_slow
+          ${subagentReadOnly}---
+          You are tester, an adversarial QA colleague working in parallel on the same ticket, started by another agent. The first user message is your task and the only context you get: the task, its acceptance criteria and the proposed design with its Test strategy.
+
+          Find the scenarios that would break the design. Read the code the design touches and its existing tests to learn what is already covered, and ${agentSkillsDir}/tdd/SKILL.md for what a good test at a seam is. Think of boundary inputs, empty and nil values, duplicates, ordering, concurrent calls, restarts, partial failures, timeouts and old data or old clients. Check each scenario against the Test strategy section. Never modify files, never run commands that change state, and never ask the user questions.
+
+          Every scenario must be concrete: the input and state that break it and the path:line it hits. A scenario without concrete input and state is worthless: do not write it.
+
+          Your final message is the only thing the caller sees: at most 10 lines, nothing else, one line per scenario, most likely to break first: `- COVERED: <scenario> -> <the Test strategy line that covers it>` or `- MISSING: <scenario, the input that breaks it, path:line, the Go test that would catch it>`. If the task gives a different reply format, follow the task.
+        '';
+
+        home.file.".pi/agent/agents/rival.md".text = ''
+          ---
+          name: rival
+          description: independent alternative design from task, criteria and code only
+          ${subagentReadOnly}---
+          You are rival, a read-only designer started by another agent. The first user message is your task and the only context you get: the task, its acceptance criteria, the located files and sometimes an idea to develop. You never see another design, so design your own from the task, the criteria and the code.
+
+          You are the second design of ${agentSkillsDir}/codebase-design/DESIGN-IT-TWICE.md: follow the design constraint the task gives you. Aim for the simplest, most elegant change that reuses existing code: find the helpers, patterns and extension points already in place before inventing anything. Prefer the smallest diff that fully meets the criteria. Never modify files, never run commands that change state, and never ask the user questions.
+
+          Your final message is the only thing the caller sees: exactly these three lines, nothing else:
+          `APPROACH: <one paragraph: the change, the files with path:line of each change point and the existing code it reuses>`
+          `DIFF: <estimated changed non-test lines, a number>`
+          `WHY: <one line why it beats the obvious alternatives>`
+        '';
+
+        home.file.".pi/agent/agents/psychologist.md".text = ''
+          ---
+          name: psychologist
+          description: emulates the most senior contributors of the touched code, their approach and style
+          model: Protei/agent_proteya_slow
+          tools: read, grep, find, ls, aft_outline, aft_zoom, aft_search, bash, codemode, write
+          permission:
+            tools:
+              read: allow
+              grep: allow
+              find: allow
+              ls: allow
+              aft_outline: allow
+              aft_zoom: allow
+              aft_search: allow
+              bash: allow
+              codemode: allow
+              write: allow
+              edit: deny
+          ---
+          You are psychologist, a read-only agent started by another agent. The first user message is your task and the only context you get: the task and the paths it touches, or a diff to review as the experts would.
+
+          1. Cache: the task names the expert profiles file `~/.pi/projects/<slug>/experts.md`. If it exists and covers the touched paths, and its first line `updated: <YYYY-MM-DD>` is less than 7 days old, reuse its profiles and skip step 2.
+          2. Find the most experienced contributors of the touched area: `git shortlog -sne` and `git log --stat` on the touched paths, `git blame` on the key files, the size and complexity of their commits, and merge request titles through the gitlab MCP tools from codemode if you have them. Pick the 1-2 most senior. Write their profiles with evidence (commit hashes and path:line) to the profiles file with the first line `updated: <today>`. This is the only file you may write.
+          3. Role-play each expert: how they would solve the task and how they would write and lay out the code (naming, errors, logging, structure, tests). Every expectation must rest on evidence from their commits.
+          4. For a diff review you are the Standards axis of ${agentSkillsDir}/code-review/SKILL.md: find the documented standards (CODING_STANDARDS.md, CONTRIBUTING.md, AGENTS.md, linter configs); a documented standard overrides the experts' habits and the smell baseline, and is cited in the finding.
+
+          Never modify any other file, never run commands that change state, and never ask the user questions.
+
+          Your final message is the only thing the caller sees. Use exactly the reply format the task gives, nothing else:
+          - For a task or design: at most 12 lines, per expert `EXPERT: <name> - <one line profile>`, then one line per concrete expectation `- <expectation, with a commit hash or path:line as evidence>`.
+          - For a diff review: at most 10 lines, `- [arch] path:line: <what they would reject in the approach>` or `- [local] path:line: <what they would change in place>`, or the single word `NONE` if they would accept it as is.
+          An expectation or finding without evidence is worthless: do not write it.
+        '';
+
+        home.file.".pi/agent/agents/gopnik.md".text = ''
+          ---
+          name: gopnik
+          description: line-by-line paranoid antagonist of a diff, returns VERDICT PASS or BLOCK
+          model: Protei/agent_proteya_slow
+          ${subagentReadOnly}---
+          You are gopnik, a read-only, paranoid code antagonist started by another agent. The first user message is your task and the only context you get. It names a diff, a commit range or files.
+
+          First check the Spec axis of ${agentSkillsDir}/code-review/SKILL.md against the acceptance criteria in the task: missing or partial, scope creep, looks implemented but wrong, each finding quoting its criterion. Then pick on every changed line: nil and zero values, ignored errors, ctx cancellation and deadlines, goroutine and resource leaks, races, overflow and type conversions, injection, retries and idempotency, partial failure, timeouts, secrets in logs. Read the callers and callees to confirm each finding. Never modify files, never run commands that change state, and never ask the user questions.
+
+          Every finding must carry a concrete failing scenario and its path:line. Prefer proving it with a failing test you describe in one line: test name, input and the actual result. A finding without a concrete scenario is worthless: do not write it.
+
+          Your final message is the only thing the caller sees: at most 12 lines, nothing else. The first line is exactly `VERDICT: PASS` or `VERDICT: BLOCK`. Then one line per finding, most severe first, `- [arch] path:line: <problem that needs a different approach, scenario>` or `- [local] path:line: <problem fixable in place, scenario>`. If the task gives a different reply format, follow the task.
+        '';
+
+        home.file.".pi/rules/go/ctx-first.yml".text = ''
+          id: go-ctx-first
+          language: go
+          severity: error
+          message: context.Context must be the first parameter.
+          rule:
+            kind: parameter_declaration
+            has:
+              field: type
+              regex: '^context\.Context$'
+            follows:
+              kind: parameter_declaration
+              stopBy: end
+        '';
+
+        home.file.".pi/rules/go/errorf-wrap.yml".text = ''
+          id: go-errorf-wrap
+          language: go
+          severity: error
+          message: Wrap the error with %w instead of %v so callers can use errors.Is and errors.As.
+          rule:
+            pattern:
+              context: 'func f() { fmt.Errorf($FMT, $$$) }'
+              selector: call_expression
+            has:
+              field: arguments
+              has:
+                kind: identifier
+                regex: '^err[A-Za-z0-9]*$'
+                nthChild:
+                  position: 1
+                  reverse: true
+          constraints:
+            FMT:
+              regex: '%v[^%]*"$'
+        '';
+
+        home.file.".pi/rules/go/errors-new-sprintf.yml".text = ''
+          id: go-errors-new-sprintf
+          language: go
+          severity: error
+          message: Use fmt.Errorf(...) instead of errors.New(fmt.Sprintf(...)).
+          rule:
+            pattern:
+              context: 'func f() { errors.New(fmt.Sprintf($$$)) }'
+              selector: call_expression
+        '';
+
+        home.file.".pi/rules/go/no-context-background.yml".text = ''
+          id: go-no-context-background
+          language: go
+          severity: warning
+          message: Pass the caller's ctx instead of creating a new root context. context.Background and context.TODO belong in main, init and tests.
+          ignores:
+            - "**/*_test.go"
+          rule:
+            pattern:
+              context: 'func f() { context.$F() }'
+              selector: call_expression
+            not:
+              inside:
+                kind: function_declaration
+                has:
+                  field: name
+                  regex: '^(main|init)$'
+                stopBy: end
+          constraints:
+            F:
+              regex: '^(Background|TODO)$'
+        '';
+
+        home.file.".pi/rules/go/no-exit-outside-main.yml".text = ''
+          id: go-no-exit-outside-main
+          language: go
+          severity: error
+          message: Only main may exit the process. Return an error instead of os.Exit or log.Fatal.
+          ignores:
+            - "**/*_test.go"
+          rule:
+            any:
+              - pattern:
+                  context: 'func f() { os.Exit($$$) }'
+                  selector: call_expression
+              - pattern:
+                  context: 'func f() { log.$F($$$) }'
+                  selector: call_expression
+            not:
+              inside:
+                kind: function_declaration
+                has:
+                  field: name
+                  regex: '^main$'
+                stopBy: end
+          constraints:
+            F:
+              regex: '^Fatal(f|ln)?$'
+        '';
+
+        home.file.".pi/rules/go/no-fmt-print.yml".text = ''
+          id: go-no-fmt-print
+          language: go
+          severity: warning
+          message: Do not print to stdout from a library package. Use the project logger or return the value.
+          ignores:
+            - "**/*_test.go"
+          rule:
+            pattern:
+              context: 'func f() { fmt.$P($$$) }'
+              selector: call_expression
+            not:
+              inside:
+                kind: source_file
+                has:
+                  kind: package_clause
+                  has:
+                    kind: package_identifier
+                    regex: '^main$'
+                stopBy: end
+          constraints:
+            P:
+              regex: '^Print(ln|f)?$'
+        '';
+
+        home.file.".pi/rules/go/no-panic.yml".text = ''
+          id: go-no-panic
+          language: go
+          severity: error
+          message: Return an error instead of panic. panic is allowed only in main, init and tests.
+          ignores:
+            - "**/*_test.go"
+          rule:
+            pattern:
+              context: 'func f() { panic($$$) }'
+              selector: call_expression
+            not:
+              inside:
+                kind: function_declaration
+                has:
+                  field: name
+                  regex: '^(main|init)$'
+                stopBy: end
+        '';
 
         home.activation.setupPi = mkAfter /* bash */ ''
           set -euo pipefail
@@ -2013,8 +5435,13 @@ in
           chmod 644 "$agent_dir/extensions/context-keeper.ts"
           cp --reflink=never "${subagentFile}" "$agent_dir/extensions/subagent.ts"
           chmod 644 "$agent_dir/extensions/subagent.ts"
-          cp --reflink=never "${grillHintFile}" "$agent_dir/extensions/grill-hint.ts"
-          chmod 644 "$agent_dir/extensions/grill-hint.ts"
+          cp --reflink=never "${gatesFile}" "$agent_dir/extensions/gates.ts"
+          chmod 644 "$agent_dir/extensions/gates.ts"
+          cp --reflink=never "${harnessToolsFile}" "$agent_dir/extensions/tools.ts"
+          chmod 644 "$agent_dir/extensions/tools.ts"
+          cp --reflink=never "${pipelineFile}" "$agent_dir/extensions/pipeline.ts"
+          chmod 644 "$agent_dir/extensions/pipeline.ts"
+          rm -f "$agent_dir/extensions/grill-hint.ts"
           cp --reflink=never "${nvimFile}" "$agent_dir/extensions/nvim.ts"
           chmod 644 "$agent_dir/extensions/nvim.ts"
           cp --reflink=never "${piReview}/review.ts" "$agent_dir/extensions/review.ts"
@@ -2035,13 +5462,7 @@ in
           fi
 
           npm_dir="$agent_dir/npm"
-          wanted=(${
-            lib.escapeShellArgs (
-              map (lib.removePrefix "npm:") (
-                lib.filter (lib.hasPrefix "npm:") (settingsSeed.packages ++ [ grillMePackage ])
-              )
-            )
-          })
+          wanted=(${lib.escapeShellArgs (map (lib.removePrefix "npm:") (lib.filter (lib.hasPrefix "npm:") settingsSeed.packages))})
           export PATH="${
             lib.makeBinPath [
               pkgs.nodejs
@@ -2075,6 +5496,30 @@ in
               log "Installing $dep''${pin:+@$pin}"
               "${pkgs.coreutils}/bin/timeout" 180s npm --prefix "$npm_dir" install "$dep''${pin:+@$pin}" --legacy-peer-deps >/dev/null 2>&1 \
                 || log "WARNING: npm install $dep failed (no network?)"
+            fi
+          done
+
+          if DISABLE_TELEMETRY=1 DO_NOT_TRACK=1 "${pkgs.coreutils}/bin/timeout" 300s \
+            npx -y skills@latest add mattpocock/skills -g -a pi -y --copy -s ${lib.escapeShellArgs mattpocockSkills} >/dev/null 2>&1; then
+            log "Updated mattpocock/skills in ${agentSkillsDir}"
+          else
+            log "WARNING: npx skills add mattpocock/skills failed (no network?), keeping the installed copies"
+          fi
+          for skill in ${lib.escapeShellArgs mattpocockSkills}; do
+            skill_md="${agentSkillsDir}/$skill/SKILL.md"
+            if [[ ! -f "$skill_md" ]]; then
+              log "WARNING: skill $skill is not installed"
+              continue
+            fi
+            ${pkgs.gnused}/bin/sed -i -E \
+              -e 's/Call the Skill tool twice, for ["`]([a-z0-9-]+)["`] and ["`]([a-z0-9-]+)["`]/Read the skills \1 and \2 (their SKILL.md files are listed in your available skills)/g' \
+              -e 's/call the Skill tool twice, for ["`]([a-z0-9-]+)["`] and ["`]([a-z0-9-]+)["`]/read the skills \1 and \2 (their SKILL.md files are listed in your available skills)/g' \
+              -e 's/Call the Skill tool (with|for) ["`]([a-z0-9-]+)["`]/Read the skill \2 (its SKILL.md is listed in your available skills)/g' \
+              -e 's/call the Skill tool (with|for) ["`]([a-z0-9-]+)["`]/read the skill \2 (its SKILL.md is listed in your available skills)/g' \
+              -e 's/should call the Skill tool for/should read (each SKILL.md is listed in the available skills)/g' \
+              "$skill_md"
+            if grep -q "Skill tool" "$skill_md"; then
+              log "WARNING: $skill/SKILL.md still mentions the Skill tool"
             fi
           done
 
