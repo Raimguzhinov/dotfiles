@@ -1,3 +1,81 @@
+# pi харнесс, шпаргалка: что за чем и когда использовать
+#
+# Запуск
+#   pi              сам агент (эта конфигурация)
+#   pi-acp          ACP-адаптер
+#   /plan           plan-режим: read-only (read/grep/lsp/aft + subagent-разведчики),
+#                   план пишется в todo; /plan ещё раз и начинается исполнение
+#
+# Большая задача: пайплайн (12 фаз, человеку нужен только checkpoint)
+#   triage -> localize -> reproduce -> design -> checkpoint -> plan
+#   -> implement -> verify -> review -> regress -> report -> retro
+#   pipeline_start "задача"        агент стартует сам или по твоей просьбе
+#   pipeline_resume                новая сессия: продолжить оборванный прогон
+#                                  с той же фазы (1 кандидат сам подхватывает,
+#                                  несколько показывает список)
+#   pipeline_start fresh: true     проигнорировать незавершённый прогон и начать заново
+#   pipeline_input_triage          маршрутизация внешнего вброса, пришедшего во время прогона
+#   pi-pipeline-view               веб-вью событий из ~/.pi/agent/pipeline/events.jsonl
+#   Состояние живёт в jsonl сессии, после завершения фазы агент сам жмёт advance_phase
+#
+# Маленькая задача / фикс: просто попросить. Агент сам:
+#   правит -> lsp_diagnostics -> run_gates (go build, golangci-lint, go test,
+#   buf lint, nixfmt, ast-grep standards) -> кратко отчитывается
+#   give_up        честная остановка, когда застрял (вместо бесконечных ретраев)
+#
+# Субагенты (herdr-вкладки, subagent / subagent_wait, параллельно)
+#   scout         read-only разведка по коду и докам
+#   reviewer      read-only ревью диффа на баги
+#   critic        анти-дизайн, VERDICT PASS или BLOCK
+#   tester        адверсариальный QA: сценарии, ломающие дизайн
+#   rival         независимый альтернативный дизайн от задачи и кода
+#   psychologist  эмуляция старейших авторов кода, их подход и стиль
+#   gopnik        построчный параноидальный антагонист диффа
+#
+# Разведка (tools.ts)
+#   why            git-история файла или диапазона строк: авторы, даты, MR
+#   exemplars      2-3 существующих примера того же вида, чтобы подражать
+#   bisect         первый коммит, где команда начинает падать (отдельный worktree)
+#   flaky          N прогонов теста: stable или flaky
+#   project_notes  личные заметки о проекте, вне репо (read/add)
+#
+# Оценка и статистика
+#   pi-eval mine <repo> --add     добавить репо в очередь eval-задач
+#   pi-eval                       нейтральная задача "найди баг в Go-репо" против агента
+#   pi-stats                      статистика по сессиям
+#
+# MCP (mcp.json)
+#   youtrack        Protei YouTrack: поиск и чтение тикетов
+#   gitlab          Protei GitLab: проекты, MR, пайплайны
+#   rag             база знаний Protei (LightRAG)
+#   searxng         веб-поиск и чтение URL
+#   postgres        локальная uc-база, read-only
+#   gh_grep         поиск кода по публичным GitHub-репозиториям
+#   chrome_devtools живой Chromium: страницы, консоль, сеть, скриншоты
+#   codebase_memory граф знаний индексируемых репозиториев
+#   uc_dev
+#
+# Скиллы (~/.agents/skills, вызов /skill:<имя>)
+#   triage            разбор тикета: верификация, бриф, критерии приёмки
+#   diagnosing-bugs   цикл диагностики сложных багов и регрессий
+#   code-review <фикс-точка>  двухосное ревью: стандарты + соответствие спеке
+#   codebase-design   проектирование модуля, углубление, швы
+#   tdd               red-green-refactor, интеграционные тесты
+#   retro             ретроспектива: что недодало агентам и харнессу
+#   grilling          допрос: выжать из плана все слабые места
+#   weekly-time       таблица учёта рабочего времени за неделю
+#   остальные: implement, handoff, to-tickets, domain-modeling,
+#   writing-for-agents, pr
+#
+# npm-экстеншены (источники встроенных инструментов)
+#   aft-pi            aft_search / aft_outline / aft_zoom / codemode
+#   pi-lsp-extension  lsp_diagnostics / lsp_hover / lsp_definition / lsp_references
+#                     / lsp_rename / lsp_code_actions
+#   rpiv-todo         todo (план многошаговой работы)
+#   context7-pi       актуальные доки библиотек: resolve-library-id + query-docs
+#   pi-add-dir, pi-fff, pi-nvim, pi-permission-system, pi-undo-redo
+#
+#
 { ... }:
 let
   mkPiAcp =
@@ -56,6 +134,12 @@ in
       inherit (lib)
         mkAfter
         ;
+
+      piHarnessAgents = lib.splitString " " "scout reviewer critic tester rival psychologist gopnik";
+
+      piAgentsDq = lib.concatStringsSep ", " (map (a: "\"${a}\"") piHarnessAgents);
+
+      piAgentsJs = "[${piAgentsDq}]";
 
       piAgentDir = "${config.home.homeDirectory}/.pi/agent";
 
@@ -420,41 +504,41 @@ in
               --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' ""
           '';
 
-      piPlan =
-        pkgs.runCommand "pi-plan"
-          {
-            src = pkgs.fetchurl {
-              url = "https://registry.npmjs.org/pi-plan/-/pi-plan-0.1.1.tgz";
-              hash = "sha256-aLu4Q64abvDSsa0w/041DG40eHuuuJH/eE9/CAwcT2o=";
-            };
-          }
-          /* bash */ ''
-            mkdir -p "$out"
-            tar xzf "$src" -C "$out" --strip-components=1
-            substituteInPlace "$out/src/safety.ts" \
-              --replace-fail '  /^\s*bat\b/,' '  /^\s*bat\b/, /^\s*herdr\s+(status|(pane\s+(list|current|get|layout|process-info|neighbor|edges|read|wait-output)|tab\s+(list|get)|workspace\s+(list|get)|agent\s+(list|get|read|wait|explain))\b)/,'
-            substituteInPlace "$out/extensions/plan/index.ts" \
-              --replace-fail 'const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];' "" \
-              --replace-fail 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls"];' 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "todo", "lsp_definition", "lsp_references", "lsp_hover", "lsp_diagnostics", "aft_outline", "aft_zoom", "aft_search", "query-docs", "resolve-library-id"];' \
-              --replace-fail '- You can only use: read, bash, grep, find, ls' '- You can only use: read, bash, grep, find, ls, todo, lsp_definition, lsp_references, lsp_hover, lsp_diagnostics, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id, subagent with the scout, reviewer, critic, tester, rival, psychologist or gopnik agent, subagent_wait' \
-              --replace-fail 'pi.setActiveTools(PLAN_MODE_TOOLS);' "" \
-              --replace-fail 'pi.setActiveTools(NORMAL_MODE_TOOLS);' 'if (!pi.getActiveTools().includes("edit")) pi.setActiveTools(pi.getAllTools().filter((t) => !t.exposure || t.exposure === "direct" || t.exposure === "model-only").map((t) => t.name));' \
-              --replace-fail 'if (event.toolName === "write" || event.toolName === "edit") {' 'if (!PLAN_MODE_TOOLS.includes(event.toolName) && event.toolName !== "mcp" && event.toolName !== "subagent_wait" && !event.toolName.startsWith("mcp__") && !(event.toolName === "subagent" && ((event.input as { tasks?: { agent?: string }[] }).tasks ?? []).every((t) => ["scout", "reviewer", "critic", "tester", "rival", "psychologist", "gopnik"].includes(t.agent ?? "scout")))) {' \
-              --replace-fail '"Plan mode active. File modifications blocked. Use /plan to disable."' '`Plan mode active. Only ''${PLAN_MODE_TOOLS.join(", ")} are allowed, file modifications are blocked. Use /plan to disable.`' \
-              --replace-fail 'ctx.ui.theme.muted(' 'ctx.ui.theme.fg("muted", ' \
-              --replace-fail 'pi.sendUserMessage(refinement.trim());' 'pi.sendUserMessage(refinement.trim(), { deliverAs: "followUp" });' \
-              --replace-fail 'import { extractPlanSteps } from' 'import { cleanStepText, extractPlanSteps } from' \
-              --replace-fail 'markCompletedSteps,' "" \
-              --replace-fail 'function persistState(): void {' 'function syncFromTodo(ctx: ExtensionContext, extra: unknown[] = []): boolean { type Todo = { id?: unknown; subject?: unknown; status?: unknown }; type Result = { role?: string; toolName?: string; details?: { action?: unknown; tasks?: Todo[] } }; const results = (messages: unknown[]) => (messages as Array<Result | undefined>).filter((m): m is Result & { details: { tasks: Todo[] } } => m?.role === "toolResult" && m.toolName === "todo" && Array.isArray(m.details?.tasks)); const branch = ctx.sessionManager.getBranch() as Array<{ type: string; customType?: string; data?: PlanState; message?: unknown }>; const start = branch.findLastIndex((e) => e.type === "custom" && e.customType === "pi-plan" && e.data?.mode !== "execute"); let ignored = new Set(results(branch.slice(0, start + 1).map((e) => e.message)).at(-1)?.details.tasks.map((t) => t.id)); let tasks: Todo[] | undefined; for (const m of results([...branch.slice(start + 1).map((e) => e.message), ...extra])) { if (m.details.action === "clear") ignored = new Set(); tasks = m.details.tasks; } if (!tasks) return false; const norm = (s: string) => cleanStepText(s.replace(/^\s*\d+\.(?!\d)\s*/, "")).toLowerCase(); let changed = false; for (const s of steps) { const task = tasks.findLast((t) => !ignored.has(t.id) && t.status !== "deleted" && typeof t.subject === "string" && (t.subject.match(/^\s*(\d+)\.(?!\d)/)?.[1] === String(s.step) || norm(t.subject) === s.text.toLowerCase())); const done = task?.status === "completed"; if (s.completed !== done) { s.completed = done; changed = true; } } return changed; } function persistState(): void {' \
-              --replace-fail 'ctx.ui.setWidget("pi-plan-todos", lines);' 'ctx.ui.setWidget("pi-plan-todos", undefined);' \
-              --replace-fail 'messages: event.messages.filter((m) => {' 'messages: event.messages.filter((m, i, all) => {' \
-              --replace-fail 'if (msg.customType === "pi-plan-context") return false;' 'if (msg.customType === "pi-plan-context") return planMode === "execute" && i === all.findLastIndex((x) => (x as { customType?: string }).customType === "pi-plan-context" && String((x as { content?: unknown }).content).startsWith("[EXECUTING PLAN"));' \
-              --replace-fail 'After completing a step, include a [DONE:n] tag in your response.' 'Track progress with the todo tool: keep one task per step with subject "N. <step text>", set it to in_progress when you start the step and to completed right after it is done. If the todo list has no tasks for these steps, create them first.' \
-              --replace-fail 'if (markCompletedSteps(text, steps) > 0) {' 'if (syncFromTodo(ctx, event.toolResults)) {' \
-              --replace-fail 'const { allDone } = getCompletionStats(steps);' 'if (syncFromTodo(ctx)) { updateUI(ctx); persistState(); } const { allDone } = getCompletionStats(steps);' \
-              --replace-fail 'markCompletedSteps(allText, steps);' 'syncFromTodo(ctx);' \
-              --replace-fail '`Execute the plan. Start with: ''${steps[0].text}`' '`Execute the plan. Track it with the todo tool: create one task per plan step with subject "N. <step text>":\n''${steps.map((s) => `''${s.step}. ''${s.text}`).join("\n")}\nSet a task to in_progress when you start the step and to completed right after it is done. Start with: ''${steps[0].text}`'
-          '';
+      piPlanCmd = /* bash */ ''
+        mkdir -p "$out"
+        tar xzf "$src" -C "$out" --strip-components=1
+        substituteInPlace "$out/src/safety.ts" \
+          --replace-fail '  /^\s*bat\b/,' '  /^\s*bat\b/, /^\s*herdr\s+(status|(pane\s+(list|current|get|layout|process-info|neighbor|edges|read|wait-output)|tab\s+(list|get)|workspace\s+(list|get)|agent\s+(list|get|read|wait|explain))\b)/,'
+        substituteInPlace "$out/extensions/plan/index.ts" \
+          --replace-fail 'const NORMAL_MODE_TOOLS = ["read", "bash", "edit", "write"];' "" \
+          --replace-fail 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls"];' 'const PLAN_MODE_TOOLS = ["read", "bash", "grep", "find", "ls", "todo", "lsp_definition", "lsp_references", "lsp_hover", "lsp_diagnostics", "aft_outline", "aft_zoom", "aft_search", "query-docs", "resolve-library-id"];' \
+           --replace-fail '- You can only use: read, bash, grep, find, ls' '- You can only use: read, bash, grep, find, ls, todo, lsp_definition, lsp_references, lsp_hover, lsp_diagnostics, aft_outline, aft_zoom, aft_search, query-docs, resolve-library-id, subagent with the ${lib.concatStringsSep ", " (lib.init piHarnessAgents)} or ${lib.last piHarnessAgents} agent, subagent_wait' \
+          --replace-fail 'pi.setActiveTools(PLAN_MODE_TOOLS);' "" \
+          --replace-fail 'pi.setActiveTools(NORMAL_MODE_TOOLS);' 'if (!pi.getActiveTools().includes("edit")) pi.setActiveTools(pi.getAllTools().filter((t) => !t.exposure || t.exposure === "direct" || t.exposure === "model-only").map((t) => t.name));' \
+          --replace-fail 'if (event.toolName === "write" || event.toolName === "edit") {' 'if (!PLAN_MODE_TOOLS.includes(event.toolName) && event.toolName !== "mcp" && event.toolName !== "subagent_wait" && !event.toolName.startsWith("mcp__") && !(event.toolName === "subagent" && ((event.input as { tasks?: { agent?: string }[] }).tasks ?? []).every((t) => [${piAgentsDq}].includes(t.agent ?? "scout")))) {' \
+          --replace-fail '"Plan mode active. File modifications blocked. Use /plan to disable."' '`Plan mode active. Only ''${PLAN_MODE_TOOLS.join(", ")} are allowed, file modifications are blocked. Use /plan to disable.`' \
+          --replace-fail 'ctx.ui.theme.muted(' 'ctx.ui.theme.fg("muted", ' \
+          --replace-fail 'pi.sendUserMessage(refinement.trim());' 'pi.sendUserMessage(refinement.trim(), { deliverAs: "followUp" });' \
+          --replace-fail 'import { extractPlanSteps } from' 'import { cleanStepText, extractPlanSteps } from' \
+          --replace-fail 'markCompletedSteps,' "" \
+          --replace-fail 'function persistState(): void {' 'function syncFromTodo(ctx: ExtensionContext, extra: unknown[] = []): boolean { type Todo = { id?: unknown; subject?: unknown; status?: unknown }; type Result = { role?: string; toolName?: string; details?: { action?: unknown; tasks?: Todo[] } }; const results = (messages: unknown[]) => (messages as Array<Result | undefined>).filter((m): m is Result & { details: { tasks: Todo[] } } => m?.role === "toolResult" && m.toolName === "todo" && Array.isArray(m.details?.tasks)); const branch = ctx.sessionManager.getBranch() as Array<{ type: string; customType?: string; data?: PlanState; message?: unknown }>; const start = branch.findLastIndex((e) => e.type === "custom" && e.customType === "pi-plan" && e.data?.mode !== "execute"); let ignored = new Set(results(branch.slice(0, start + 1).map((e) => e.message)).at(-1)?.details.tasks.map((t) => t.id)); let tasks: Todo[] | undefined; for (const m of results([...branch.slice(start + 1).map((e) => e.message), ...extra])) { if (m.details.action === "clear") ignored = new Set(); tasks = m.details.tasks; } if (!tasks) return false; const norm = (s: string) => cleanStepText(s.replace(/^\s*\d+\.(?!\d)\s*/, "")).toLowerCase(); let changed = false; for (const s of steps) { const task = tasks.findLast((t) => !ignored.has(t.id) && t.status !== "deleted" && typeof t.subject === "string" && (t.subject.match(/^\s*(\d+)\.(?!\d)/)?.[1] === String(s.step) || norm(t.subject) === s.text.toLowerCase())); const done = task?.status === "completed"; if (s.completed !== done) { s.completed = done; changed = true; } } return changed; } function persistState(): void {' \
+          --replace-fail 'ctx.ui.setWidget("pi-plan-todos", lines);' 'ctx.ui.setWidget("pi-plan-todos", undefined);' \
+          --replace-fail 'messages: event.messages.filter((m) => {' 'messages: event.messages.filter((m, i, all) => {' \
+          --replace-fail 'if (msg.customType === "pi-plan-context") return false;' 'if (msg.customType === "pi-plan-context") return planMode === "execute" && i === all.findLastIndex((x) => (x as { customType?: string }).customType === "pi-plan-context" && String((x as { content?: unknown }).content).startsWith("[EXECUTING PLAN"));' \
+          --replace-fail 'After completing a step, include a [DONE:n] tag in your response.' 'Track progress with the todo tool: keep one task per step with subject "N. <step text>", set it to in_progress when you start the step and to completed right after it is done. If the todo list has no tasks for these steps, create them first.' \
+          --replace-fail 'if (markCompletedSteps(text, steps) > 0) {' 'if (syncFromTodo(ctx, event.toolResults)) {' \
+          --replace-fail 'const { allDone } = getCompletionStats(steps);' 'if (syncFromTodo(ctx)) { updateUI(ctx); persistState(); } const { allDone } = getCompletionStats(steps);' \
+          --replace-fail 'markCompletedSteps(allText, steps);' 'syncFromTodo(ctx);' \
+          --replace-fail '`Execute the plan. Start with: ''${steps[0].text}`' '`Execute the plan. Track it with the todo tool: create one task per plan step with subject "N. <step text>":\n''${steps.map((s) => `''${s.step}. ''${s.text}`).join("\n")}\nSet a task to in_progress when you start the step and to completed right after it is done. Start with: ''${steps[0].text}`'
+      '';
+
+      piPlan = pkgs.runCommand "pi-plan" {
+        src = pkgs.fetchurl {
+          url = "https://registry.npmjs.org/pi-plan/-/pi-plan-0.1.1.tgz";
+          hash = "sha256-aLu4Q64abvDSsa0w/041DG40eHuuuJH/eE9/CAwcT2o=";
+        };
+        passthru.command = piPlanCmd;
+      } piPlanCmd;
 
       researchFile = pkgs.writeText "research.ts" /* typescript */ ''
         import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
@@ -1522,7 +1606,7 @@ in
                     git(tree, "init", "-q")
                     git(tree, "add", "-A")
                     git(tree, "-c", "commit.gpgsign=false", "commit", "-q", "-m", "baseline", env=env)
-                    body = git(repo, "show", "-s", "--format=%B", t["commit"]).strip()
+                    body = "В этом Go-репозитории есть баг. Найди его и исправь."
                     start = time.time()
                     timed_out = False
                     try:
@@ -2039,7 +2123,7 @@ in
         import { homedir, tmpdir } from "node:os";
         import { basename, dirname, join, resolve } from "node:path";
         import { checkCommand } from "${piPlan}/src/safety.ts";
-
+        ${pipelineCommon}
         type Agent = { name: string; description: string; tools?: string; model?: string; thinking?: string; body: string };
         type Answer = { answer: string; stopReason?: string; usage?: unknown };
         type Herdr = { ok: true; result: any } | { ok: false; code: string; message: string };
@@ -2067,7 +2151,6 @@ in
 
         const DIR = join(process.env.XDG_RUNTIME_DIR || tmpdir(), "pi-herdr");
         const AGENTS = join(process.env.PI_CODING_AGENT_DIR || join(homedir(), ".pi", "agent"), "agents");
-        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
         const TICK_MS = 5000;
         const CAP = 4000;
         const LIMIT = Math.max(1, Number(process.env.PI_SUBAGENT_CONCURRENCY) || 2);
@@ -2100,13 +2183,6 @@ in
           waiters.shift()?.();
         };
 
-        const emit = (node: Record<string, unknown>) => {
-          try {
-            mkdirSync(dirname(EVENTS), { recursive: true });
-            appendFileSync(EVENTS, JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
-          } catch {}
-        };
-
         const finished = (j: Job) => j.status === "done" || j.status === "failed";
 
         const head = (s: string, n = 30) => {
@@ -2119,7 +2195,7 @@ in
         const emitAgent = (job: Job) =>
           job.nodeId &&
           job.pipe &&
-          emit({
+          emitEvent({
             id: job.nodeId,
             parents: [job.pipe.parent],
             kind: "agent",
@@ -2136,7 +2212,7 @@ in
           const nodes = jobs.filter((j) => j.nodeId && j.pipe && finished(j));
           if (nodes.length < 2) return;
           const pipe = nodes[0].pipe!;
-          emit({
+          emitEvent({
             id: `join-''${randomUUID()}`,
             parents: nodes.map((j) => j.nodeId),
             kind: "join",
@@ -2436,12 +2512,7 @@ in
             const p = data as typeof phase | null;
             phase = p?.nodeId ? p : undefined;
           });
-          const pipeOf = (): Pipe | undefined =>
-            phase
-              ? { run: phase.run, parent: phase.nodeId, phase: phase.phase }
-              : process.env.PI_PIPELINE_NODE
-                ? { run: process.env.PI_PIPELINE_RUN ?? "", parent: process.env.PI_PIPELINE_NODE }
-                : undefined;
+          const pipeOf = () => currentNode(phase);
 
           pi.registerTool({
             name: "subagent",
@@ -2597,7 +2668,7 @@ in
         import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
         import { homedir } from "node:os";
         import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-
+        ${pipelineCommon}
         type Phase = { run: string; phase: string; nodeId: string } | null;
         type Result = { name: string; ok: boolean; output: string };
         type Finding = { ruleId: string; severity: string; message: string; file: string; range: { start: { line: number } } };
@@ -2613,7 +2684,6 @@ in
         const MAX_FAILS = 3;
         const SNAPSHOT_CAP = 5000;
         const INTERESTING = /^(--- FAIL|FAIL\b|panic:|ok\s)|\.(go|proto|nix):\d+(:\d+)?|error|undefined:|cannot |expected |unexpected /i;
-        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
         const RULES = join(homedir(), ".pi", "rules");
         const GOLANGCI = join(RULES, "go", "golangci.yml");
         const MAX_FINDINGS = 20;
@@ -2653,13 +2723,6 @@ in
             if (d === stop || d === dirname(d)) return undefined;
           }
         };
-        const emit = (node: Node) => {
-          try {
-            mkdirSync(dirname(EVENTS), { recursive: true });
-            appendFileSync(EVENTS, `''${JSON.stringify(node)}\n`);
-          } catch {}
-        };
-
         export default function (pi: ExtensionAPI) {
           let phase: Phase = null;
           let fails = 0;
@@ -2710,10 +2773,9 @@ in
             return [...out];
           };
 
-          const label = (p: Exclude<Phase, null>, text: string, status: Node["status"], ctx: ExtensionContext, id: string, detail?: string) =>
-            emit({ id, parents: [p.nodeId], kind: "gate", label: text, run: p.run, phase: p.phase, cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId(), status, ts: Date.now(), pid: process.pid, detail });
-          const parentPhase = (): Exclude<Phase, null> | undefined =>
-            phase ?? (process.env.PI_PIPELINE_NODE ? { run: process.env.PI_PIPELINE_RUN ?? "", phase: "", nodeId: process.env.PI_PIPELINE_NODE } : undefined);
+          const label = (p: { run: string; parent: string; phase?: string }, text: string, status: Node["status"], ctx: ExtensionContext, id: string, detail?: string) =>
+            emitEvent({ id, parents: [p.parent], kind: "gate", label: text, run: p.run, phase: p.phase, cwd: ctx.cwd, sessionId: ctx.sessionManager.getSessionId(), status, detail });
+          const parentPhase = () => currentNode(phase);
 
           pi.events.on("pipeline:phase", (data) => {
             const prev = phase;
@@ -2974,7 +3036,7 @@ in
         import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
         import { homedir, tmpdir } from "node:os";
         import { basename, dirname, join, resolve } from "node:path";
-
+        ${pipelineCommon}
         const HOME = process.env.HOME || homedir();
         const MAX_LINES = 60;
         const SAMPLE_LINES = 40;
@@ -2984,14 +3046,6 @@ in
         const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
         const ok = (text: string, details: unknown = {}) => ({ content: [{ type: "text" as const, text }], details });
         const fail = (text: string) => ({ content: [{ type: "text" as const, text: "Error: " + text }], details: { error: true } });
-
-        const emit = (node: Record<string, unknown>) => {
-          try {
-            const dir = join(HOME, ".pi", "agent", "pipeline");
-            mkdirSync(dir, { recursive: true });
-            appendFileSync(join(dir, "events.jsonl"), JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
-          } catch {}
-        };
 
         const stripGoComments = (src: string) => {
           let out = "";
@@ -3207,7 +3261,7 @@ in
               const node = id;
               const run = process.env.PI_PIPELINE_RUN || id;
               const parents = process.env.PI_PIPELINE_NODE ? [process.env.PI_PIPELINE_NODE] : [];
-              const ev = (status: string, detail?: string) => emit({ id: node, parents, kind: "step", label: "bisect " + clip(params.command, 40), run, cwd: top, status, detail });
+              const ev = (status: string, detail?: string) => emitEvent({ id: node, parents, kind: "step", label: "bisect " + clip(params.command, 40), run, cwd: top, status, detail });
               const timeoutS = Number(process.env.PI_BISECT_TIMEOUT_S) || 1800;
               ev("running");
               onUpdate?.({ content: [{ type: "text", text: "bisect started in " + wt }], details: {} });
@@ -3321,7 +3375,7 @@ in
         import { homedir } from "node:os";
         import { basename, dirname, isAbsolute, join, resolve } from "node:path";
         import { checkCommand } from "${piPlan}/src/safety.ts";
-
+        ${pipelineCommon}
         const PHASES = ["triage", "localize", "reproduce", "design", "checkpoint", "plan", "implement", "verify", "review", "regress", "report", "retro"] as const;
         type Phase = (typeof PHASES)[number];
         type Status = "running" | "ok" | "fail" | "skipped";
@@ -3372,6 +3426,7 @@ in
           reviewLines?: number;
           reviewFiles?: string[];
           mutation?: string;
+          stress?: string;
           res: Res[];
           read: string[];
           calls: string[];
@@ -3407,8 +3462,7 @@ in
         type Entry = { type: string; customType?: string; modelId?: string; data?: { state?: State | null; mode?: string; cutoff?: unknown }; message?: Msg };
 
         const READONLY = new Set<Phase>(["triage", "localize", "design", "checkpoint", "plan", "report", "retro"]);
-        const AGENTS = ["scout", "reviewer", "critic", "tester", "rival", "psychologist", "gopnik"];
-        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
+        const AGENTS = ${piAgentsJs};
         const MAX_FAILS = 5;
         const MAX_ROUNDS = 3;
         const MAX_LOCAL = 2;
@@ -3489,6 +3543,7 @@ in
           { phases: ["plan"], skill: "to-tickets", why: "vertical slices, blocking edges" },
           { phases: ["implement"], skill: "implement", why: "slice by slice" },
           { phases: ["implement"], skill: "tdd", why: "red before green at confirmed seams", when: notDocs },
+          { phases: ["review"], skill: "code-review", why: "two-axis review of the diff" },
           { phases: ["report"], skill: "pr", why: "report template" },
           { phases: ["retro"], skill: "retro", why: "retro categories" },
         ];
@@ -3730,19 +3785,85 @@ in
         const ranges = (diff: string) =>
           [...diff.matchAll(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/gm)].map((m) => [Number(m[1]), Number(m[1]) + Math.max(Number(m[2] ?? 1), 1) - 1] as [number, number]).filter((r) => r[1] >= r[0]);
 
-        const emit = (node: { id: string; parents: string[]; kind: string; label: string; run: string; phase?: string; cwd: string; sessionId?: string; status: Status; detail?: string }) => {
-          try {
-            mkdirSync(dirname(EVENTS), { recursive: true });
-            appendFileSync(EVENTS, JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
-          } catch {}
-        };
-
         const planMode = (ctx: ExtensionContext) =>
           (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pi-plan")?.data?.mode ?? "normal";
 
-        const load = (ctx: ExtensionContext) => {
-          const st = (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pipeline")?.data?.state ?? undefined;
-          return st ? { repros: [], round: 0, items: [], ideas: [], inputs: 0, dups: [], news: [], answers: {}, localRound: 0, used: [], ...(st as Partial<State>) } as State : undefined;
+        const stateDefaults: Partial<State> = { repros: [], round: 0, items: [], ideas: [], inputs: 0, dups: [], news: [], answers: {}, localRound: 0, used: [] };
+
+        const mergeState = (st: unknown): State | undefined => (st && typeof st === "object" ? ({ ...stateDefaults, ...(st as Partial<State>) } as State) : undefined);
+
+        const load = (ctx: ExtensionContext) =>
+          mergeState((ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pipeline")?.data?.state ?? undefined);
+
+        type SessEntry = { id?: string; parentId?: string; timestamp?: string; type?: string; customType?: string; cwd?: string; data?: { state?: State | null } };
+
+        const sessionState = (text: string): { cwd: string; state: State } | undefined => {
+          const byId = new Map<string, SessEntry>();
+          let cwd = "";
+          for (const line of text.split("\n")) {
+            if (!line) continue;
+            try {
+              const e = JSON.parse(line) as SessEntry;
+              if (e.type === "session" && typeof e.cwd === "string") cwd = e.cwd;
+              if (typeof e.id === "string") byId.set(e.id, e);
+            } catch {}
+          }
+          if (!cwd || !byId.size) return undefined;
+          const refs = new Set<string>();
+          byId.forEach((e) => {
+            if (typeof e.parentId === "string") refs.add(e.parentId);
+          });
+          let leaf: string | undefined;
+          byId.forEach((e, id) => {
+            if (refs.has(id)) return;
+            if (!leaf || (e.timestamp ?? "") >= (byId.get(leaf)!.timestamp ?? "")) leaf = id;
+          });
+          if (!leaf) return undefined;
+          let seen = false;
+          let state: State | null = null;
+          let cur: string | undefined = leaf;
+          while (cur) {
+            const e = byId.get(cur);
+            if (!e) break;
+            if (e.type === "custom" && e.customType === "pipeline") {
+              if (!seen) state = e.data?.state ?? null;
+              seen = true;
+            }
+            cur = typeof e.parentId === "string" ? e.parentId : undefined;
+          }
+          const st = mergeState(state);
+          return st ? { cwd, state: st } : undefined;
+        };
+
+        const scanSessions = (): { file: string; cwd: string; state: State }[] => {
+          const dir = process.env.PI_CODING_AGENT_SESSION_DIR || join(homedir(), ".pi", "agent", "sessions");
+          let groups: string[] = [];
+          try {
+            groups = readdirSync(dir);
+          } catch {
+            return [];
+          }
+          const out: { file: string; cwd: string; state: State }[] = [];
+          for (const g of groups) {
+            let files: string[] = [];
+            try {
+              files = readdirSync(join(dir, g));
+            } catch {
+              continue;
+            }
+            for (const f of files) {
+              if (!f.endsWith(".jsonl")) continue;
+              const file = join(dir, g, f);
+              let parsed: { cwd: string; state: State } | undefined;
+              try {
+                parsed = sessionState(readFileSync(file, "utf8"));
+              } catch {
+                continue;
+              }
+              if (parsed) out.push({ file, ...parsed });
+            }
+          }
+          return out;
         };
 
         const projDir = (st: State) => join(homedir(), ".pi", "projects", st.root.replace(/\//g, "-"));
@@ -3864,10 +3985,10 @@ in
           };
 
           const node = (st: State, status: Status, detail?: string) =>
-            emit({ id: st.node, parents: [st.parent], kind: "phase", label: st.phase, run: st.run, phase: st.phase, cwd: st.root, status, detail });
+            emitEvent({ id: st.node, parents: [st.parent], kind: "phase", label: st.phase, run: st.run, phase: st.phase, cwd: st.root, status, detail });
 
           const gate = (st: State, name: string, status: Status, detail?: string) =>
-            emit({ id: `''${st.node}:gate:''${name}`, parents: [st.node], kind: "gate", label: name, run: st.run, phase: st.phase, cwd: st.root, status, detail: detail && head(detail, 200) });
+            emitEvent({ id: `''${st.node}:gate:''${name}`, parents: [st.node], kind: "gate", label: name, run: st.run, phase: st.phase, cwd: st.root, status, detail: detail && head(detail, 200) });
 
           const enter = async (st: State, phase: Phase, ctx: ExtensionContext) => {
             const from = st.phase;
@@ -3886,7 +4007,7 @@ in
           const finish = (status: Status, ctx: ExtensionContext, detail?: string) => {
             if (!s) return;
             node(s, status, detail);
-            emit({ id: s.run, parents: [], kind: "run", label: s.issue ?? head(s.task), run: s.run, cwd: s.root, sessionId: ctx.sessionManager.getSessionId(), status, detail });
+            emitEvent({ id: s.run, parents: [], kind: "run", label: s.issue ?? head(s.task), run: s.run, cwd: s.root, sessionId: ctx.sessionManager.getSessionId(), status, detail });
             s = undefined;
             save();
             publish(ctx);
@@ -3902,7 +4023,7 @@ in
               res: discover(ctx.cwd, root, pi.getAllTools().map((t) => t.name)), read: [], calls: [], used: [], skips: {}, down: [], log: [],
               timeline: [{ phase: "triage", at: Date.now() }], repros: [], round: 0, items: [], ideas: [], inputs: 0, dups: [], news: [], answers: {}, localRound: 0,
             };
-            emit({ id: run, parents: [], kind: "run", label: issue ?? head(task), run, cwd: root, sessionId: ctx.sessionManager.getSessionId(), status: "running" });
+            emitEvent({ id: run, parents: [], kind: "run", label: issue ?? head(task), run, cwd: root, sessionId: ctx.sessionManager.getSessionId(), status: "running" });
             node(s, "running");
             save();
             publish(ctx);
@@ -3956,7 +4077,7 @@ in
             }
             recordJobs(st, jobs);
             const parents = jobs.map((j) => j.sessionId ?? j.id).filter((x): x is string => !!x);
-            emit({ id: `''${st.node}:join:''${key}`, parents: parents.length ? parents : [st.node], kind: "join", label: `join ''${key}`, run: st.run, phase: st.phase, cwd: st.root, status: jobs.every((j) => j.ok) ? "ok" : "fail" });
+            emitEvent({ id: `''${st.node}:join:''${key}`, parents: parents.length ? parents : [st.node], kind: "join", label: `join ''${key}`, run: st.run, phase: st.phase, cwd: st.root, status: jobs.every((j) => j.ok) ? "ok" : "fail" });
             return tasks.map((t, i) => jobs[i] ?? { agent: t.agent, ok: false, error: "missing" });
           };
 
@@ -4087,7 +4208,7 @@ in
             const expects = openItems(st, ["expect"]);
             if (block || rejecting.length) {
               fact(st, "design", `design round ''${st.round} rejected: ''${rejecting.map((i) => `''${i.id} ''${head(i.text, 60)}`).join("; ")}`);
-              emit({ id: `''${st.node}:round:''${st.round}`, parents: [`''${st.node}:join:design''${st.round}`], kind: "step", label: `design round ''${st.round} rejected`, run: st.run, phase: "design", cwd: st.root, status: "fail" });
+              emitEvent({ id: `''${st.node}:round:''${st.round}`, parents: [`''${st.node}:join:design''${st.round}`], kind: "step", label: `design round ''${st.round} rejected`, run: st.run, phase: "design", cwd: st.root, status: "fail" });
               if (st.round >= MAX_ROUNDS) return { ok: true, status: "fail", note: `Design not accepted after ''${MAX_ROUNDS} rounds. ''${st.checked ? "The unresolved items stay in the facts, the user already decided at the checkpoint." : "The unresolved items go to the user at the checkpoint."}` };
               save();
               return { ok: true, wait: `Design rejected (round ''${st.round}/''${MAX_ROUNDS}). Rework the approach (not a patch) and submit the whole design doc again with advance_phase.''${itemsText(st)}` };
@@ -4175,7 +4296,7 @@ in
                 ...goSrc.filter((f) => freshGo.has(f)).flatMap((f) => readFileSync(join(st.root, f), "utf8").split("\n")),
               ];
               const decl = /^func\s+(?:\(([^)]*)\)\s*)?([A-Z]\w*)\s*(?:\[[^\]]*\])?\(([^)]*)\)\s*([^{]*)|^type\s+([A-Z]\w*)\s/;
-              const existing = (await sh(`git grep -n -E '^(func (\\([^)]*\\) ?)?[A-Z][A-Za-z0-9_]*(\\[[^]]*\\])?\\(|type [A-Z][A-Za-z0-9_]* )' HEAD -- '*.go' ':!:*_test.go' | head -20000`, st.root, 60000, signal)).stdout
+              const existing = (await sh(`git grep -n -E '^(func (\\([^)]*\\) ?)?[A-Z][A-Za-z0-9_]*(\\[[^]]*\\])?\\(|type [A-Z][A-Za-z0-9_]* )' HEAD -- '*.go' ':!:*_test.go'`, st.root, 60000, signal)).stdout
                 .split("\n")
                 .map((l) => l.match(/^HEAD:([^:]+):(\d+):(.*)$/))
                 .filter((m): m is RegExpMatchArray => !!m)
@@ -4210,7 +4331,10 @@ in
           };
 
           const stress = async (st: State, signal?: AbortSignal): Promise<string | undefined> => {
-            if (!existsSync(join(st.root, "go.mod"))) return undefined;
+            if (!existsSync(join(st.root, "go.mod"))) {
+              st.stress = "skip";
+              return undefined;
+            }
             const files = (await changed(st)).filter((f) => f.endsWith(".go") && existsSync(join(st.root, f)));
             const fresh = new Set(await untracked(st, files));
             const tests = new Map<string, Set<string>>();
@@ -4221,6 +4345,10 @@ in
             }
             const pkgs = [...new Set(files.filter((f) => !isTest(f)).map((f) => "./" + dirname(f)))];
             const cmds = [...[...tests].map(([d, names]) => `go test -race -count=3 -shuffle=on -run ''${q(`^(''${[...names].join("|")})$`)} ''${q("./" + d)}`), ...(pkgs.length ? [`go test -race -count=1 ''${pkgs.map(q).join(" ")}`] : [])];
+            if (!cmds.length) {
+              st.stress = "skip";
+              return undefined;
+            }
             for (let cmd of cmds) {
               let r = await sh(cmd, st.root, 900000, signal);
               if (r.code !== 0 && /requires cgo|-race is not supported|race detector/i.test(r.out)) {
@@ -4234,6 +4362,7 @@ in
                 return `New or changed tests are not stable or race free (''${cmd}):\n''${tail(r.out.split("\n").filter((l) => /^(--- FAIL|FAIL|panic:|WARNING: DATA RACE|\s+\S+\.go:\d+)/.test(l)).join("\n") || r.out, 30)}`;
               }
             }
+            st.stress = "ok";
             return undefined;
           };
 
@@ -4519,8 +4648,8 @@ in
                 if (h) return h;
                 const dbg = [
                   ...(await sh("git diff HEAD -U0", st.root, 30000, signal)).stdout.split("\n").filter((l) => l.startsWith("+") && !l.startsWith("+++")),
-                  ...(await sh("git ls-files --others --exclude-standard -z | xargs -0r grep -HnF '[DEBUG-' --", st.root, 30000, signal)).stdout.split("\n"),
-                ].filter((l) => /\[DEBUG-\w+\]/.test(l));
+                  ...(await sh("git ls-files --others --exclude-standard -z | xargs -0r grep -HnF '[DEBUG' --", st.root, 30000, signal)).stdout.split("\n"),
+                ].filter((l) => /\[DEBUG-\w*]|\[DEBUG\]/.test(l));
                 if (dbg.length) return { ok: false, why: `Remove the tagged debug logs before verify:\n''${dbg.slice(0, 8).map((l) => head(l, 160)).join("\n")}` };
                 const g = await runGates(ctx, signal);
                 if (!g.ok) return { ok: false, why: g.text };
@@ -4530,7 +4659,7 @@ in
                 if (sx) return { ok: false, why: sx };
                 const mx = await mutate(st, signal);
                 if (mx) return { ok: false, why: mx };
-                return { ok: true, note: [g.text, st.repros.length ? `Repro passes: ''${st.repros.join(" ; ")}` : "", "Stress and race runs ok.", st.mutation === "skip" ? "Mutation testing skipped (no gremlins)." : st.mutation === "ok" ? "No surviving mutants in changed code." : ""].filter(Boolean).join(" ") };
+                return { ok: true, note: [g.text, st.repros.length ? `Repro passes: ''${st.repros.join(" ; ")}` : "", (st.stress === "skip" ? "Stress and race skipped (no Go changes)." : "Stress and race ran ok."), st.mutation === "skip" ? "Mutation testing skipped (no gremlins)." : st.mutation === "ok" ? "No surviving mutants in changed code." : ""].filter(Boolean).join(" ") };
               }
               case "review":
                 return reviewCheck(st, summary, ctx, signal);
@@ -4670,7 +4799,7 @@ in
             } catch (e) {
               return `Retro could not be saved: ''${String(e)}`;
             }
-            items.forEach((it, i) => emit({ id: `''${st.node}:item:''${i + 1}`, parents: [st.node], kind: "step", label: `''${it.type}: ''${head(it.gap, 40)}`, run: st.run, phase: "retro", cwd: st.root, status: "ok", detail: it.target }));
+            items.forEach((it, i) => emitEvent({ id: `''${st.node}:item:''${i + 1}`, parents: [st.node], kind: "step", label: `''${it.type}: ''${head(it.gap, 40)}`, run: st.run, phase: "retro", cwd: st.root, status: "ok", detail: it.target }));
             const order = items.map((_, i) => i).sort((a, b) => times[b] - times[a]);
             return `Retro saved to ''${file}.''${order.map((i) => `\n''${i + 1}. ''${items[i].type} -> ''${items[i].target}: ''${items[i].gap}''${seenText(i)}`).join("")}`;
           };
@@ -4766,7 +4895,7 @@ in
             st.inputs++;
             st.pending = undefined;
             fact(st, "design-miss", `design missed ''${type} from outside: ''${head(text, 150)}`);
-            emit({ id: `''${st.node}:input:''${st.inputs}`, parents: [st.node], kind: "step", label: `input ''${type}`, run: st.run, phase: st.phase, cwd: st.root, status: "ok", detail: head(text, 200) });
+            emitEvent({ id: `''${st.node}:input:''${st.inputs}`, parents: [st.node], kind: "step", label: `input ''${type}`, run: st.run, phase: st.phase, cwd: st.root, status: "ok", detail: head(text, 200) });
             const at = PHASES.indexOf(st.phase);
             let target: Phase | undefined;
             let note: string;
@@ -4851,13 +4980,65 @@ in
             name: "pipeline_start",
             label: "Pipeline start",
             description: "Start the task pipeline for a code task: triage, localize, reproduce, design, checkpoint, plan, implement, verify, review, regress, report. Each phase is finished with advance_phase.",
-            parameters: Type.Object({ task: Type.String({ description: "The task in 1-3 sentences, or a YouTrack issue URL or ID" }) }),
+            parameters: Type.Object({
+              task: Type.String({ description: "The task in 1-3 sentences, or a YouTrack issue URL or ID" }),
+              fresh: Type.Optional(Type.Boolean({ description: "Start a new run even if an unfinished run for this project exists; the old run stays resumable" })),
+            }),
             async execute(_id, params, _signal, _onUpdate, ctx) {
               const fail = (text: string) => ({ content: [{ type: "text" as const, text }], details: {}, isError: true });
               if (planMode(ctx) !== "normal") return fail("Plan mode is on, the pipeline cannot start. Plan in plan mode instead.");
               if (s) return fail(`A pipeline is already running, phase ''${s.phase}. Continue it with advance_phase.`);
               if (!params.task.trim()) return fail("Pass the task text.");
+              if (!params.fresh) {
+                const top = await sh("git rev-parse --show-toplevel", ctx.cwd, 10000);
+                const root = top.code === 0 ? top.stdout.trim() : ctx.cwd;
+                const c = scanSessions().find((x) => x.cwd === root);
+                if (c)
+                  return fail(
+                    `An unfinished pipeline run exists in another session (phase ''${c.state.phase}, run ''${c.state.run}, session ''${c.file}). Resume it with pipeline_resume, or start a new run with fresh=true (the old run stays resumable).`,
+                  );
+              }
               return { content: [{ type: "text", text: await start(params.task.trim(), ctx) }], details: {} };
+            },
+          });
+
+          pi.registerTool({
+            name: "pipeline_resume",
+            label: "Pipeline resume",
+            description: "Resume a task pipeline that stopped in another session (crash, closed pi, compaction) from the phase where it stopped. Without session it finds the latest unfinished run for this project; with session (path to the .jsonl or its session id) it resumes that run.",
+            parameters: Type.Object({ session: Type.Optional(Type.String({ description: "Path to the session .jsonl or its session id, when several unfinished runs are found" })) }),
+            async execute(_id, params, _signal, _onUpdate, ctx) {
+              const fail = (text: string) => ({ content: [{ type: "text" as const, text }], details: {}, isError: true });
+              if (s)
+                return { content: [{ type: "text", text: `A pipeline is already running in this session, phase ''${s.phase}; resume is for a run stopped in another session.` }], details: {} };
+              if (planMode(ctx) !== "normal") return fail("Plan mode is on, the pipeline cannot run. Plan in plan mode instead.");
+              const top = await sh("git rev-parse --show-toplevel", ctx.cwd, 10000);
+              const root = top.code === 0 ? top.stdout.trim() : ctx.cwd;
+              const all = scanSessions();
+              const cands = all.filter((x) => x.cwd === root);
+              let pick: { file: string; cwd: string; state: State } | undefined;
+              if (params.session) {
+                const q = params.session.trim();
+                pick = cands.find((x) => x.file === q || x.file.endsWith(`_''${q}.jsonl`)) ?? all.find((x) => x.file === q || x.file.endsWith(`_''${q}.jsonl`));
+                if (!pick) return fail(`No unfinished pipeline run found for session ''${q}.`);
+              } else {
+                const same = cands.length ? cands : all;
+                if (same.length === 0) return { content: [{ type: "text", text: "No unfinished pipeline run found for this project." }], details: {} };
+                if (same.length > 1)
+                  return {
+                    content: [{ type: "text", text: `Several unfinished runs, pass one to pipeline_resume as session:\n''${same.map((x) => `- ''${x.state.phase} (run ''${x.state.run}, cwd ''${x.cwd}) ''${x.file}`).join("\n")}` }],
+                    details: {},
+                  };
+                pick = same[0];
+              }
+              s = pick.state;
+              emitEvent({ id: s.run, parents: [], kind: "run", label: s.issue ?? head(s.task), run: s.run, cwd: s.root, sessionId: ctx.sessionManager.getSessionId(), status: "running", detail: `resumed from ''${pick.file}` });
+              node(s, "running");
+              save();
+              publish(ctx);
+              const n = PHASES.indexOf(s.phase) + 1;
+              const extra = s.phase === "checkpoint" ? `\nCheckpoint: ''${s.decision ? `decision given: ''${s.decision}` : "waiting for the user's decision"}` : "";
+              return { content: [{ type: "text", text: `Resumed run ''${s.run}: ''${head(s.task, 200)}\nPhase ''${s.phase} (''${n}/''${PHASES.length}), attempt ''${s.fails + 1}/''${MAX_FAILS}''${extra}\n''${listCriteria(s.criteria)}''${s.phase === "design" || s.phase === "plan" ? itemsText(s) : ""}\nTo advance: ''${NEED[s.phase]} Continue the phase, do not start over.` }], details: {} };
             },
           });
 
@@ -4898,7 +5079,7 @@ in
             if (!st.used.includes(`''${r.kind} ''${r.name}`)) st.used.push(`''${r.kind} ''${r.name}`);
             if (list.includes(r.name)) return;
             list.push(r.name);
-            emit({ id: `''${st.node}:''${r.kind}:''${r.name}`, parents: [st.node], kind: "step", label: `''${r.kind}: ''${r.name}`, run: st.run, phase: st.phase, cwd: st.root, status: "ok" });
+            emitEvent({ id: `''${st.node}:''${r.kind}:''${r.name}`, parents: [st.node], kind: "step", label: `''${r.kind}: ''${r.name}`, run: st.run, phase: st.phase, cwd: st.root, status: "ok" });
             save();
           };
 
@@ -5008,6 +5189,21 @@ in
             const reminder = { role: "custom", customType: "pipeline-reminder", content, display: false, timestamp: Date.now() };
             return { messages: [...event.messages, reminder as (typeof event.messages)[number]] };
           });
+        }
+      '';
+
+      pipelineCommon = ''
+        const EVENTS = join(homedir(), ".pi", "agent", "pipeline", "events.jsonl");
+        function emitEvent(node: Record<string, unknown>) {
+          try {
+            mkdirSync(dirname(EVENTS), { recursive: true });
+            appendFileSync(EVENTS, JSON.stringify({ ...node, ts: Date.now(), pid: process.pid }) + "\n");
+          } catch {}
+        }
+        function currentNode(p?: { run: string; nodeId: string; phase?: string } | null) {
+          if (p && p.nodeId) return { run: p.run, parent: p.nodeId, phase: p.phase };
+          if (process.env.PI_PIPELINE_NODE) return { run: process.env.PI_PIPELINE_RUN ?? "", parent: process.env.PI_PIPELINE_NODE, phase: "" };
+          return undefined;
         }
       '';
 
