@@ -290,7 +290,6 @@ in
       settingsSeed = {
         defaultProvider = "Protei";
         defaultModel = "auto";
-        theme = "dark";
         defaultThinkingLevel = "medium";
         defaultTools = [ "-powershell" ];
         thinkingBudgets = {
@@ -300,9 +299,7 @@ in
         };
         compaction = {
           reserveTokens = 41000;
-          keepRecentTokens = 20000;
         };
-        extensions = [ ];
         packages = [
           "npm:@cortexkit/aft-pi"
           "npm:@juicesharp/rpiv-todo"
@@ -349,7 +346,6 @@ in
 
       aftConfig = {
         format_on_edit = true;
-        edit_mode = "default";
         bash.background = false;
         lsp = {
           auto_install = false;
@@ -573,15 +569,6 @@ in
         const planMode = (ctx: ExtensionContext) =>
           (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "pi-plan")?.data?.mode ?? "normal";
 
-        const reviewActive = (ctx: ExtensionContext, messages: ModelRouteRequest["messages"]) => {
-          const state = (ctx.sessionManager.getBranch() as Entry[]).findLast((e) => e.type === "custom" && e.customType === "review-session");
-          if (state?.data?.active) return true;
-          const user = messages.findLast((m) => m.role === "user");
-          if (user?.role !== "user") return false;
-          const text = typeof user.content === "string" ? user.content : user.content.find((c) => c.type === "text")?.text;
-          return text?.startsWith("# Review Guidelines") ?? false;
-        };
-
         const E2E = (id: string) => `''${id}:e2e`;
 
         const isVirtual = (m: { provider: string; id: string } | undefined) => m?.provider === VIRTUAL.provider && m.id === VIRTUAL.id;
@@ -599,7 +586,6 @@ in
           let first = 0;
           let last = 0;
           let chars = 0;
-          let review = false;
           let lastMain = Date.now();
           let usage: { ctx: number; hit: number } | undefined;
 
@@ -627,11 +613,11 @@ in
             const v = ewmaOf(backend());
             const lvl = LEVELS[level()];
             const left = manualLeft();
-            const mode = review ? "review" : left ? `manual ''${left}m` : "auto";
+            const mode = left ? `manual ''${left}m` : "auto";
             const e2e = ewmaOf(E2E(backend()));
             const speed = v === undefined ? "" : ` ''${Math.round(v)} tok/s''${e2e === undefined ? "" : ` (e2e ''${Math.round(e2e)})`}`;
             const load = usage ? ` · ctx ''${Math.round(usage.ctx / 1000)}k cache ''${Math.round(usage.hit * 100)}%` : "";
-            ctx.ui.setStatus("protei-auto", `''${routed}''${probe ? " probe" : ""}''${speed} · ''${review ? "high" : lvl} ''${mode}''${load}`);
+            ctx.ui.setStatus("protei-auto", `''${routed}''${probe ? " probe" : ""}''${speed} · ''${lvl} ''${mode}''${load}`);
           };
 
           const reset = () => {
@@ -643,7 +629,6 @@ in
             manual = undefined;
             upTarget = -1;
             upCount = 0;
-            review = false;
             lastMain = Date.now();
             usage = undefined;
           };
@@ -748,11 +733,9 @@ in
                 const next: Target = key ? (big && key !== "strict" ? "strict" : key) : big || planMode(ctx) === "plan" ? "strict" : pool;
                 return { model: find(next), thinkingLevel: request.thinkingLevel };
               }
-              review = reviewActive(ctx, request.messages);
               const sticky = request.reason === "retry" ? request.failed : request.reason === "user" ? undefined : request.previous;
               const stickyKey = sticky && keyOf(sticky.model);
               const stickyLevel = sticky?.thinkingLevel;
-              const forced: ModelThinkingLevel = "high";
               const limit = Math.min(find("main").contextWindow, find("small").contextWindow) - CFG.headroom;
               const big = contextTokens(request.messages) > limit;
               if (sticky && stickyKey && stickyLevel && levelIndex(stickyLevel) >= 0) {
@@ -768,21 +751,19 @@ in
                 if (!forceStrict && (swap || leavePlan)) choosePool(now);
                 retarget(forceStrict ? "strict" : leavePlan || swap ? pool : stickyKey);
                 show(ctx);
-                return { model: find(routed), thinkingLevel: review ? forced : stickyLevel };
+                return { model: find(routed), thinkingLevel: stickyLevel };
               }
-              if (!review) {
-                if (selected !== undefined && request.thinkingLevel !== selected && levelIndex(request.thinkingLevel) >= 0) {
-                  manual = { level: levelIndex(request.thinkingLevel), at: now };
-                  upCount = 0;
-                }
-                selected = request.thinkingLevel;
-                if (auto === undefined) auto = Math.max(0, levelIndex(request.thinkingLevel));
+              if (selected !== undefined && request.thinkingLevel !== selected && levelIndex(request.thinkingLevel) >= 0) {
+                manual = { level: levelIndex(request.thinkingLevel), at: now };
+                upCount = 0;
               }
+              selected = request.thinkingLevel;
+              if (auto === undefined) auto = Math.max(0, levelIndex(request.thinkingLevel));
               const strict = big || planMode(ctx) === "plan";
               if (!strict) choosePool(now);
               retarget(strict ? "strict" : pool);
               const model: Model<Api> = find(routed);
-              const thinkingLevel: ModelThinkingLevel = review ? forced : LEVELS[level(now)];
+              const thinkingLevel: ModelThinkingLevel = LEVELS[level(now)];
               show(ctx);
               return { model, thinkingLevel };
             },
@@ -2077,18 +2058,6 @@ in
           chmod 644 "$agent_dir/APPEND_SYSTEM.md"
 
           mkdir -p "$agent_dir/extensions"
-          rm -f "$agent_dir/extensions/checkpoint-nudge.ts" \
-            "$agent_dir/extensions/scout.ts" \
-            "$agent_dir/extensions/research.ts" \
-            "$agent_dir/extensions/thinking-auto.ts" \
-            "$agent_dir/extensions/subagent.ts" \
-            "$agent_dir/extensions/tools.ts" \
-            "$agent_dir/extensions/pipeline.ts" \
-            "$agent_dir/extensions/grill-hint.ts" \
-            "$agent_dir/extensions/nvim.ts" \
-            "$agent_dir/extensions/review.ts" \
-            "$agent_dir/thinking-auto.json"
-          rm -rf "$agent_dir/self-compact"
           cp --reflink=never "${proteiAutoFile}" "$agent_dir/extensions/protei-auto.ts"
           chmod 644 "$agent_dir/extensions/protei-auto.ts"
 
