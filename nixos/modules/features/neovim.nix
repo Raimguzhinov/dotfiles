@@ -64,28 +64,6 @@ let
       };
     };
 
-  piTermCmd = # lua
-    ''(vim.env.PI_NVIM_SESSION and "pi --session " .. vim.fn.shellescape(vim.env.PI_NVIM_SESSION)) or (vim.env.PI_NVIM_CONTINUE == "1" and "pi --continue") or "pi"'';
-
-  piTermOpts = # lua
-    ''{ win = { position = "right", width = 0.35 } }'';
-
-  piTerm = # lua
-    "Snacks.terminal.get(${piTermCmd}, { create = false })";
-
-  piSlash =
-    command: # lua
-    ''
-      function()
-        local term = ${piTerm}
-        if not (term and term:buf_valid()) then
-          return vim.notify("pi terminal is not open (<leader>At)", vim.log.levels.WARN)
-        end
-        term:show()
-        require("pi-nvim").prompt("${command}")
-      end
-    '';
-
   sqlSources = [
     "lsp"
     "dadbod"
@@ -399,9 +377,6 @@ let
                 if vim.fn.argc() ~= 0 or vim.g.nvf_started_with_stdin then
                   return
                 end
-                if vim.env.PI_NVIM_SESSION or vim.env.PI_NVIM_CONTINUE == "1" then
-                  return
-                end
                 for _, arg in ipairs(vim.v.argv) do
                   -- --headless: herdr-nvim daemon и скриптовые запуски без UI.
                   if arg == "-c" or arg == "-S" or arg == "--headless" or arg:match("^%+") then
@@ -431,21 +406,6 @@ let
                     require("yazi").yazi(nil, vim.fn.getcwd())
                   end)
                 end
-              end
-            '';
-      }
-      {
-        event = [ "VimEnter" ];
-        callback =
-          lib.generators.mkLuaInline # lua
-            ''
-              function()
-                if not (vim.env.PI_NVIM_SESSION or vim.env.PI_NVIM_CONTINUE == "1") then
-                  return
-                end
-                vim.schedule(function()
-                  Snacks.terminal.get(${piTermCmd}, ${piTermOpts})
-                end)
               end
             '';
       }
@@ -718,46 +678,6 @@ let
           picker = {
             enabled = true;
             ui_select = true;
-            win.input.keys."<a-o>" = {
-              "@" = "pi_send";
-              mode = [
-                "n"
-                "i"
-              ];
-            };
-            actions.pi_send =
-              lib.generators.mkLuaInline # lua
-                ''
-                  function(picker)
-                    local refs = {}
-                    for _, item in ipairs(picker:selected({ fallback = true })) do
-                      local path = Snacks.picker.util.path(item)
-                      if path then
-                        refs[#refs + 1] = "@" .. vim.fn.fnamemodify(path, ":.")
-                      end
-                    end
-                    picker:close()
-                    if #refs == 0 then
-                      return
-                    end
-                    local text = table.concat(refs, " ") .. " "
-                    vim.schedule(function()
-                      local term = ${piTerm}
-                      if term and term:buf_valid() then
-                        term:show()
-                        term:focus()
-                        vim.api.nvim_chan_send(vim.bo[term.buf].channel, "\27[200~" .. text .. "\27[201~")
-                        vim.cmd.startinsert()
-                        return
-                      end
-                      vim.ui.input({ prompt = "Pi prompt: ", default = text }, function(input)
-                        if input and input ~= "" then
-                          require("pi-nvim").prompt(input)
-                        end
-                      end)
-                    end)
-                  end
-                '';
           };
         };
       };
@@ -943,14 +863,6 @@ let
         (lib.generators.mkLuaInline # lua
           ''
             function()
-              local ok, pi = pcall(require, "pi-nvim")
-              return ok and pi.get_socket_path() and "π" or ""
-            end
-          ''
-        )
-        (lib.generators.mkLuaInline # lua
-          ''
-            function()
               local ok, out = pcall(function()
                 return require("herdr-nvim").statusline()
               end)
@@ -975,7 +887,6 @@ let
         enable = true;
         register = {
           "<leader>a" = "AI (herdr)";
-          "<leader>A" = "AI (pi)";
           "<leader>b" = "Buffers";
           "<leader>c" = "Conflict (ours/theirs/base)";
           "<leader>d" = "Debug";
@@ -1785,113 +1696,6 @@ let
               end,
             })
           '';
-      };
-      "carderne-pi-nvim" = {
-        package = pkgs-unstable.vimPlugins.carderne-pi-nvim;
-        lazy = false;
-        setupModule = "pi-nvim";
-        setupOpts.set_default_keymaps = false;
-        keys = [
-          {
-            key = "<leader>At";
-            mode = "n";
-            lua = true;
-            action = # lua
-              "function() Snacks.terminal.toggle(${piTermCmd}, ${piTermOpts}) end";
-            desc = "Toggle pi terminal";
-          }
-          {
-            key = "<leader>Aa";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("pi-nvim").prompt() end'';
-            desc = "Send prompt [pi]";
-          }
-          {
-            key = "<leader>Aa";
-            mode = "x";
-            action = ":PiSendSelection<CR>";
-            desc = "Send selection [pi]";
-          }
-          {
-            key = "<leader>AA";
-            mode = "n";
-            action = "<cmd>Pi<CR>";
-            desc = "Send dialog [pi]";
-          }
-          {
-            key = "<leader>AA";
-            mode = "x";
-            action = ":Pi<CR>";
-            desc = "Send dialog with selection [pi]";
-          }
-          {
-            key = "<leader>Ax";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''function() require("pi-nvim").prompt(string.format("Explain %s:%d and its context", vim.fn.expand("%:."), vim.fn.line("."))) end'';
-            desc = "Explain this [pi]";
-          }
-          {
-            key = "<leader>An";
-            mode = "n";
-            lua = true;
-            action = piSlash "/new";
-            desc = "New session [pi]";
-          }
-          {
-            key = "<leader>Ae";
-            mode = "n";
-            lua = true;
-            action = piSlash "/resume";
-            desc = "Resume session [pi]";
-          }
-          {
-            key = "<leader>Ac";
-            mode = "n";
-            lua = true;
-            action = piSlash "/compact";
-            desc = "Compact session [pi]";
-          }
-          {
-            key = "<leader>Au";
-            mode = "n";
-            lua = true;
-            action = piSlash "/undo";
-            desc = "Undo last message [pi]";
-          }
-          {
-            key = "<leader>AR";
-            mode = "n";
-            lua = true;
-            action = piSlash "/redo";
-            desc = "Redo last message [pi]";
-          }
-          {
-            key = "<leader>Ai";
-            mode = "n";
-            lua = true;
-            action = # lua
-              ''
-                function()
-                  local term = ${piTerm}
-                  if not (term and term:buf_valid()) then
-                    return vim.notify("pi terminal is not open (<leader>At)", vim.log.levels.WARN)
-                  end
-                  vim.api.nvim_chan_send(vim.bo[term.buf].channel, "\27")
-                end
-              '';
-            desc = "Interrupt [pi]";
-          }
-          {
-            key = "<leader>AS";
-            mode = "n";
-            action = "<cmd>PiSessions<CR>";
-            desc = "Select session socket [pi]";
-          }
-        ];
       };
       "herdr-splits.nvim" = {
         package = pkgs-unstable.vimPlugins.herdr-splits-nvim;
