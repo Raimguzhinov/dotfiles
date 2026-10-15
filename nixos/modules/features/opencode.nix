@@ -208,7 +208,7 @@
         # plugin is LIST_UNION_KEY: repo ["opencode-auto-resume"] + ours = union
         plugin = [
           "opencode-claude-auth@latest"
-          "@cortexkit/aft-opencode@${config.programs.pi.aftVersion}"
+          "@cortexkit/aft-opencode@${config.programs.harness.aftVersion}"
         ];
       };
 
@@ -405,7 +405,7 @@
             ln -sf "$opencode_dir/opencode.json" "$opencode_dir/config.json"
           fi
 
-          if [[ ! -d "${config.xdg.cacheHome}/opencode/packages/@cortexkit/aft-opencode@${config.programs.pi.aftVersion}" ]]; then
+          if [[ ! -d "${config.xdg.cacheHome}/opencode/packages/@cortexkit/aft-opencode@${config.programs.harness.aftVersion}" ]]; then
             log "Warming up @cortexkit/aft-opencode plugin cache (first-run bun install is slow and can hang a live TUI session)"
             if ! "${pkgs.coreutils}/bin/timeout" 240s "${pkgs-unstable.opencode}/bin/opencode" run "warm up plugin cache" >/dev/null 2>&1; then
               log "WARNING: aft-opencode plugin warm-up failed or timed out (no network / provider unreachable?)"

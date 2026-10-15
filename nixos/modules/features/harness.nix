@@ -109,6 +109,12 @@
         description = "Common system-prompt fragment shared by all agents";
       };
 
+      options.programs.harness.aftVersion = lib.mkOption {
+        type = lib.types.str;
+        default = "0.59.0";
+        description = "aft version shared by pi and opencode, both write the same storage";
+      };
+
       config = {
         # Одна команда на каждый switch: обновляет скиллы и пересоздаёт
         # симлинки. pi и opencode читают store нативно, claude-code получает

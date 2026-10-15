@@ -1865,17 +1865,12 @@ in
         - If the same error appears twice in a row, stop and explain what you tried.
       '';
       npmPins = {
-        "@cortexkit/aft-pi" = config.programs.pi.aftVersion;
+        "@cortexkit/aft-pi" = config.programs.harness.aftVersion;
+        "pi-herdr-subagents" = "0.2.1";
         "pi-lsp-extension" = "1.4.0";
       };
     in
     {
-      options.programs.pi.aftVersion = lib.mkOption {
-        type = lib.types.str;
-        default = "0.59.0";
-        description = "aft version shared by pi and opencode, both write the same storage";
-      };
-
       config = {
 
         home.packages = [
@@ -2161,6 +2156,16 @@ in
                 || log "WARNING: npm install $dep failed (no network?)"
             fi
           done
+
+          # ctrl+j захардкожен в 0.2.1, но в herdr он занят next_workspace
+          subagent_done="$npm_dir/node_modules/pi-herdr-subagents/pi-extension/subagents/subagent-done.ts"
+          if [[ -f "$subagent_done" ]] && grep -qF '"ctrl+j"' "$subagent_done"; then
+            ${pkgs.gnused}/bin/sed -i \
+              -e 's/"ctrl+j"/"ctrl+i"/' \
+              -e 's/Ctrl+J/Ctrl+I/g' \
+              "$subagent_done"
+            grep -qF '"ctrl+i"' "$subagent_done" || log "WARNING: pi-herdr-subagents key patch did not apply"
+          fi
 
           perm="$npm_dir/node_modules/pi-permission-system/src/index.ts"
           if [[ -f "$perm" ]]; then
