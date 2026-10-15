@@ -337,3 +337,17 @@ nixos/
   они для другой машины.
 - Если команду прервали, она могла выполниться частично: сначала смотреть
   `git diff`, потом повторять.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in `Raimguzhinov/dotfiles` (via the `gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary, label strings equal to role names. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.

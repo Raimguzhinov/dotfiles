@@ -597,6 +597,7 @@
               homeModules.development
               homeModules.ecdy
               homeModules.git
+              homeModules.harness
               homeModules.herdr
               homeModules.jetbrains
               homeModules.kitty
