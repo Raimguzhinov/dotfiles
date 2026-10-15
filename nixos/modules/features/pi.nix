@@ -256,11 +256,8 @@ in
           };
           codebase_memory = {
             description = "Code knowledge graph of indexed repositories";
-            command = "npx";
-            args = [
-              "-y"
-              "codebase-memory-mcp"
-            ];
+            command = lib.getExe config.programs.harness.codebaseMemory;
+            args = config.programs.harness.codebaseMemoryArgs;
             env = {
               CBM_ALLOWED_ROOT = config.home.homeDirectory;
             };
@@ -301,7 +298,9 @@ in
           reserveTokens = 41000;
         };
         packages = [
+          "npm:@aliou/pi-guardrails"
           "npm:@cortexkit/aft-pi"
+          "npm:@cortexkit/pi-magic-context"
           "npm:@juicesharp/rpiv-todo"
           "npm:pi-add-dir"
           "npm:pi-fff"
@@ -413,40 +412,542 @@ in
       fffJsonFile = toJsonFile "pi-fff.json" {
         enabledFeatures = [ "autocomplete" ];
       };
-      piVsCcExtensions =
-        pkgs.runCommand "pi-vs-cc-extensions"
-          {
-            src = pkgs.fetchFromGitHub {
-              owner = "disler";
-              repo = "pi-vs-claude-code";
-              rev = "0ed11f44932fdef29bd98467700019762298f50d";
-              hash = "sha256-n6v27jGRg1qCPQpflumGye7b4mz1U8xU06FVnfaglYA=";
-            };
-            nativeBuildInputs = [ pkgs.yq-go ];
+      guardrailsConfig = {
+        version = "0.19.0";
+        enabled = true;
+        features = {
+          policies = true;
+          permissionGate = true;
+          pathAccess = true;
+        };
+        permissionGate = {
+          customPatterns = [
+            {
+              pattern = ''\bgit\s+checkout\s+--\s*\.'';
+              description = "Discards all uncommitted changes";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+restore\s+\.'';
+              description = "Discards all uncommitted changes";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+stash\s+drop\b'';
+              description = "Permanently deletes a stash";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+branch\s+(-[^\s]*)*-D'';
+              description = "Force deletes branch (even if unmerged)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+push\s+\S+\s+--delete\b'';
+              description = "Deletes remote branch";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+push\s+\S+\s+:\S+'';
+              description = "Deletes remote branch (old syntax)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgcloud\s+iam\s+policies\b'';
+              description = "gcloud iam policies (modifies IAM policies)";
+              regex = true;
+            }
+            {
+              pattern = ''\bDELETE\s+FROM\s+\w+\s+WHERE\b.*\bid\s*='';
+              description = "SQL DELETE with specific ID";
+              regex = true;
+            }
+            # стандартный dangerous-набор guardrails: customPatterns вытесняет встроенные
+            # (useBuiltinMatchers=false), возвращаем его. Покрытые autoDeny (rm -rf, mkfs.,
+            # chmod -R 777) не дублируем.
+            {
+              pattern = "sudo";
+              description = "superuser command";
+            }
+            {
+              pattern = "dd of=";
+              description = "disk write operation";
+            }
+            {
+              pattern = "chown -R";
+              description = "recursive ownership change";
+            }
+            {
+              pattern = "doas";
+              description = "privileged command execution";
+            }
+            {
+              pattern = "pkexec";
+              description = "privileged command execution";
+            }
+            {
+              pattern = "shred";
+              description = "secure file overwrite";
+            }
+            {
+              pattern = "wipefs";
+              description = "filesystem signature wipe";
+            }
+            {
+              pattern = "blkdiscard";
+              description = "block device discard";
+            }
+            {
+              pattern = "fdisk";
+              description = "disk partitioning";
+            }
+            {
+              pattern = "parted";
+              description = "disk partitioning";
+            }
+            {
+              pattern = "docker run --privileged";
+              description = "container with privileged mode";
+            }
+          ];
+          autoDenyPatterns = [
+            {
+              pattern = ''\brm\s+(-[^\s]*)*-[rRf]'';
+              description = "rm with recursive or force flags";
+              regex = true;
+            }
+            {
+              pattern = ''\brm\s+--recursive'';
+              description = "rm with --recursive flag";
+              regex = true;
+            }
+            {
+              pattern = ''\brm\s+--force'';
+              description = "rm with --force flag";
+              regex = true;
+            }
+            {
+              pattern = ''\bsudo\s+rm\b'';
+              description = "sudo rm";
+              regex = true;
+            }
+            {
+              pattern = ''\brmdir\s+--ignore-fail-on-non-empty'';
+              description = "rmdir ignore-fail";
+              regex = true;
+            }
+            {
+              pattern = ''\bchmod\s+(-[^\s]+\s+)*777\b'';
+              description = "chmod 777 (world writable)";
+              regex = true;
+            }
+            {
+              pattern = ''\bchmod\s+-[Rr].*777'';
+              description = "recursive chmod 777";
+              regex = true;
+            }
+            {
+              pattern = ''\bchown\s+-[Rr].*\broot\b'';
+              description = "recursive chown to root";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+reset\s+--hard\b'';
+              description = "git reset --hard (use --soft or stash)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+clean\s+(-[^\s]*)*-[fd]'';
+              description = "git clean with force/directory flags";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+push\s+.*--force(?!-with-lease)'';
+              description = "git push --force (use --force-with-lease)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+push\s+(-[^\s]*)*-f\b'';
+              description = "git push -f (use --force-with-lease)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+stash\s+clear\b'';
+              description = "git stash clear (deletes ALL stashes)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+reflog\s+expire\b'';
+              description = "git reflog expire (destroys recovery mechanism)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+gc\s+.*--prune=now'';
+              description = "git gc --prune=now (can lose dangling commits)";
+              regex = true;
+            }
+            {
+              pattern = ''\bgit\s+filter-branch\b'';
+              description = "git filter-branch (rewrites entire history)";
+              regex = true;
+            }
+            {
+              pattern = ''\bmkfs\.'';
+              description = "filesystem format command";
+              regex = true;
+            }
+            {
+              pattern = ''\bdd\s+.*of=/dev/'';
+              description = "dd writing to device";
+              regex = true;
+            }
+            {
+              pattern = ''\bkill\s+-9\s+-1\b'';
+              description = "kill all processes";
+              regex = true;
+            }
+            {
+              pattern = ''\bkillall\s+-9\b'';
+              description = "killall -9";
+              regex = true;
+            }
+            {
+              pattern = ''\bpkill\s+-9\b'';
+              description = "pkill -9";
+              regex = true;
+            }
+            {
+              pattern = ''\bhistory\s+-c\b'';
+              description = "clearing shell history";
+              regex = true;
+            }
+            {
+              pattern = ''DELETE\s+FROM\s+\w+\s*;'';
+              description = "DELETE without WHERE clause (will delete ALL rows)";
+              regex = true;
+            }
+            {
+              pattern = ''DELETE\s+\*\s+FROM'';
+              description = "DELETE * (will delete ALL rows)";
+              regex = true;
+            }
+            {
+              pattern = ''\bTRUNCATE\s+TABLE\b'';
+              description = "TRUNCATE TABLE (will delete ALL rows)";
+              regex = true;
+            }
+            {
+              pattern = ''\bDROP\s+TABLE\b'';
+              description = "DROP TABLE";
+              regex = true;
+            }
+            {
+              pattern = ''\bDROP\s+DATABASE\b'';
+              description = "DROP DATABASE";
+              regex = true;
+            }
+            {
+              pattern = ''\bDROP\s+SCHEMA\b'';
+              description = "DROP SCHEMA";
+              regex = true;
+            }
+          ];
+        };
+        # доступ вне cwd намеренно свободен: агент работает по всему $HOME, защиту дают policies ниже
+        pathAccess = {
+          mode = "allow";
+        };
+        policies = {
+          rules = [
+            {
+              id = "secrets";
+              description = "Files containing secrets: no read, no write, no bash";
+              patterns = [
+                { pattern = ".env"; }
+                { pattern = ".env.local"; }
+                { pattern = ".env.development"; }
+                { pattern = ".env.production"; }
+                { pattern = ".env.staging"; }
+                { pattern = ".env.test"; }
+                { pattern = ".env.*.local"; }
+                { pattern = "*.env"; }
+                {
+                  pattern = ''^~/\.ssh(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''^~/\.gnupg(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''^~/\.aws(/|$)'';
+                  regex = true;
+                }
+                { pattern = "*-credentials.json"; }
+                { pattern = "*serviceAccount*.json"; }
+                { pattern = "*service-account*.json"; }
+                {
+                  pattern = ''^~/\.azure(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''^~/\.kube(/|$)'';
+                  regex = true;
+                }
+                { pattern = "kubeconfig"; }
+                { pattern = "*-secret.yaml"; }
+                { pattern = "secrets.yaml"; }
+                {
+                  pattern = ''^~/\.docker(/|$)'';
+                  regex = true;
+                }
+                { pattern = "*.pem"; }
+                { pattern = "*.key"; }
+                { pattern = "*.p12"; }
+                { pattern = "*.pfx"; }
+                { pattern = "*.tfstate"; }
+                { pattern = "*.tfstate.backup"; }
+                {
+                  pattern = ''(^|/)\.terraform(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''(^|/)\.vercel(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''(^|/)\.netlify(/|$)'';
+                  regex = true;
+                }
+                { pattern = "firebase-adminsdk*.json"; }
+                { pattern = "serviceAccountKey.json"; }
+                {
+                  pattern = ''(^|/)\.supabase(/|$)'';
+                  regex = true;
+                }
+                { pattern = "~/.netrc"; }
+                { pattern = "~/.npmrc"; }
+                { pattern = "~/.pypirc"; }
+                { pattern = "~/.git-credentials"; }
+                { pattern = ".git-credentials"; }
+                { pattern = "dump.sql"; }
+                { pattern = "backup.sql"; }
+                { pattern = "*.dump"; }
+              ];
+              # /nix/store неизменяем: store-пути защите не подлежат
+              allowedPatterns = [
+                {
+                  pattern = "^/nix/store(/|$)";
+                  regex = true;
+                }
+              ];
+              protection = "noAccess";
+              onlyIfExists = false;
+            }
+            {
+              id = "system-readonly";
+              description = "System and build output paths are read-only";
+              patterns = [
+                {
+                  pattern = "^/etc(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = "^/usr(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = "^/bin(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = "^/sbin(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = "^/boot(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = "^/root(/|$)";
+                  regex = true;
+                }
+                { pattern = "~/.bash_history"; }
+                { pattern = "~/.zsh_history"; }
+                { pattern = "~/.node_repl_history"; }
+                { pattern = "~/.bashrc"; }
+                { pattern = "~/.zshrc"; }
+                { pattern = "~/.profile"; }
+                { pattern = "~/.bash_profile"; }
+                { pattern = "package-lock.json"; }
+                { pattern = "yarn.lock"; }
+                { pattern = "pnpm-lock.yaml"; }
+                { pattern = "Gemfile.lock"; }
+                { pattern = "poetry.lock"; }
+                { pattern = "Pipfile.lock"; }
+                { pattern = "composer.lock"; }
+                { pattern = "Cargo.lock"; }
+                { pattern = "go.sum"; }
+                { pattern = "flake.lock"; }
+                { pattern = "bun.lockb"; }
+                { pattern = "uv.lock"; }
+                { pattern = "npm-shrinkwrap.json"; }
+                { pattern = "*.lock"; }
+                { pattern = "*.lockb"; }
+                { pattern = "*.min.js"; }
+                { pattern = "*.min.css"; }
+                { pattern = "*.bundle.js"; }
+                { pattern = "*.chunk.js"; }
+                {
+                  pattern = "(^|/)dist/";
+                  regex = true;
+                }
+                {
+                  pattern = "(^|/)build/";
+                  regex = true;
+                }
+                {
+                  pattern = ''(^|/)\.next(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''(^|/)\.nuxt(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''(^|/)\.output(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = "(^|/)__pycache__(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = ''(^|/)\.venv(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = "(^|/)venv(/|$)";
+                  regex = true;
+                }
+                {
+                  pattern = "(^|/)target(/|$)";
+                  regex = true;
+                }
+              ];
+              # store-пути неизменяемы: dist/build/.min.js/lock внутри /nix/store
+              # не являются build-output проекта
+              allowedPatterns = [
+                {
+                  pattern = "^/nix/store(/|$)";
+                  regex = true;
+                }
+              ];
+              protection = "readOnly";
+              onlyIfExists = false;
+            }
+            {
+              id = "no-delete";
+              description = "Project meta files must not be deleted or moved";
+              patterns = [
+                {
+                  pattern = ''^~/\.claude(/|$)'';
+                  regex = true;
+                }
+                { pattern = "CLAUDE.md"; }
+                { pattern = "LICENSE"; }
+                { pattern = "LICENSE.*"; }
+                { pattern = "COPYING"; }
+                { pattern = "COPYING.*"; }
+                { pattern = "NOTICE"; }
+                { pattern = "PATENTS"; }
+                { pattern = "README.md"; }
+                { pattern = "README.*"; }
+                { pattern = "CONTRIBUTING.md"; }
+                { pattern = "CHANGELOG.md"; }
+                { pattern = "CODE_OF_CONDUCT.md"; }
+                { pattern = "SECURITY.md"; }
+                {
+                  pattern = ''(^|/)\.git(/|$)'';
+                  regex = true;
+                }
+                { pattern = ".gitignore"; }
+                { pattern = ".gitattributes"; }
+                { pattern = ".gitmodules"; }
+                {
+                  pattern = ''(^|/)\.github(/|$)'';
+                  regex = true;
+                }
+                { pattern = ".gitlab-ci.yml"; }
+                {
+                  pattern = ''(^|/)\.circleci(/|$)'';
+                  regex = true;
+                }
+                { pattern = "Jenkinsfile"; }
+                { pattern = ".travis.yml"; }
+                { pattern = "azure-pipelines.yml"; }
+                { pattern = "Dockerfile"; }
+                { pattern = "Dockerfile.*"; }
+                { pattern = "docker-compose.yml"; }
+                { pattern = "docker-compose.*.yml"; }
+                { pattern = ".dockerignore"; }
+              ];
+              # /nix/store неизменяем: store-пути защите не подлежат
+              allowedPatterns = [
+                {
+                  pattern = "^/nix/store(/|$)";
+                  regex = true;
+                }
+              ];
+              protection = "readOnly";
+              onlyIfExists = false;
+              blockMessage = "{file} is a protected project file. Deleting or moving it is not allowed; explain why and ask the user to do it manually.";
+            }
+            {
+              id = "home-dot-readonly";
+              description = "~/.pi and ~/.config are managed by home-manager; no imperative edits";
+              patterns = [
+                {
+                  pattern = ''^~/\.pi(/|$)'';
+                  regex = true;
+                }
+                {
+                  pattern = ''^~/\.config(/|$)'';
+                  regex = true;
+                }
+              ];
+              protection = "readOnly";
+              onlyIfExists = false;
+              blockMessage = "~/.pi and ~/.config are managed declaratively by home-manager (pi.nix). Do not edit them with edit/write/bash; change the NixOS config and run nixos-rebuild switch instead.";
+            }
+          ];
+        };
+      };
+
+      guardrailsJsonFile = toJsonFile "pi-guardrails.json" guardrailsConfig;
+
+      magicContextFile = pkgs.writeText "magic-context.jsonc" /* jsonc */ ''
+        {
+          "historian": {
+            "pi": {
+              "model": "Protei/agent_proteya_slow",
+              "thinking_level": "off"
+            },
+            "opencode": {
+              "model": "Protei/agent_proteya_slow"
+            }
+          },
+          "dreamer": {
+            "pi": {
+              "model": "llama.cpp/ornith-ai/Ornith-1.5-35B-A3B",
+              "thinking_level": "off"
+            },
+            "opencode": {
+              "model": "llamaCpp/ornith-ai/Ornith-1.5-35B-A3B"
+            }
           }
-          /* bash */ ''
-            mkdir -p "$out"
-            yq -o=json "$src/.pi/damage-control-rules.yaml" > "$out/damage-control-rules.json"
-            substitute "$src/extensions/damage-control-continue.ts" "$out/damage-control.ts" \
-              --replace-fail 'import { parse as yamlParse } from "yaml";' 'const yamlParse = JSON.parse;' \
-              --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
-              --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
-              --replace-fail 'damage-control-rules.yaml' 'damage-control-rules.json' \
-              --replace-fail 'const inputPaths: string[] = [];' 'const inputPaths: string[] = []; const deletedPaths: string[] = [];' \
-              --replace-fail 'inputPaths.push(event.input.path);' 'if (typeof event.input.path === "string") inputPaths.push(event.input.path); if (typeof event.input.patch === "string") { let section: string | null = null; for (const line of event.input.patch.split("\n")) { const header = line.match(/^\[(.+)#[0-9A-Fa-f]{4}\]\s*$/); if (header) { section = header[1]; inputPaths.push(section); continue; } const mv = line.match(/^\s*MV\s+["\x27]?([^\s"\x27]+)/); if (mv) { inputPaths.push(mv[1]); if (section) deletedPaths.push(section); } else if (section && /^\s*REM\s*$/.test(line)) deletedPaths.push(section); } }' \
-              --replace-fail 'for (const p of inputPaths) {' 'for (const p of deletedPaths) { const resolved = resolvePath(p, ctx.cwd); const ndp = rules.noDeletePaths.find((pattern) => isPathMatch(resolved, pattern, ctx.cwd)); if (ndp) { violationReason = `Deletion or move of protected path restricted: ''${ndp}`; break; } } for (const p of inputPaths) {'
-            substitute "$src/extensions/tool-counter.ts" "$out/tool-counter.ts" \
-              --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
-              --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' "" \
-              --replace-fail 'const model = ctx.model?.id || "no-model";' 'const latest = ctx.model?.api === "pi-virtual" ? ctx.sessionManager.getBranch().findLast((e) => e.type === "message" && e.message.role === "assistant" && e.message.stopReason !== "error" && e.message.stopReason !== "aborted") : undefined; const routed = latest?.type === "message" && latest.message.role === "assistant" ? latest.message : undefined; const model = (ctx.model?.id || "no-model") + (routed ? ` → ''${routed.model}` : "");' \
-              --replace-fail 'let tokIn = 0;' 'let tokIn = 0; let tokCache = 0;' \
-              --replace-fail 'tokIn += m.usage.input;' 'tokIn += m.usage.input; tokCache += m.usage.cacheRead ?? 0;' \
-              --replace-fail 'theme.fg("dim", " in ") +' 'theme.fg("dim", " in ") + theme.fg("success", `''${fmt(tokCache)}`) + theme.fg("dim", " cached ") +' \
-              --replace-fail 'return [line1, line2];' 'const statuses = [...footerData.getExtensionStatuses()].filter(([, value]) => value).map(([, value]) => value).join(theme.fg("dim", " · ")); return statuses ? [line1, line2, truncateToWidth(" " + statuses, width, "")] : [line1, line2];'
-            substitute "$src/extensions/session-replay.ts" "$out/session-replay.ts" \
-              --replace-fail 'import { applyExtensionDefaults } from "./themeMap.ts";' "" \
-              --replace-fail 'applyExtensionDefaults(import.meta.url, ctx);' ""
-          '';
+        }
+      '';
 
       piPlanCmd = /* bash */ ''
         mkdir -p "$out"
@@ -488,6 +989,8 @@ in
         import type { Api, Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
         import type { ExtensionAPI, ExtensionContext, ModelRouteRequest } from "@earendil-works/pi-coding-agent";
         import { calculateContextTokens, estimateTokens } from "@earendil-works/pi-coding-agent";
+        import type { ReadonlyFooterDataProvider, Theme } from "@earendil-works/pi-coding-agent";
+        import { truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
         import { readFileSync, writeFileSync, mkdirSync, renameSync, unlinkSync } from "node:fs";
         import { homedir } from "node:os";
         import { dirname, join } from "node:path";
@@ -588,6 +1091,10 @@ in
           let chars = 0;
           let lastMain = Date.now();
           let usage: { ctx: number; hit: number } | undefined;
+          let liveCtx: ExtensionContext | undefined;
+          let rerender: (() => void) | undefined;
+          let footerInstalled = false;
+            const toolCounts = new Map<string, number>(); // намерено суммарные вызовы за сессию, reset не предусмотрен
 
           const backend = () => TARGETS[routed].id;
 
@@ -607,17 +1114,81 @@ in
 
           const level = (now = Date.now()) => (manual && manualLeft(now) ? manual.level : (auto ?? 1));
 
+          const row = (width: number, left: string, center: string, right: string): string => {
+            const lw = visibleWidth(left);
+            const cw = visibleWidth(center);
+            const rw = visibleWidth(right);
+            const mid = width - lw - rw;
+            if (mid < cw + 2) return truncateToWidth([left, center, right].filter(Boolean).join("  "), width, "");
+            const before = Math.floor((mid - cw) / 2);
+            return left + " ".repeat(Math.max(1, before)) + center + " ".repeat(Math.max(1, mid - cw - before)) + right;
+          };
+
+          const buildFooter = (width: number, theme: Theme, fd: ReadonlyFooterDataProvider): string[] => {
+            const ctx = liveCtx;
+            if (!ctx) return [];
+            const m = ctx.model;
+            const virtual = isVirtual(m);
+            let name: string, mmode: string, think: string, tmode = "";
+            if (virtual) {
+              name = TARGETS[routed].id;
+              mmode = "auto";
+              think = LEVELS[level()];
+              const ml = manualLeft();
+              tmode = ml ? "man " + ml + "m" : "auto";
+            } else {
+              name = (m && m.id) || "no-model";
+              mmode = "manual";
+              think = (ctx.thinkingLevel as string) || "off";
+            }
+            const dim = (s: string) => theme.fg("dim", s);
+            const cu = ctx.getContextUsage();
+            const pct = cu ? cu.percent : null;
+            let barText: string, barColor: "dim" | "warning" | "error";
+            if (pct === null || pct === undefined) {
+              barText = "░░░░░░░░░░ ?";
+              barColor = "dim";
+            } else {
+              const filled = Math.max(0, Math.min(10, Math.round(pct / 10)));
+              barText = "▓".repeat(filled) + "░".repeat(10 - filled) + " " + Math.round(pct) + "%";
+              barColor = pct > 90 ? "error" : pct > 70 ? "warning" : "dim";
+            }
+            const st = fd.getExtensionStatuses();
+            const lsp = st.get("lsp") || "";
+            const modes = Array.from(st.entries()).filter(([k]) => k !== "lsp" && k !== "protei-auto").map(([, t]) => t).filter(Boolean).join(" · ");
+            const tools = Array.from(toolCounts.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => theme.fg("mdLink", k) + theme.fg("text", "×") + theme.fg("warning", n)).join(" ");
+            const v = ewmaOf(backend());
+            const speed = v === undefined ? "" : "⚡ " + Math.round(v) + " tok/s";
+            const l1c = "🪟 ctx " + theme.fg(barColor, barText);
+            const l1l = "🤖 " + theme.fg("accent", name) + " " + dim("⟨" + mmode + "⟩") + " · " + theme.fg("success", think) + (tmode ? " " + dim("⟨" + tmode + "⟩") : "") + "  " + l1c;
+            const l1r = [lsp ? "🧰 " + theme.fg("mdLink", lsp) : "", speed ? theme.fg("warning", speed) : ""].filter(Boolean).join("  ");
+            const l2l = tools ? dim("🔧 ") + tools : "";
+            return [row(width, l1l, "", l1r), row(width, l2l, "", modes)];
+          };
+
+          const installFooter = (ctx: ExtensionContext) => {
+            if (footerInstalled) return;
+            ctx.ui.setFooter((tui, theme, fd) => {
+              rerender = () => tui.requestRender();
+              footerInstalled = true;
+              return {
+                render(width: number) {
+                  return buildFooter(width, theme, fd);
+                },
+                invalidate() {},
+                dispose() {
+                  footerInstalled = false;
+                  rerender = undefined;
+                },
+              };
+            });
+          };
+
           const show = (ctx: ExtensionContext) => {
             if (!ctx.hasUI) return;
-            if (!isVirtual(ctx.model)) return ctx.ui.setStatus("protei-auto", undefined);
-            const v = ewmaOf(backend());
-            const lvl = LEVELS[level()];
-            const left = manualLeft();
-            const mode = left ? `manual ''${left}m` : "auto";
-            const e2e = ewmaOf(E2E(backend()));
-            const speed = v === undefined ? "" : ` ''${Math.round(v)} tok/s''${e2e === undefined ? "" : ` (e2e ''${Math.round(e2e)})`}`;
-            const load = usage ? ` · ctx ''${Math.round(usage.ctx / 1000)}k cache ''${Math.round(usage.hit * 100)}%` : "";
-            ctx.ui.setStatus("protei-auto", `''${routed}''${probe ? " probe" : ""}''${speed} · ''${lvl} ''${mode}''${load}`);
+            liveCtx = ctx;
+            installFooter(ctx);
+            rerender?.();
           };
 
           const reset = () => {
@@ -823,6 +1394,11 @@ in
           });
 
           pi.on("turn_end", async (_e, ctx) => show(ctx));
+
+            pi.on("tool_execution_start", (e) => {
+            toolCounts.set(e.toolName, (toolCounts.get(e.toolName) ?? 0) + 1);
+            rerender?.();
+          });
         }
       '';
 
@@ -1153,336 +1729,6 @@ in
               stale;
             const reminder = { role: "custom", customType: "todo-reminder", content, display: false, timestamp: Date.now() };
             return { messages: [...event.messages, reminder as (typeof event.messages)[number]] };
-          });
-        }
-      '';
-
-      contextKeeperFile = pkgs.writeText "context-keeper.ts" /* typescript */ ''
-        import type { Api, Model } from "@earendil-works/pi-ai";
-        import type { ExtensionAPI, ExtensionContext, SessionEntry } from "@earendil-works/pi-coding-agent";
-        import { buildSessionContext, convertToLlm, estimateTokens, generateSummaryWithUsage } from "@earendil-works/pi-coding-agent";
-
-        type Msg = Parameters<typeof estimateTokens>[0];
-        type Level = NonNullable<ExtensionContext["thinkingLevel"]>;
-        type Call = { type: string; text?: string; id?: string; name?: string; arguments?: Record<string, unknown> };
-        type Task = { id: number; subject: string; status: string };
-        type Manifest = {
-          users: string[];
-          todos: Task[];
-          bash: { cmd: string; exit: string }[];
-          errors: { tool: string; args: string; text: string }[];
-          test?: { cmd: string; exit: string; tail: string };
-        };
-        type Details = { readFiles?: string[]; modifiedFiles?: string[]; contextKeeper?: Manifest };
-        type State = { cutoff?: string; mark?: number };
-        type Runtime = {
-          resolveModel(model: Model<Api>, messages: ReturnType<typeof convertToLlm>, options: { reason: "direct"; thinkingLevel: Level; signal?: AbortSignal }): Promise<{ model: Model<Api>; thinkingLevel: Level }>;
-          getAuth(model: Model<Api>, options: { signal?: AbortSignal }): Promise<{ auth: { apiKey?: string; headers?: Record<string, string | null>; baseUrl?: string }; env?: Record<string, string> } | undefined>;
-          streamSimple: ExtensionContext["modelRegistry"]["streamSimple"];
-        };
-        type StreamFn = NonNullable<Parameters<typeof generateSummaryWithUsage>[9]>;
-
-        const STATE = "context-keeper";
-        const MASK_AT = 64_000;
-        const MASK_STEP = 16_000;
-        const KEEP_ROUNDS = 10;
-        const SMALL_RESULT = 600;
-        const LOOP_WINDOW = 10;
-        const LOOP_REPEATS = 2;
-        const READ_LIKE = new Set(["read", "aft_zoom", "aft_outline"]);
-        const CODE_FILE = /\.(go|ts|tsx|js|jsx|mjs|cjs|rs|py|nix|sh|bash|zsh|lua|java|kt|c|h|cc|cpp|hpp|cs|rb|php|swift|sql|zig|proto)$/;
-        const COMMENT = /^\s*(\/\/|\/\*|\*\/|\*\s|#(?!!)|--\s)|\s(\/\/|#|--)\s/;
-        const CUT_HINT =
-          "[Harness] Your previous response was cut off by a proxy timeout before it finished. Keep thinking short and split large changes: write or edit at most about 60 lines per tool call.";
-        const USER_CHARS = 2000;
-        const USER_BUDGET = 24_000;
-        const BASH_KEEP = 15;
-        const ERROR_KEEP = 5;
-        const TAIL_LINES = 30;
-        const MARK = "\n\n---\n## Manifest";
-        const TEST_CMD = /(^|[;&|(\n])\s*(?:\S+=\S+\s+|timeout\s+\S+\s+|time\s+|env\s+|nix develop\s+(?:\S+\s+)?-c\s+|uv run\s+)*(make|cargo|go (?:test|build|vet)|golangci-lint|nix (?:build|flake check)|npm (?:run|test)|pnpm|yarn|pytest|tsc)\b/;
-        const MUTATING = /edit|write|patch|rename|code_actions|codemode|subagent/;
-        const POLLING = new Set(["bash", "bash_status", "bash_watch", "lsp_diagnostics", "todo"]);
-        const SCHEMA = [
-          "Ignore the section list above. Use exactly these markdown sections, in this order:",
-          "## Goal",
-          "## Decisions (each with its reason)",
-          "## Rejected hypotheses (what was tried or suspected and ruled out, and why)",
-          "## Discoveries (facts about the code: exact paths, functions, behaviour)",
-          "## Current step",
-          "## Next action",
-          "Write \"none\" under a section that has nothing. If a previous summary is given, merge the new information into it section by section instead of rewriting it: keep every item that is still valid, move finished work out of Current step, drop only what is proven wrong.",
-          "Do not list user messages, todo tasks, files, bash commands or tool errors: the harness appends them verbatim.",
-        ].join("\n");
-
-        const clip = (s: string, n: number) => (s.length > n ? `''${s.slice(0, n)}…` : s);
-        const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
-        const textOf = (content: unknown) =>
-          typeof content === "string" ? content : Array.isArray(content) ? (content as Call[]).map((c) => (c?.type === "text" ? (c.text ?? "") : "")).join("\n") : "";
-        const sizeOf = (content: unknown) =>
-          typeof content === "string" ? content.length : Array.isArray(content) ? (content as Call[]).reduce((n, c) => n + (c?.type === "text" ? (c.text?.length ?? 0) : 4800), 0) : 0;
-        const stable = (v: unknown): string =>
-          Array.isArray(v)
-            ? `[''${v.map(stable).join(",")}]`
-            : v && typeof v === "object"
-              ? `{''${Object.keys(v).sort().map((k) => `''${JSON.stringify(k)}:''${stable((v as Record<string, unknown>)[k])}`).join(",")}}`
-              : (JSON.stringify(v) ?? "null");
-        const shortArgs = (args: Record<string, unknown> | undefined) => {
-          if (!args) return "";
-          for (const k of ["path", "file_path", "command", "pattern", "query", "target", "url"]) {
-            if (typeof args[k] === "string") return clip(oneLine(args[k] as string), 120);
-          }
-          return clip(JSON.stringify(args), 120);
-        };
-        const callsOf = (m: Msg): Call[] => (m.role === "assistant" && Array.isArray(m.content) ? (m.content as Call[]).filter((c) => c?.type === "toolCall") : []);
-        const messagesOf = (entries: SessionEntry[]) => entries.flatMap((e) => (e.type === "message" ? [e.message as Msg] : []));
-        const sinceCompaction = (entries: SessionEntry[]) => entries.slice(entries.findLastIndex((e) => e.type === "compaction") + 1);
-        const resultIndex = (messages: Msg[], id: string | undefined) => (id ? messages.findIndex((m) => m.role === "toolResult" && m.toolCallId === id) : -1);
-
-        const mask = (messages: Msg[], cutoff: string | undefined) => {
-          const end = resultIndex(messages, cutoff);
-          if (end < 0) return { messages, saved: 0 };
-          const calls = new Map(messages.slice(0, end + 1).flatMap(callsOf).map((c) => [c.id, c] as const));
-          let saved = 0;
-          const out = messages.map((m, i) => {
-            if (i > end || m.role !== "toolResult" || m.toolName === "todo" || sizeOf(m.content) < SMALL_RESULT) return m;
-            const what = [m.toolName, shortArgs(calls.get(m.toolCallId)?.arguments)].filter(Boolean).join(" ");
-            const next = { ...m, content: [{ type: "text" as const, text: `[''${m.toolName} result hidden to save context: ''${what}. Run it again if you need it.]` }] };
-            saved += estimateTokens(m) - estimateTokens(next);
-            return next;
-          });
-          return { messages: out, saved };
-        };
-
-        const pickCutoff = (messages: Msg[]) => {
-          const rounds = messages.flatMap((m, i) => (callsOf(m).length ? [i] : []));
-          if (rounds.length <= KEEP_ROUNDS) return -1;
-          for (let i = rounds[rounds.length - KEEP_ROUNDS] - 1; i >= 0; i--) if (messages[i].role === "toolResult") return i;
-          return -1;
-        };
-
-        const collect = (entries: SessionEntry[], prev: Manifest): Manifest => {
-          const m: Manifest = { users: [...prev.users], todos: prev.todos, bash: [...prev.bash], errors: [...prev.errors], test: prev.test };
-          const calls = new Map<string | undefined, Call>();
-          for (const msg of messagesOf(entries)) {
-            if (msg.role === "user") {
-              const text = textOf(msg.content).trim();
-              if (text) m.users.push(clip(text, USER_CHARS));
-            }
-            for (const c of callsOf(msg)) calls.set(c.id, c);
-            if (msg.role !== "toolResult") continue;
-            const call = calls.get(msg.toolCallId);
-            const text = textOf(msg.content);
-            const details = msg.details as { tasks?: Task[]; nextId?: number; exit_code?: number } | undefined;
-            if (msg.toolName === "todo" && Array.isArray(details?.tasks) && typeof details?.nextId === "number") {
-              m.todos = details.tasks.filter((t) => t.status === "pending" || t.status === "in_progress");
-            }
-            if (msg.isError) m.errors.push({ tool: msg.toolName, args: shortArgs(call?.arguments), text: clip(oneLine(text), 300) });
-            const cmd = msg.toolName === "bash" ? call?.arguments?.command : undefined;
-            if (typeof cmd !== "string") continue;
-            const code = typeof details?.exit_code === "number" ? String(details.exit_code) : (/\[exit code: (-?\d+)\]/.exec(text)?.[1] ?? (msg.isError ? "error" : "0"));
-            m.bash.push({ cmd: clip(oneLine(cmd), 300), exit: code });
-            if (TEST_CMD.test(cmd)) m.test = { cmd: clip(oneLine(cmd), 300), exit: code, tail: text.trimEnd().split("\n").slice(-TAIL_LINES).map((l) => clip(l, 300)).join("\n") };
-          }
-          const users: string[] = [];
-          let total = 0;
-          for (const u of [...m.users].reverse()) {
-            if ((total += u.length) > USER_BUDGET && users.length) break;
-            users.unshift(u);
-          }
-          return { ...m, users, bash: m.bash.slice(-BASH_KEEP), errors: m.errors.slice(-ERROR_KEEP) };
-        };
-
-        const section = (title: string, lines: string[]) => `### ''${title}\n''${lines.length ? lines.join("\n") : "none"}`;
-        const render = (m: Manifest, read: string[], modified: string[]) =>
-          [
-            "## Manifest (recorded by the harness from the session log, exact)",
-            section("User messages, verbatim, oldest first", m.users.map((u, i) => `''${i + 1}. ''${u.replace(/\n/g, "\n   ")}`)),
-            section("Open todo tasks", m.todos.map((t) => `- #''${t.id} [''${t.status}] ''${t.subject}`)),
-            section("Files read", read.map((f) => `- ''${f}`)),
-            section("Files modified", modified.map((f) => `- ''${f}`)),
-            section("Last bash commands, oldest first", m.bash.map((b) => `- [exit ''${b.exit}] ''${b.cmd}`)),
-            section("Last tool errors", m.errors.map((e) => `- ''${[e.tool, e.args].filter(Boolean).join(" ")}: ''${e.text}`)),
-            m.test ? `### Last test/build output: ''${m.test.cmd} (exit ''${m.test.exit})\n\`\`\`\n''${m.test.tail}\n\`\`\`` : section("Last test/build output", []),
-          ].join("\n\n");
-
-        export default function (pi: ExtensionAPI) {
-          const readState = (ctx: ExtensionContext): State => {
-            const e = sinceCompaction(ctx.sessionManager.getBranch()).findLast((x) => x.type === "custom" && x.customType === STATE);
-            return (e?.type === "custom" ? (e.data as State | undefined) : undefined) ?? {};
-          };
-
-          pi.on("context", (event, ctx) => {
-            const state = readState(ctx);
-            let { messages, saved } = mask(event.messages, state.cutoff);
-            const size = (list: Msg[]) => Math.ceil(ctx.getSystemPrompt().length / 4) + list.reduce((n, m) => n + estimateTokens(m), 0);
-            const tokens = size(messages);
-            if (tokens >= MASK_AT && (state.mark === undefined || tokens >= state.mark + MASK_STEP)) {
-              const next = pickCutoff(event.messages);
-              const at = next > resultIndex(event.messages, state.cutoff) ? next : -1;
-              const cutoff = at >= 0 ? (event.messages[at] as Extract<Msg, { role: "toolResult" }>).toolCallId : state.cutoff;
-              ({ messages, saved } = mask(event.messages, cutoff));
-              pi.appendEntry<State>(STATE, { cutoff, mark: size(messages) });
-            }
-            if (ctx.hasUI) ctx.ui.setStatus(STATE, saved > 0 ? `masked ''${Math.round(saved / 1000)}k` : undefined);
-            if (cut) messages = [...messages, { role: "custom", customType: "context-keeper-cut", content: CUT_HINT, display: false, timestamp: Date.now() } as Msg];
-            return messages === event.messages ? undefined : { messages };
-          });
-
-          let cut = false;
-
-          pi.on("message_end", (event) => {
-            const m = event.message;
-            if (m.role !== "assistant") return;
-            cut = m.stopReason === "error" && /terminated/i.test(m.errorMessage ?? "");
-          });
-
-          pi.on("session_start", () => {
-            cut = false;
-          });
-
-          pi.on("tool_result", (event) => {
-            if (event.isError || (event.toolName !== "edit" && event.toolName !== "write")) return;
-            const input = event.input as { path?: unknown; content?: unknown; appendContent?: unknown; edits?: { oldString?: unknown; newString?: unknown; content?: unknown }[] };
-            if (typeof input.path !== "string" || !CODE_FILE.test(input.path)) return;
-            const str = (v: unknown) => (typeof v === "string" ? v : "");
-            const pairs = [
-              ["", str(input.content)],
-              ["", str(input.appendContent)],
-              ...(Array.isArray(input.edits) ? input.edits.map((e) => [str(e.oldString), str(e.newString) || str(e.content)]) : []),
-            ];
-            const added = pairs.flatMap(([before, after]) => {
-              const old = new Set(before.split("\n").map((l) => l.trim()));
-              return after.split("\n").filter((l) => COMMENT.test(l) && !old.has(l.trim())).map((l) => l.trim());
-            });
-            if (added.length === 0) return;
-            const list = added.slice(0, 10).map((l) => `  ''${clip(l, 160)}`).join("\n");
-            const text = `[Harness] This edit added ''${added.length} comment line(s):\n''${list}\nCheck each against the Code comments rules. Keep one only if it explains a non-obvious why that the code cannot show. Remove the others with your next edit.`;
-            return { content: [...event.content, { type: "text" as const, text }], structuredContent: event.structuredContent };
-          });
-
-          pi.on("session_compact", (_event, ctx) => {
-            if (ctx.hasUI) ctx.ui.setStatus(STATE, undefined);
-          });
-
-          pi.on("tool_call", (event, ctx) => {
-            if (event.parentToolCallId || POLLING.has(event.toolName)) return;
-            const msgs = messagesOf(sinceCompaction(ctx.sessionManager.getBranch()));
-            const calls = msgs.slice(msgs.findLastIndex((m) => m.role === "user") + 1).flatMap(callsOf);
-            const at = calls.findIndex((c) => c.id === event.toolCallId);
-            const hidden = resultIndex(msgs, readState(ctx).cutoff);
-            const visible = (id: string | undefined) => {
-              const i = resultIndex(msgs, id);
-              const r = msgs[i];
-              return i > hidden && r?.role === "toolResult" && !r.isError;
-            };
-            const self = at >= 0 ? calls[at] : { name: event.toolName, arguments: event.input as Record<string, unknown> };
-            const key = `''${self.name}:''${stable(self.arguments ?? {})}`;
-            let repeats = 0;
-            for (const c of (at >= 0 ? calls.slice(0, at) : calls).slice(-LOOP_WINDOW).reverse()) {
-              const k = `''${c.name}:''${stable(c.arguments ?? {})}`;
-              if (k === key) {
-                if (visible(c.id)) repeats++;
-              }
-              else if (c.name && (MUTATING.test(c.name) || c.name === "bash")) break;
-            }
-            if (repeats < (READ_LIKE.has(event.toolName) ? 1 : LOOP_REPEATS)) return;
-            return {
-              block: true,
-              reason: READ_LIKE.has(event.toolName) && repeats === 1
-                ? `Skipped: you already ran this exact ''${event.toolName} in this turn and nothing was modified since. The content is in the earlier result above, use it.`
-                : `Blocked: this ''${event.toolName} call repeats an identical earlier call (same tool, same arguments) with no edit, write or other command since, so the result has not changed. Use the earlier result or change approach.`,
-            };
-          });
-
-          pi.on("session_before_compact", async (event, ctx) => {
-            const { preparation: prep, branchEntries, signal } = event;
-            const model = ctx.model;
-            const runtime = (ctx.modelRegistry as unknown as { runtime?: Runtime }).runtime;
-            if (!model || typeof runtime?.resolveModel !== "function" || typeof runtime.getAuth !== "function" || typeof runtime.streamSimple !== "function") return;
-
-            const last = branchEntries.findLast((e) => e.type === "compaction");
-            const prev = (last?.type === "compaction" ? (last.details as Details | undefined) : undefined) ?? {};
-            const manifest = collect(sinceCompaction(branchEntries), prev.contextKeeper ?? { users: [], todos: [], bash: [], errors: [] });
-            const modified = new Set([...(prev.modifiedFiles ?? []), ...prep.fileOps.edited, ...prep.fileOps.written]);
-            const readFiles = [...new Set([...(prev.readFiles ?? []), ...prep.fileOps.read])].filter((f) => !modified.has(f)).sort();
-            const modifiedFiles = [...modified].sort();
-
-            let request: { model: Model<Api>; thinkingLevel: Level; apiKey?: string; headers?: Record<string, string>; env?: Record<string, string> };
-            try {
-              const level = ctx.thinkingLevel ?? pi.getThinkingLevel();
-              const llm = convertToLlm(buildSessionContext(branchEntries, branchEntries.at(-1)?.id ?? null).messages);
-              request = model.api === "pi-virtual" ? await runtime.resolveModel(model, llm, { reason: "direct", thinkingLevel: level, signal }) : { model, thinkingLevel: level };
-              try {
-                const auth = await runtime.getAuth(request.model, { signal });
-                if (auth) {
-                  request = {
-                    model: auth.auth.baseUrl ? { ...request.model, baseUrl: auth.auth.baseUrl } : request.model,
-                    thinkingLevel: request.thinkingLevel,
-                    apiKey: auth.auth.apiKey,
-                    headers: auth.auth.headers ? Object.fromEntries(Object.entries(auth.auth.headers).filter((h): h is [string, string] => h[1] !== null)) : undefined,
-                    env: auth.env,
-                  };
-                }
-              } catch (error) {
-                if (signal.aborted) throw error;
-              }
-            } catch (error) {
-              if (signal.aborted) return { cancel: true };
-              ctx.ui.notify(`context-keeper: model routing failed, using default compaction: ''${error instanceof Error ? error.message : String(error)}`, "warning");
-              return;
-            }
-
-            const s = pi.getSettings();
-            const idle = s.httpIdleTimeoutMs ?? 300_000;
-            const transport = {
-              timeoutMs: s.retry?.provider?.timeoutMs ?? (idle === 0 ? 2147483647 : idle),
-              websocketConnectTimeoutMs: s.websocketConnectTimeoutMs,
-              maxRetries: s.retry?.provider?.maxRetries,
-              maxRetryDelayMs: s.retry?.provider?.maxRetryDelayMs ?? 60_000,
-            };
-            const streamFn = ((m, c, o) => runtime.streamSimple(m, c, { ...o, ...transport })) as StreamFn;
-            const retry = {
-              enabled: s.retry?.enabled ?? true,
-              maxRetries: s.retry?.maxRetries ?? 3,
-              baseDelayMs: s.retry?.baseDelayMs ?? 2000,
-              maxAgentDelayMs: s.retry?.maxAgentDelayMs ?? 60_000,
-            };
-            const instructions = [SCHEMA, event.customInstructions].filter(Boolean).join("\n\n");
-            const list = [...prep.messagesToSummarize, ...prep.turnPrefixMessages] as Msg[];
-            const cutoff = readState(ctx).cutoff;
-            const tail = list.findLast((m) => m.role === "toolResult");
-            const summarized = mask(list, cutoff && resultIndex(list, cutoff) < 0 && tail?.role === "toolResult" ? tail.toolCallId : cutoff).messages;
-
-            try {
-              const result = await generateSummaryWithUsage(
-                summarized,
-                request.model,
-                prep.settings.reserveTokens,
-                request.apiKey,
-                request.headers,
-                signal,
-                instructions,
-                prep.previousSummary?.split(MARK)[0],
-                request.thinkingLevel,
-                streamFn,
-                request.env,
-                retry,
-              );
-              return {
-                compaction: {
-                  summary: `''${result.text.trim()}\n\n---\n''${render(manifest, readFiles, modifiedFiles)}`,
-                  firstKeptEntryId: prep.firstKeptEntryId,
-                  tokensBefore: prep.tokensBefore,
-                  usage: result.usage,
-                  details: { readFiles, modifiedFiles, contextKeeper: manifest } satisfies Details,
-                },
-              };
-            } catch (error) {
-              if (signal.aborted) return { cancel: true };
-              ctx.ui.notify(`context-keeper: compaction failed, using default compaction: ''${error instanceof Error ? error.message : String(error)}`, "warning");
-              return;
-            }
           });
         }
       '';
@@ -1846,7 +2092,9 @@ in
         - If the same error appears twice in a row, stop and explain what you tried.
       '';
       npmPins = {
+        "@aliou/pi-guardrails" = "0.19.0";
         "@cortexkit/aft-pi" = config.programs.harness.aftVersion;
+        "@cortexkit/pi-magic-context" = config.programs.harness.magicContextVersion;
         "pi-herdr-subagents" = "0.2.1";
         "pi-lsp-extension" = "1.4.0";
       };
@@ -2061,20 +2309,23 @@ in
           cp --reflink=never "${proteiAutoFile}" "$agent_dir/extensions/protei-auto.ts"
           chmod 644 "$agent_dir/extensions/protei-auto.ts"
 
-          for ext in damage-control tool-counter session-replay; do
-            cp --reflink=never "${piVsCcExtensions}/$ext.ts" "$agent_dir/extensions/$ext.ts"
-            chmod 644 "$agent_dir/extensions/$ext.ts"
-          done
+          rm -f "$agent_dir/extensions/damage-control.ts" \
+                "$agent_dir/extensions/tool-counter.ts" \
+                "$agent_dir/extensions/session-replay.ts" \
+                "$agent_dir/extensions/context-keeper.ts" \
+                "$agent_dir/extensions/routed-model.ts" \
+                "$agent_dir/pi-statusline.json" \
+                "${config.home.homeDirectory}/.pi/damage-control-rules.json"
+          cp --reflink=never "${guardrailsJsonFile}" "$agent_dir/extensions/guardrails.json"
+          chmod 644 "$agent_dir/extensions/guardrails.json"
+          cp --reflink=never "${magicContextFile}" "$cortexkit_dir/magic-context.jsonc"
+          chmod 644 "$cortexkit_dir/magic-context.jsonc"
           cp --reflink=never "${fffJsonFile}" "$agent_dir/extensions/pi-fff.json"
           chmod 644 "$agent_dir/extensions/pi-fff.json"
           cp --reflink=never "${todoReminderFile}" "$agent_dir/extensions/todo-reminder.ts"
           chmod 644 "$agent_dir/extensions/todo-reminder.ts"
-          cp --reflink=never "${contextKeeperFile}" "$agent_dir/extensions/context-keeper.ts"
-          chmod 644 "$agent_dir/extensions/context-keeper.ts"
           cp --reflink=never "${gatesFile}" "$agent_dir/extensions/gates.ts"
           chmod 644 "$agent_dir/extensions/gates.ts"
-          cp --reflink=never "${piVsCcExtensions}/damage-control-rules.json" "${config.home.homeDirectory}/.pi/damage-control-rules.json"
-          chmod 644 "${config.home.homeDirectory}/.pi/damage-control-rules.json"
 
           cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
           chmod 600 "$agent_dir/mcp.json"

@@ -1,7 +1,7 @@
 # Общий харнесс агентов (pi, claude-code, opencode): единый store скиллов
 # ~/.agents/skills и общий фрагмент system prompt. Агент-специфика остаётся
 # в своих модулях (pi.nix, claude.nix, opencode.nix).
-{ ... }:
+{ inputs, ... }:
 {
   flake.homeModules.harness =
     {
@@ -115,7 +115,36 @@
         description = "aft version shared by pi and opencode, both write the same storage";
       };
 
+      options.programs.harness.magicContextVersion = lib.mkOption {
+        type = lib.types.str;
+        default = "0.49.2";
+        description = "magic-context version shared by pi and opencode, both write the same store";
+      };
+
+      options.programs.harness.codebaseMemory = lib.mkOption {
+        type = lib.types.package;
+        # non-UI: UI-сборка тянет graph-ui, у которого протух npmDepsHash
+        default = inputs.codebase-memory-mcp.packages.${pkgs.stdenv.hostPlatform.system}.default;
+        description = "codebase-memory-mcp package shared by pi, opencode and claude-code";
+      };
+
+      options.programs.harness.codebaseMemoryArgs = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "CLI args for the codebase-memory-mcp server, shared by pi, opencode and claude-code";
+      };
+
+      options.programs.harness.codebaseMemoryAutoIndex = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Index new repositories automatically when an MCP session starts";
+      };
+
       config = {
+        home.packages = [
+          config.programs.harness.codebaseMemory
+        ];
+
         # Одна команда на каждый switch: обновляет скиллы и пересоздаёт
         # симлинки. pi и opencode читают store нативно, claude-code получает
         # пер-скилловые симлинки в ~/.claude/skills
@@ -134,6 +163,18 @@
             log "Updated mattpocock/skills in ~/.agents/skills"
           else
             log "WARNING: npx skills add mattpocock/skills failed (no network?), keeping installed skills"
+          fi
+        '';
+
+        # auto_index не имеет ни env, ни JSON-ключа (только SQLite _config.db),
+        # ставится CLI. Конфликт с живым демоном другой версии не должен ронять activation
+        home.activation.codebaseMemoryConfig = lib.mkIf config.programs.harness.codebaseMemoryAutoIndex /* bash */ ''
+          set -uo pipefail
+          log() { printf '[harness] %s\n' "$*" >&2; }
+          if "${lib.getExe config.programs.harness.codebaseMemory}" config set auto_index true; then
+            log "codebase-memory-mcp: auto_index=true"
+          else
+            log "WARNING: could not set codebase-memory-mcp auto_index (conflicting daemon?), will retry next activation"
           fi
         '';
       };

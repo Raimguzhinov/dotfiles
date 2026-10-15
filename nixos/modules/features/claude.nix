@@ -321,11 +321,8 @@
           };
           codebase_memory = {
             type = "stdio";
-            command = "npx";
-            args = [
-              "-y"
-              "codebase-memory-mcp"
-            ];
+            command = lib.getExe config.programs.harness.codebaseMemory;
+            args = config.programs.harness.codebaseMemoryArgs;
             env.CBM_ALLOWED_ROOT = config.home.homeDirectory;
           };
           searxng = {

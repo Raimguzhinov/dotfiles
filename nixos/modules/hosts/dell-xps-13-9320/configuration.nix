@@ -1202,6 +1202,7 @@
           ffmpeg
           file-roller
           firefoxpwa
+          forgejo-cli
           gcc
           gdlv
           gdu # du -> ncdu/dust -> gdu

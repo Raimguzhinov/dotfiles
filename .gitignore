@@ -1,5 +1,6 @@
-.idea
 .claude
+.idea
+.pi
 .tmux/resurrect
 .DS_Store
 SpecificDots/Fonts/nerd-fonts

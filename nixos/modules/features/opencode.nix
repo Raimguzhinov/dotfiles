@@ -166,10 +166,9 @@
           codebase_memory = {
             type = "local";
             command = [
-              "npx"
-              "-y"
-              "codebase-memory-mcp"
-            ];
+              (lib.getExe config.programs.harness.codebaseMemory)
+            ]
+            ++ config.programs.harness.codebaseMemoryArgs;
             environment.CBM_ALLOWED_ROOT = config.home.homeDirectory;
             enabled = true;
           };
@@ -209,6 +208,7 @@
         plugin = [
           "opencode-claude-auth@latest"
           "@cortexkit/aft-opencode@${config.programs.harness.aftVersion}"
+          "@cortexkit/opencode-magic-context@${config.programs.harness.magicContextVersion}"
         ];
       };
 
@@ -385,15 +385,17 @@
           #     reasoning_effort outside (low, medium, xhigh)
           #   - Coding/Strict context: repo ships 131072 and 231072, the model is
           #     natively 262144
+          #   - compaction: MC self-disables if native auto/prune is on
           if [[ -f "$opencode_dir/opencode.json" ]]; then
             "${lib.getExe pkgs.jq}" \
-              'del(.enabled_providers)
-               | .model = "opencode/longcat-2.5-preview-free"
-               | .small_model = "opencode/longcat-2.5-preview-free"
-               | del(.mcp.logzone)
-               | del(.provider.Protei.models[]?.variants.high)
-               | .provider.Protei.models.Coding.limit = { context: 262144, output: 65536 }
-               | .provider.Protei.models.Strict.limit.context = 262144' \
+               'del(.enabled_providers)
+                | .model = "opencode/longcat-2.5-preview-free"
+                | .small_model = "opencode/longcat-2.5-preview-free"
+                | del(.mcp.logzone)
+                | del(.provider.Protei.models[]?.variants.high)
+                | .provider.Protei.models.Coding.limit = { context: 262144, output: 65536 }
+                | .provider.Protei.models.Strict.limit.context = 262144
+                | .compaction = { auto: false, prune: false }' \
               "$opencode_dir/opencode.json" \
               > "$opencode_dir/opencode.json.tmp" && \
               mv "$opencode_dir/opencode.json.tmp" "$opencode_dir/opencode.json"
@@ -405,8 +407,9 @@
             ln -sf "$opencode_dir/opencode.json" "$opencode_dir/config.json"
           fi
 
-          if [[ ! -d "${config.xdg.cacheHome}/opencode/packages/@cortexkit/aft-opencode@${config.programs.harness.aftVersion}" ]]; then
-            log "Warming up @cortexkit/aft-opencode plugin cache (first-run bun install is slow and can hang a live TUI session)"
+          if [[ ! -d "${config.xdg.cacheHome}/opencode/packages/@cortexkit/aft-opencode@${config.programs.harness.aftVersion}" ]] \
+             || [[ ! -d "${config.xdg.cacheHome}/opencode/packages/@cortexkit/opencode-magic-context@${config.programs.harness.magicContextVersion}" ]]; then
+            log "Warming up cortexkit plugin cache (aft-opencode, opencode-magic-context; first-run bun install is slow and can hang a live TUI session)"
             if ! "${pkgs.coreutils}/bin/timeout" 240s "${pkgs-unstable.opencode}/bin/opencode" run "warm up plugin cache" >/dev/null 2>&1; then
               log "WARNING: aft-opencode plugin warm-up failed or timed out (no network / provider unreachable?)"
             fi
