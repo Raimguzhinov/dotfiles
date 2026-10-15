@@ -38,7 +38,7 @@
 #
 # npm-экстеншены (источники встроенных инструментов)
 #   aft-pi            aft_search / aft_outline / aft_zoom / codemode
-#   pi-lsp-extension  lsp_* (Python/pyright, Nix/nixd, TypeScript)
+#   pi-lsp-extension  lsp_* (Python/pyright, Nix/nixd, TypeScript, Go/gopls)
 #   rpiv-todo         todo (план многошаговой работы)
 #   pi-herdr-subagents  subagent / subagent_wait через herdr
 #   pi-add-dir, pi-fff, pi-permission-system, pi-undo-redo
@@ -1825,7 +1825,7 @@ in
         ## Code intelligence
         Each tool has one job, do not use two tools for the same question.
         - Structure of a file: aft_outline. Body of a symbol: aft_zoom. Find code by name or text: aft_search, or grep for exact strings, comments, logs and config keys.
-        - In Go, Nix, TypeScript, TSX, JavaScript, Rust and Python use LSP only for what aft cannot do: exact definition across files (lsp_definition), every usage of a symbol (lsp_references), its type or signature (lsp_hover), quick fixes and imports (lsp_code_actions). Go is additionally served by the gopls MCP server; pi-lsp covers Python (pyright), Nix (nixd) and TypeScript.
+        - In Go, Nix, TypeScript, TSX, JavaScript, Rust and Python use LSP only for what aft cannot do: exact definition across files (lsp_definition), every usage of a symbol (lsp_references), its type or signature (lsp_hover), quick fixes and imports (lsp_code_actions). pi-lsp covers Python (pyright), Nix (nixd), TypeScript and Go (gopls); Go is additionally served by the gopls MCP server.
         - Rename a symbol only with lsp_rename, never with edit or text replacement: it updates every reference across files.
         - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
         - Find files with find, list directories with ls.

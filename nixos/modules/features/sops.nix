@@ -57,6 +57,17 @@
         secrets."typesafe/api_key" = { };
       };
 
+      # чтобы gh работал в шеллах без env-токена (tool-шелл агента не наследует precmd-hook zsh)
+      sops.templates."gh/hosts" = {
+        path = "${config.home.homeDirectory}/.config/gh/hosts.yml";
+        mode = "0600";
+        content = ''
+          github.com:
+              oauth_token: ${config.sops.placeholder."git/github_token"}
+              user: Raimguzhinov
+        '';
+      };
+
       programs.zsh.initContent = # bash
         ''
           _sops_load_secrets() {
