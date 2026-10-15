@@ -59,8 +59,6 @@
         "youtrack"
       ];
 
-      mcpPermissions = lib.listToAttrs (map (name: lib.nameValuePair "${name}_*" "allow") mcpServers);
-
       thinkingVariants = {
         off.chat_template_kwargs.enable_thinking = false;
         low.chat_template_kwargs = {
@@ -84,44 +82,6 @@
         "$schema" = "https://opencode.ai/config.json";
         share = "disabled";
         default_agent = "build";
-
-        permission = mcpPermissions // {
-          # "*" = "ask";
-          todowrite = "allow";
-          glob = "allow";
-          grep = "allow";
-          list = "allow";
-          edit = "allow";
-          webfetch = "ask";
-          websearch = "deny";
-          doom_loop = "deny";
-          read = {
-            "*" = "allow";
-            "*.env" = "ask";
-            "*.env.*" = "ask";
-            "*.env.example" = "allow";
-            "~/.config/opencode/*" = "allow";
-          };
-          write = {
-            "*" = "ask";
-            "opencode.json" = "deny";
-            "opencode.jsonc" = "deny";
-          };
-          bash = {
-            "*" = "ask";
-            "ip *" = "allow";
-            "date *" = "allow";
-            "ls *" = "allow";
-            "sort *" = "allow";
-            "tail *" = "allow";
-            "git log *" = "allow";
-            "git diff *" = "allow";
-          };
-          external_directory = {
-            "*" = "ask";
-            "~/.config/opencode/*" = "allow";
-          };
-        };
 
         provider = {
           Protei.models.Coding.variants = thinkingVariants;
