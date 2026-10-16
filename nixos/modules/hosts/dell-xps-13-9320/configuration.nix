@@ -1246,6 +1246,7 @@
           pdfchain # pdftk GUI
           popsicle # USB flasher
           postgresql
+          pre-commit
           procs # ps → procs
           psmisc
           python3

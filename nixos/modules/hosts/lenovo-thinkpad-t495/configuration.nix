@@ -136,6 +136,7 @@
         glow
         htop
         jocalsend
+        pre-commit
         ripgrep
         rsync
         vim

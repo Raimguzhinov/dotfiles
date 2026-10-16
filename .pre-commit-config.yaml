@@ -6,3 +6,8 @@ repos:
         entry: nixfmt --check
         language: system
         types: [nix]
+      - id: pi-theme-tokens
+        name: pi theme tokens
+        entry: python3 scripts/check_pi_theme_tokens.py
+        language: system
+        files: 'nixos/modules/features/pi\.nix'

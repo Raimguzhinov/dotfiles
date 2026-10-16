@@ -166,6 +166,36 @@
           fi
         '';
 
+        # Скилл из cursor/plugins: fetch в activation, не в деривации, чтобы
+        # не кэшироваться в store и всегда тянуть свежий upstream. Имя hook'а
+        # алфавитно после updateAgentSkills, чтобы идти после npx skills
+        home.activation.updateCursorSkill = /* bash */ ''
+          set -euo pipefail
+          log() { printf '[harness] %s\n' "$*" >&2; }
+          export PATH="${
+            lib.makeBinPath [
+              pkgs.curl
+              pkgs.coreutils
+            ]
+          }:$PATH"
+          skill_dir="$HOME/.agents/skills/thermo-nuclear-code-quality-review"
+          url="https://raw.githubusercontent.com/cursor/plugins/main/cursor-team-kit/skills/thermo-nuclear-code-quality-review/SKILL.md"
+          tmp=$(mktemp)
+          trap 'rm -f "$tmp"' EXIT
+          if "${pkgs.coreutils}/bin/timeout" 60s "${pkgs.curl}/bin/curl" -fsSL "$url" -o "$tmp"; then
+            if [[ -f "$skill_dir/SKILL.md" ]] && cmp -s "$tmp" "$skill_dir/SKILL.md"; then
+              log "thermo-nuclear-code-quality-review skill is up to date"
+            else
+              mkdir -p "$skill_dir"
+              mv "$tmp" "$skill_dir/SKILL.md"
+              log "Updated thermo-nuclear-code-quality-review skill from cursor/plugins"
+            fi
+          else
+            log "WARNING: could not fetch thermo-nuclear-code-quality-review skill (no network?), keeping installed"
+          fi
+          ln -sfn "$skill_dir" "$HOME/.claude/skills/thermo-nuclear-code-quality-review"
+        '';
+
         # auto_index не имеет ни env, ни JSON-ключа (только SQLite _config.db),
         # ставится CLI. Конфликт с живым демоном другой версии не должен ронять activation
         home.activation.codebaseMemoryConfig = lib.mkIf config.programs.harness.codebaseMemoryAutoIndex /* bash */ ''

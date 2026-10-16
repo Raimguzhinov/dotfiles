@@ -43,6 +43,22 @@
 #   pi-herdr-subagents  subagent / subagent_wait через herdr
 #   pi-add-dir, pi-fff, pi-permission-system, pi-undo-redo
 #
+# Карта файла (секции в порядке следования)
+#   modelsConfig         модели Protei (id, reasoning, API-ключ)
+#   mcpConfig            MCP-серверы
+#   settingsSeed         seed settings.json (npm-плагины)
+#   permissionsPolicy    политики прав
+#   keybindingsOverrides маппинги клавиш
+#   aftConfig            конфиг aft
+#   guardrailsConfig     guardrails: autoDeny, customPatterns, policies
+#   magicContextFile     magic-context.jsonc
+#   proteiAutoFile       protei-auto.ts (вирт. модели + кастомный footer)
+#   piStats / piEval     статистика сессий / eval-харнес
+#   todoReminderFile     todo-напоминатель
+#   gatesFile            run_gates
+#   appendSystemFile     приложение к системному промпту
+#   npmPins              пины npm-пакетов
+#   home.activation      деплой в ~/.pi (setupPi)
 #
 { ... }:
 let
@@ -450,11 +466,6 @@ in
             {
               pattern = ''\bgit\s+push\s+\S+\s+:\S+'';
               description = "Deletes remote branch (old syntax)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgcloud\s+iam\s+policies\b'';
-              description = "gcloud iam policies (modifies IAM policies)";
               regex = true;
             }
             {
