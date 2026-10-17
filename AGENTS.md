@@ -93,6 +93,8 @@ nixos/
 - Коммиты должны быть подписаны (GPG signing включён): не использовать
   `--no-gpg-sign`/`--no-gpg-sign`. Если подпись не проходит (нет YubiKey/PIN
   prompt), остановиться и попросить пользователя запустить коммит локально.
+- Issue с комментарием, ссылающимся на коммит, закрывать только после
+  пуша этого коммита.
 - Стиль `inherit` в атрсетах: каждый аргумент на отдельной строке
   (`inherit foo;`).
 
@@ -112,7 +114,9 @@ rebind тачпада i2c-устройства и не `modprobe -r i2c_designwa
 
 ## SOPS / YubiKey
 
-- Секреты управляются `sops-nix`.
+- Секреты управляются `sops-nix`. Рендер секрета: файл
+  `~/.config/sops-nix/secrets/<имя>`, Nix-значение
+  `config.sops.secrets.<имя>.path`.
 - User unit `sops-nix.service` настроен так, чтобы:
   - запускаться после поднятия сессии (`graphical-session.target`),
   - не уходить в бесконечные ретраи при отсутствии YubiKey,
@@ -153,46 +157,8 @@ YubiKey используется только для sops-дешифровки �
 - nvim-cmp `<Tab>` по умолчанию: select_next + auto-complete. Для confirm без
   select: переопределить через `setupOpts.mapping`.
 
-### Стандарты редактирования `neovim.nix`
-
-Впредь любые правки `nixos/modules/features/neovim.nix` вести по этим
-правилам:
-
-- **Декларативность прежде Lua.** Перед тем как писать сырой Lua (`pluginRC`,
-  `lazy.plugins.*.after`, ручной `vim.lsp.config`/`vim.lsp.enable` в
-  autocmd), проверить исходники nvf (store-путь инпута `nvf` из
-  `nix flake archive`) на предмет готовой декларативной опции — например
-  `vim.lsp.servers.<name>` вместо ручного `vim.lsp.config`, `vim.lsp.mappings`
-  вместо ручных `keymaps` на `vim.lsp.buf.*`, `vim.autocomplete.nvim-cmp.mappings`
-  вместо патчинга `cmp.get_config()`, `vim.languages.<lang>.extraDiagnostics`
-  вместо ручного `require("lint")`. Обязательно свериться через **context7**
-  (`/notashelf/nvf` и соответствующий neovim-плагин) — версии/API меняются,
-  доверять памяти нельзя.
-- **Комментарии — минимум.** Только для действительно неочевидного: обход
-  бага апстрима, порядок инициализации, который иначе сломается, причина,
-  почему код похож на мёртвый, но им не является (например, коллизия
-  дефолтных маппингов между плагинами). Максимум 1-2 строки, без пересказа
-  того, что и так видно из кода или имени опции. Если комментарий не мешает
-  убрать его — значит, он не нужен.
-- **Подсветка встроенного кода.** Каждый непустой `''...''`-блок (Lua через
-  `mkLuaInline`, bash/json/markdown и т.п.) должен иметь маркер языка прямо
-  перед открывающими кавычками — так `nvim-treesitter`'s comment-based
-  injection (`# <lang>` → `injection.language`) подсвечивает синтаксис:
-  ```nix
-  on_init =
-    lib.generators.mkLuaInline # lua
-      ''
-        function(client) ... end
-      '';
-  ```
-  Ставить маркер только если это реальный, установленный в конфиге
-  treesitter-grammar (см. `vim.treesitter.grammars`/`languages.*.enable`), а
-  не самодельный DSL или plaintext-формат без грамматики.
-- **Проверка headless перед тем как считать фикс готовым.** Гонять
-  `nvim --headless` на реальных файлах пользователя, а не полагаться на то,
-  что код «выглядит правильно» (см. `feedback_verify_and_revert_dead_fixes`
-  в памяти).
-- После правок обязательно прогонять `nixfmt` по изменённому файлу.
+Правки `nixos/modules/features/neovim.nix` вести по правилам из
+`docs/agents/neovim-nix.md`.
 
 ## Polkit
 
@@ -203,8 +169,7 @@ YubiKey используется только для sops-дешифровки �
 
 - Общий для pi и opencode. Версия: `programs.harness.aftVersion`
   (`harness.nix`).
-- Проводка: pin и `aftConfig` в `pi.nix`, плагин и warm-up кэша в
-  `opencode.nix`.
+- Проводка: pin и `aftConfig` в `pi.nix`, плагин в `opencode.nix`.
 - Бинарник не из Nix, а из npm-пакетов (кэш `~/.cache/aft/bin/`).
   Индексы общие: `~/.local/share/cortexkit/aft/`, конфиг
   `~/.config/cortexkit/aft.jsonc`.
