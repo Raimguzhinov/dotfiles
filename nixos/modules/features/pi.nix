@@ -50,7 +50,6 @@
 #   keybindingsOverrides маппинги клавиш
 #   aftConfig            конфиг aft (lsp.disabled из lspOwnership harness.nix)
 #   guardrailsConfig     guardrails: autoDeny, customPatterns, policies
-#   magicContextFile     magic-context.jsonc
 #   proteiAutoFile       protei-auto.ts (вирт. модели + кастомный footer)
 #   piStats / piEval     статистика сессий / eval-харнес
 #   todoReminderFile     todo-напоминатель
@@ -310,7 +309,6 @@ in
         packages = [
           "npm:@aliou/pi-guardrails"
           "npm:@cortexkit/aft-pi"
-          "npm:@cortexkit/pi-magic-context"
           "npm:@juicesharp/rpiv-todo"
           "npm:pi-add-dir"
           "npm:pi-fff"
@@ -893,29 +891,6 @@ in
       };
 
       guardrailsJsonFile = toJsonFile "pi-guardrails.json" guardrailsConfig;
-
-      magicContextFile = pkgs.writeText "magic-context.jsonc" /* jsonc */ ''
-        {
-          "historian": {
-            "pi": {
-              "model": "Protei/agent_proteya_slow",
-              "thinking_level": "off"
-            },
-            "opencode": {
-              "model": "Protei/agent_proteya_slow"
-            }
-          },
-          "dreamer": {
-            "pi": {
-              "model": "llama.cpp/ornith-ai/Ornith-1.5-35B-A3B",
-              "thinking_level": "off"
-            },
-            "opencode": {
-              "model": "llamaCpp/ornith-ai/Ornith-1.5-35B-A3B"
-            }
-          }
-        }
-      '';
 
       piPlanCmd = /* bash */ ''
         mkdir -p "$out"
@@ -2062,7 +2037,6 @@ in
       npmPins = {
         "@aliou/pi-guardrails" = "0.19.0";
         "@cortexkit/aft-pi" = config.programs.harness.aftVersion;
-        "@cortexkit/pi-magic-context" = config.programs.harness.magicContextVersion;
         "pi-herdr-subagents" = "0.2.1";
         "pi-lsp-extension" = "1.4.0";
       };
@@ -2285,11 +2259,10 @@ in
                 "$agent_dir/extensions/context-keeper.ts" \
                 "$agent_dir/extensions/routed-model.ts" \
                 "$agent_dir/pi-statusline.json" \
-                "${config.home.homeDirectory}/.pi/damage-control-rules.json"
+                "${config.home.homeDirectory}/.pi/damage-control-rules.json" \
+                "$cortexkit_dir/magic-context.jsonc"
           cp --reflink=never "${guardrailsJsonFile}" "$agent_dir/extensions/guardrails.json"
           chmod 644 "$agent_dir/extensions/guardrails.json"
-          cp --reflink=never "${magicContextFile}" "$cortexkit_dir/magic-context.jsonc"
-          chmod 644 "$cortexkit_dir/magic-context.jsonc"
           cp --reflink=never "${fffJsonFile}" "$agent_dir/extensions/pi-fff.json"
           chmod 644 "$agent_dir/extensions/pi-fff.json"
           cp --reflink=never "${todoReminderFile}" "$agent_dir/extensions/todo-reminder.ts"

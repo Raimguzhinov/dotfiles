@@ -183,12 +183,6 @@
         description = "LSP ownership (ADR-0002): aft LSP id -> owning server per agent; keys generate the shared aft config's disabled-LSP list";
       };
 
-      options.programs.harness.magicContextVersion = lib.mkOption {
-        type = lib.types.str;
-        default = "0.49.2";
-        description = "magic-context version shared by pi and opencode, both write the same store";
-      };
-
       options.programs.harness.codebaseMemory = lib.mkOption {
         type = lib.types.package;
         # non-UI: UI-сборка тянет graph-ui, у которого протух npmDepsHash

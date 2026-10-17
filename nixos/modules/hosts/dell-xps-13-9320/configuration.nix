@@ -601,7 +601,7 @@
               homeModules.herdr
               homeModules.jetbrains
               homeModules.kitty
-              homeModules.llamaCpp
+              # homeModules.llamaCpp
               homeModules.neovim
               homeModules.niri
               homeModules.noctalia
@@ -693,12 +693,12 @@
       systemd.services.display-manager.environment.XDG_CURRENT_DESKTOP = "X-NIXOS-SYSTEMD-AWARE";
 
       # LLama CPP
-      systemd.services.llama-cpp = {
-        environment = {
-          XDG_CACHE_HOME = "/var/cache/llama-cpp";
-          MESA_SHADER_CACHE_DIR = "/var/cache/llama-cpp";
-        };
-      };
+      # systemd.services.llama-cpp = {
+      #   environment = {
+      #     XDG_CACHE_HOME = "/var/cache/llama-cpp";
+      #     MESA_SHADER_CACHE_DIR = "/var/cache/llama-cpp";
+      #   };
+      # };
 
       # Enable CUPS to print documents.
       services.avahi = {

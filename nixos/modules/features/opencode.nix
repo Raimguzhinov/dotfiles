@@ -319,7 +319,6 @@
             plugin = [
               "opencode-claude-auth@latest"
               "@cortexkit/aft-opencode@${config.programs.harness.aftVersion}"
-              "@cortexkit/opencode-magic-context@${config.programs.harness.magicContextVersion}"
             ];
 
             lsp = {
