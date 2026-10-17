@@ -38,7 +38,7 @@
 #
 # npm-экстеншены (источники встроенных инструментов)
 #   aft-pi            aft_search / aft_outline / aft_zoom / codemode
-#   pi-lsp-extension  lsp_* (Python/pyright, Nix/nixd, TypeScript, Go/gopls)
+#   pi-lsp-extension  lsp_* (Python/pyright, Nix/nixd, TypeScript, Go/gopls, Rust/rust-analyzer)
 #   rpiv-todo         todo (план многошаговой работы)
 #   pi-herdr-subagents  subagent / subagent_wait через herdr
 #   pi-add-dir, pi-fff, pi-permission-system, pi-undo-redo
@@ -49,7 +49,7 @@
 #   settingsSeed         seed settings.json (npm-плагины)
 #   permissionsPolicy    политики прав
 #   keybindingsOverrides маппинги клавиш
-#   aftConfig            конфиг aft
+#   aftConfig            конфиг aft (lsp.disabled из lspOwnership harness.nix)
 #   guardrailsConfig     guardrails: autoDeny, customPatterns, policies
 #   magicContextFile     magic-context.jsonc
 #   proteiAutoFile       protei-auto.ts (вирт. модели + кастомный footer)
@@ -364,45 +364,8 @@ in
         bash.background = false;
         lsp = {
           auto_install = false;
-          disabled = [
-            "typescript"
-            "typescript-native"
-            "python"
-            "rust"
-            "go"
-            "bash"
-            "yaml"
-            "ty"
-            "clojure-lsp"
-            "dart"
-            "elixir-ls"
-            "fsharp"
-            "gleam"
-            "haskell-language-server"
-            "jdtls"
-            "julials"
-            "nixd"
-            "ocaml-lsp"
-            "php-intelephense"
-            "ruby-lsp"
-            "sourcekit-lsp"
-            "csharp"
-            "razor"
-            "clangd"
-            "lua-ls"
-            "zls"
-            "tinymist"
-            "kotlin-ls"
-            "texlab"
-            "oxlint"
-            "terraform"
-            "vue"
-            "astro"
-            "prisma"
-            "biome"
-            "svelte"
-            "dockerfile"
-          ];
+          # LSP всех языков из ownership-таблицы отдаёт нативный LSP агентов, не aft (ADR-0002)
+          disabled = lib.attrNames config.programs.harness.lspOwnership;
         };
         disabled_tools = [
           "aft_inspect"

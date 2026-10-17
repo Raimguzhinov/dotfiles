@@ -115,6 +115,74 @@
         description = "aft version shared by pi and opencode, both write the same storage";
       };
 
+      # LSP ownership (ADR-0002): какой сервер владеет языком в каждом агенте.
+      # Ключ — aft LSP id из каталога aft v0.59.0; отсутствующий ключ агента
+      # = у агента нет LSP для языка. Disabled-лист общего aft-конфига
+      # генерируется из ключей: LSP обслуживают нативные экстеншены агентов,
+      # не aft.
+      options.programs.harness.lspOwnership = lib.mkOption {
+        type = lib.types.attrsOf (lib.types.attrsOf lib.types.str);
+        default = {
+          astro = { };
+          bash = { };
+          biome = { };
+          clangd = { };
+          clojure-lsp = { };
+          csharp = { };
+          dart = { };
+          dockerfile = { };
+          elixir-ls = { };
+          fsharp = { };
+          gleam = { };
+          go = {
+            opencode = "gopls";
+            pi = "pi-lsp (gopls)";
+          };
+          haskell-language-server = { };
+          # jdtls-бинарник не установлен, java ни у кого не обслуживается
+          jdtls = { };
+          julials = { };
+          kotlin-ls = { };
+          lua-ls = { };
+          nixd = {
+            opencode = "nixd";
+            pi = "pi-lsp (nixd)";
+          };
+          ocaml-lsp = { };
+          oxlint = { };
+          php-intelephense = { };
+          prisma = { };
+          python = {
+            opencode = "basedpyright";
+            pi = "pi-lsp (pyright)";
+          };
+          razor = { };
+          ruby-lsp = { };
+          rust = {
+            opencode = "rust-analyzer";
+            pi = "pi-lsp (rust-analyzer)";
+          };
+          sourcekit-lsp = { };
+          svelte = { };
+          terraform = { };
+          texlab = { };
+          tinymist = { };
+          ty = { };
+          typescript = {
+            opencode = "typescript-language-server";
+            pi = "pi-lsp (typescript-language-server)";
+          };
+          typescript-native = {
+            opencode = "typescript-language-server";
+            pi = "pi-lsp (typescript-language-server)";
+          };
+          vue = { };
+          yaml = { };
+          zls = { };
+        };
+        description = "LSP ownership (ADR-0002): aft LSP id -> owning server per agent; keys generate the shared aft config's disabled-LSP list";
+      };
+
       options.programs.harness.magicContextVersion = lib.mkOption {
         type = lib.types.str;
         default = "0.49.2";
