@@ -1,3 +1,4 @@
+# commit-msg хук требует отдельной установки: pre-commit install -t commit-msg
 repos:
   - repo: local
     hooks:
