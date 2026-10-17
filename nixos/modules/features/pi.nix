@@ -34,7 +34,6 @@
 #   codebase_memory граф знаний индексируемых репозиториев
 #   uc_dev
 #   context7        актуальные доки библиотек: resolve-library-id + query-docs
-#   gopls           Go LSP: диагностика, определения, ссылки, hover
 #
 # npm-экстеншены (источники встроенных инструментов)
 #   aft-pi            aft_search / aft_outline / aft_zoom / codemode
@@ -264,11 +263,6 @@ in
           context7 = {
             description = "Up-to-date documentation and code examples for libraries and frameworks";
             url = "https://mcp.context7.com/mcp";
-          };
-          gopls = {
-            description = "Go language server over MCP: diagnostics, definitions, references, hover, workspace symbols";
-            command = "gopls";
-            args = [ "mcp" ];
           };
           codebase_memory = {
             description = "Code knowledge graph of indexed repositories";
@@ -2045,7 +2039,7 @@ in
         ## Code intelligence
         Each tool has one job, do not use two tools for the same question.
         - Structure of a file: aft_outline. Body of a symbol: aft_zoom. Find code by name or text: aft_search, or grep for exact strings, comments, logs and config keys.
-        - In Go, Nix, TypeScript, TSX, JavaScript, Rust and Python use LSP only for what aft cannot do: exact definition across files (lsp_definition), every usage of a symbol (lsp_references), its type or signature (lsp_hover), quick fixes and imports (lsp_code_actions). pi-lsp covers Python (pyright), Nix (nixd), TypeScript and Go (gopls); Go is additionally served by the gopls MCP server.
+        - In Go, Nix, TypeScript, TSX, JavaScript, Rust and Python use LSP only for what aft cannot do: exact definition across files (lsp_definition), every usage of a symbol (lsp_references), its type or signature (lsp_hover), quick fixes and imports (lsp_code_actions). pi-lsp covers Python (pyright), Nix (nixd), TypeScript and Go (gopls).
         - Rename a symbol only with lsp_rename, never with edit or text replacement: it updates every reference across files.
         - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
         - Find files with find, list directories with ls.
@@ -2093,6 +2087,8 @@ in
         home.sessionVariables = {
           PI_OFFLINE = "1";
           LLAMA_BASE_URL = "http://127.0.0.1:8085";
+          # каждый gopls поднимает дочерний telemetry-процесс, отключаем
+          GOTELEMETRY = "off";
         };
 
         home.file.".pi/agent/agents/worker.md".text = ''
