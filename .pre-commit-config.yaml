@@ -11,3 +11,8 @@ repos:
         entry: python3 scripts/check_pi_theme_tokens.py
         language: system
         files: 'nixos/modules/features/pi\.nix'
+      - id: commit-msg
+        name: commit-msg format
+        entry: bash scripts/check_commit_msg.sh
+        language: system
+        stages: [commit-msg]
