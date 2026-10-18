@@ -1,5 +1,7 @@
 # Magic Context as the context manager
 
+**Status: superseded by ADR-0007.** Magic Context was rejected for signal dilution in long sessions; the agent window stays owned by native compaction.
+
 Sessions of the main and backup agents used to stop at native compaction, and a home-grown context-hiding extension (context-keeper) masked secrets into compaction summaries. We decided to give **one** context manager per agent: Magic Context (cortexkit, same ecosystem as the already-accepted aft), installed in both the main and the backup agent with a **shared local store**, so memory pools across agents.
 
 Considered options:

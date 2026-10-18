@@ -325,6 +325,8 @@ in
       aftConfig = {
         format_on_edit = true;
         bash.background = false;
+        # callgraph-индекс выключен, инструмент aft_callgraph и так в disabled_tools
+        indexes.callgraph = false;
         lsp = {
           auto_install = false;
           # LSP всех языков из ownership-таблицы отдаёт нативный LSP агентов, не aft (ADR-0002)
@@ -341,6 +343,20 @@ in
           "aft_delete"
           "aft_move"
         ];
+        # семантика и реранкер в корпоративном embedder, ключ в PROTEI_AI_API_KEY
+        semantic = {
+          backend = "openai_compatible";
+          model = "giga-embeddings-instruct";
+          base_url = "https://embedder.ai.protei.ru/api/";
+          api_key_env = "PROTEI_AI_API_KEY";
+        };
+        search.rerank = {
+          backend = "remote";
+          model = "bge-reranker-v2-m3";
+          endpoint = "https://rerank.ai.protei.ru/api/v1";
+          api_key_env = "PROTEI_AI_API_KEY";
+          top_n = 20;
+        };
       };
 
       toJsonFile = (pkgs.formats.json { }).generate;

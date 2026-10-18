@@ -80,6 +80,11 @@
               export YOUTRACK_URL=$(cat ${config.sops.secrets."youtrack/url".path} 2> /dev/null)
               export YOUTRACK_TOKEN=$(cat ${config.sops.secrets."youtrack/token".path} 2> /dev/null)
             fi
+            if [[ -f ${config.sops.secrets."work_ai/litellm_api_key".path} ]]; then
+              export PROTEI_AI_API_KEY=$(cat ${
+                config.sops.secrets."work_ai/litellm_api_key".path
+              } 2> /dev/null)
+            fi
           }
           add-zsh-hook precmd _sops_load_secrets
 
