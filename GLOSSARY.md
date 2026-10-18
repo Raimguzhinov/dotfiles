@@ -1,83 +1,101 @@
 # Glossary
 
-Контекст репозитория: конфигурация NixOS-машины как flake (home-manager, coding-агенты, редактор, сервисы). Термины ниже — для кластера модулей, настраивающего coding-агентов (harness).
+NixOS dotfiles as a flake: hosts, desktop, tools, editors, services, and a coding-agent harness.
 
-## Language
+## Machine
 
-### Агенты
+**host**:
+A concrete machine with its own hardware; a directory in `modules/hosts/`, named after nixos-hardware (`dell-xps-13-9320`).
+_Avoid_: host config, system, machine (as a module name)
+
+**feature module**:
+A module that publishes one tool as a home-manager module and, where a standalone build makes sense, also as a package with its config baked in.
+_Avoid_: tool module, package module
+
+## Harness
+
+### Agents
 
 **harness**:
-Кластер модулей, настраивающий coding-агенты машины и общую инфраструктуру под ними (поиск по коду, LSP, эндпоинты моделей).
-_Avoid_: agent setup, tools-кластер, плагины
+The cluster of feature modules that configures the machine's coding agents and the shared infrastructure under them (code search, LSP, model endpoints).
+_Avoid_: agent setup, tools cluster, plugins
 
-**основной агент**:
-Агент повседневного корпоративного кодинга (сейчас — pi).
-_Avoid_: primary, «главный pi»
+**main agent**:
+The agent for everyday corporate coding (currently pi).
+_Avoid_: primary, "the main pi"
 
-**запасной агент**:
-Корпоративный агент, взаимозаменяемый с основным для тех же задач (сейчас — opencode).
-_Avoid_: secondary, «второй», alternative
+**backup agent**:
+A corporate agent interchangeable with the main agent for the same tasks (currently opencode).
+_Avoid_: secondary, "the second one", alternative
 
-**личный агент**:
-Агент петпроектов: публичных и личных, без доступа к корпоративной инфраструктуре (сейчас — claude).
-_Avoid_: personal agent, pet-агент
+**personal agent**:
+The agent for pet projects, public and private, with no access to corporate infrastructure (currently claude).
+_Avoid_: pet agent
 
-**feature-модуль**:
-Модуль, который публикует один инструмент и как standalone-пакет, и как home-manager модуль.
-_Avoid_: tool module, пакет-модуль
-
-### Код-интеллигенция
+### Code intelligence
 
 **LSP ownership**:
-Привязка языка к единственному серверу, который владеет им в данном агенте. Приоритет LSP читается из этой таблицы, а не из памяти.
-_Avoid_: LSP-приоритет, покрытие LSP
+Binding a language to the single server that owns it in a given agent. LSP priority is read from this table, not from memory.
+_Avoid_: LSP priority, LSP coverage
 
 **aft**:
-Общий для основного и запасного агентов индексированный поиск по коду. Его конфиг общий; per-agent конфиги не вводится.
-_Avoid_: code search, индекс
+Indexed code search shared by the main and backup agents. Its config is shared; per-agent configs are not introduced.
+_Avoid_: code search, index
 
-### Контекст и память
+**semantic search**:
+Code search by the meaning of the query, without an exact name.
+_Avoid_: meaning search, fuzzy search
 
-**контекст-менеджер**:
-Владелец окна контекста агента и долговременной памяти, живущей дольше сессии. В агенте один.
-_Avoid_: компакция, summarizer, «управление контекстом»
+**semantic backend**:
+The model that builds embeddings for semantic search: a local ONNX model or a corporate model.
+_Avoid_: embedding model, embedder
+
+### Context and memory
+
+**native compaction**:
+The agent's own built-in management of its context window. It bounds the window and loses accumulated knowledge.
+_Avoid_: auto-compact, built-in compaction
+
+**context manager**:
+The owner of the agent's context window and of long-term memory that outlives the session. One per agent.
+_Avoid_: compaction, summarizer, "context management"
 
 **historian**:
-Малая модель, которая успевает за сессией и превращает её в память.
-_Avoid_: summarizer, бэкграунд-модель
+A small model that keeps up with the session and turns it into memory.
+_Avoid_: summarizer, background model
 
 **dreamer**:
-Модель, консолидирующая память, когда машина простаивает.
+A model that consolidates memory while the machine is idle.
 _Avoid_: consolidator
 
-**корпоративная модель**:
-Модель, доступная через корпоративный прокси (Protei).
-_Avoid_: Protei (как имя класса моделей), remote model
+**corporate model**:
+A model reached through the corporate proxy (Protei).
+_Avoid_: Protei (as the name of a model class), remote model
 
-**локальная модель**:
-Модель, обслуживаемая на самой машине.
-_Avoid_: llama.cpp (как имя класса моделей), local LLM
+**local model**:
+A model served on the machine itself.
+_Avoid_: llama.cpp (as the name of a model class), local LLM
 
 ### System prompt
 
-**shared-фрагмент**:
-Часть system prompt, общая для всех агентов; доставляется каждому.
-_Avoid_: common prompt, общий промпт
+**shared fragment**:
+A part of the system prompt common to all agents; delivered to each.
+_Avoid_: common prompt
 
-**per-agent-секция**:
-Часть system prompt, специфичная для одного агента.
-_Avoid_: override, секция-надстройка
+**per-agent section**:
+A part of the system prompt specific to one agent.
+_Avoid_: override, add-on section
 
 ### pi
 
 **virtual model**:
-Имя модели, которое не физическая модель, а слот, маршрутизирующий к ней. Конкретная модель выбирается логикой агента по thinking-level и задаче (напр. auto → agent_proteya).
-_Avoid_: model alias, селектор модели, «модель auto»
+A model name that is not a physical model but a slot routing to one. The agent's logic picks the concrete model by thinking level and task (e.g. auto → agent_proteya).
+_Avoid_: model alias, model selector, "the auto model"
 
 **routed model**:
-Физическая модель, к которой виртуальная модель резолвится сейчас и которая реально гоняет инференс. В pi живёт в session.routedModel.
-_Avoid_: target model, resolved model, «настоящая модель»
+The physical model a virtual model currently resolves to and that actually runs inference. In pi it lives in session.routedModel.
+_Avoid_: target model, resolved model, "the real model"
 
 **footer**:
-Статусная строка pi внизу экрана. Кастомный setExtensionFooter полностью заменяет нативный футер (который показывал бы git-ветку и статусы расширений), поэтому статусы расширений надо дорисовывать самому.
-_Avoid_: statusline, строка состояния
+pi's status line at the bottom of the screen. A custom setExtensionFooter fully replaces the native footer (which would show the git branch and extension statuses), so extension statuses have to be drawn by hand.
+_Avoid_: statusline, status bar
