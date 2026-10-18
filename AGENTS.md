@@ -182,7 +182,7 @@ YubiKey используется только для sops-дешифровки �
 
 ## Модель прав
 
-Операции классифицируются по ADR-0006: read-only проходит, разрушительное блокируется с причиной, среднее спрашивает один раз на сессию. Источник правил — `programs.harness.permissions` (`harness.nix`); pi рендерит `config.json` для `@gotgenes/pi-permission-system`, opencode — нативную permission-карту.
+Операции классифицируются по ADR-0006: read-only проходит, разрушительное блокируется с причиной, среднее в pi проходит без вопроса (yoloMode), в opencode спрашивает. Источник правил — `programs.harness.permissions` (`harness.nix`); pi рендерит `config.json` для `@gotgenes/pi-permission-system`, opencode — нативную permission-карту.
 
 - bash: read-only и рабочий git-набор (status, diff, log, fetch, pull, add, commit, switch) проходят; остальное спрашивает.
 - Блокируется: рекурсивный rm и `find -delete` (удаление делает пользователь), `git checkout/restore/stash drop/branch -D/reset --hard`, force-push, `mkfs`, `dd` в /dev.

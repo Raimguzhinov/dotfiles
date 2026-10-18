@@ -26,3 +26,4 @@ Consequences:
 - No activation-time `sed` patch on the permission system; the legacy exception list in ADR-0003 shrinks to three packages.
 - `nixpkgs` `formats.json` emits keys in **alphabetical** order, and the package resolves patterns last-match-wins: patterns are written so the intended winner is also the alphabetically last match (`*` sorts first, so the default never overrides specifics).
 - opencode has no directional path surfaces, so its `external_directory` stays bidirectional: reads outside the cwd ask there, while pi's `external_directory_read` is allow. Accepted for the reserve agent.
+- pi's rendered config enables `yoloMode`: every `ask` is rewritten to a standing `allow` (origin `yolo`, recorded in the review log) while `deny` rules are untouched; opencode has no such knob, so its asks prompt there.

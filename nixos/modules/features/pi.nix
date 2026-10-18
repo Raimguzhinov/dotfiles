@@ -366,6 +366,7 @@ in
         {
           "$schema" =
             "https://raw.githubusercontent.com/gotgenes/pi-packages/main/packages/pi-permission-system/schemas/permissions.schema.json";
+          yoloMode = true;
           permission = {
             "*" = "allow";
             external_directory_read = {
