@@ -17,7 +17,7 @@ sudo nixos-rebuild build-vm --flake ~/dotfiles/nixos#raimguzhinov
 ./result/bin/run-raimguzhinov-vm -device virtio-vga-gl -display gtk,gl=on
 
 # Форматирование Nix-файлов
-nixfmt nixos/
+nixfmt nixos/modules/
 ```
 
 ## Архитектура конфигурации
@@ -184,7 +184,7 @@ YubiKey используется только для sops-дешифровки �
 
 Операции классифицируются по ADR-0006: read-only проходит, разрушительное блокируется с причиной, среднее в pi проходит без вопроса (yoloMode), в opencode спрашивает. Источник правил — `programs.harness.permissions` (`harness.nix`); pi рендерит `config.json` для `@gotgenes/pi-permission-system`, opencode — нативную permission-карту.
 
-- bash: read-only и рабочий git-набор (status, diff, log, fetch, pull, add, commit, switch) проходят; остальное спрашивает.
+- bash: read-only и git проходят.
 - Блокируется: рекурсивный rm и `find -delete` (удаление делает пользователь), `git checkout/restore/stash drop/branch -D/reset --hard`, force-push, `mkfs`, `dd` в /dev.
 - Секреты запрещены читать и писать (.env, ~/.ssh, ~/.gnupg, ключи, *.pem, дампы).
 - Только-чтение (запись запрещена, чтение свободно): ~/.pi, ~/.config, лок-файлы, артефакты сборки, мета-файлы (README, .git, CI, Dockerfiles).

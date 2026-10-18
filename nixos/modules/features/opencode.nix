@@ -426,7 +426,7 @@
               1. Проверить, что новые `.nix` файлы добавлены в git (иначе `import-tree` их не увидит)
               2. Проверить Linux-only условия: использовать `system` + `builtins.elem`, не `pkgs.stdenv.isLinux` в `perSystem`
               3. Убедиться, что секреты не попали в nix store (только `sops.placeholder`/`sops.templates`)
-              4. Прогнать форматирование: `nixfmt-rfc-style nixos/` (или `nixfmt`)
+              4. Прогнать форматирование: `nixfmt nixos/modules/`
               5. Собрать без применения: `sudo nixos-rebuild build --flake ~/dotfiles/nixos`
 
               ## Результат
