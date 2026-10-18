@@ -4,6 +4,11 @@ set -euo pipefail
 
 subject=$(head -n1 "$1")
 
+if LC_ALL=C.UTF-8 grep -qP '[\x{0400}-\x{052F}]' "$1"; then
+  echo "commit-msg: message must be in English (Cyrillic characters found)" >&2
+  exit 1
+fi
+
 if [[ ! "$subject" =~ ^nixos:\  ]]; then
   echo "commit-msg: subject must start with 'nixos: ' (got: $subject)" >&2
   exit 1

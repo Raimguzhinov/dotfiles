@@ -40,16 +40,15 @@
 #   pi-lsp-extension  lsp_* (Python/pyright, Nix/nixd, TypeScript, Go/gopls, Rust/rust-analyzer)
 #   rpiv-todo         todo (план многошаговой работы)
 #   pi-herdr-subagents  subagent / subagent_wait через herdr
-#   pi-add-dir, pi-fff, pi-permission-system, pi-undo-redo
+#   pi-add-dir, @gotgenes/pi-permission-system, pi-fff, pi-undo-redo
 #
 # Карта файла (секции в порядке следования)
 #   modelsConfig         модели Protei (id, reasoning, API-ключ)
 #   mcpConfig            MCP-серверы
 #   settingsSeed         seed settings.json (npm-плагины)
-#   permissionsPolicy    политики прав
+#   permissionConfig     конфиг @gotgenes/pi-permission-system (ADR-0006)
 #   keybindingsOverrides маппинги клавиш
 #   aftConfig            конфиг aft (lsp.disabled из lspOwnership harness.nix)
-#   guardrailsConfig     guardrails: autoDeny, customPatterns, policies
 #   proteiAutoFile       protei-auto.ts (вирт. модели + кастомный footer)
 #   piStats / piEval     статистика сессий / eval-харнес
 #   todoReminderFile     todo-напоминатель
@@ -307,44 +306,16 @@ in
           reserveTokens = 41000;
         };
         packages = [
-          "npm:@aliou/pi-guardrails"
           "npm:@cortexkit/aft-pi"
+          "npm:@gotgenes/pi-permission-system"
           "npm:@juicesharp/rpiv-todo"
           "npm:pi-add-dir"
           "npm:pi-fff"
           "npm:pi-herdr-subagents"
           "npm:pi-lsp-extension"
-          "npm:pi-permission-system"
           "${piPlan}"
           "npm:pi-undo-redo"
         ];
-      };
-
-      permissionsPolicy = {
-        defaultPolicy = {
-          tools = "ask";
-          bash = "allow";
-          mcp = "allow";
-          skills = "allow";
-          special = "ask";
-        };
-        tools = {
-          read = "allow";
-          grep = "allow";
-          find = "allow";
-          ls = "allow";
-          aft_outline = "allow";
-          aft_zoom = "allow";
-          aft_search = "allow";
-          todo = "allow";
-          codemode = "allow";
-          lsp_diagnostics = "allow";
-          lsp_hover = "allow";
-          lsp_definition = "allow";
-          lsp_references = "allow";
-          subagent = "allow";
-          "mcp__*" = "allow";
-        };
       };
 
       keybindingsOverrides = {
@@ -377,520 +348,90 @@ in
       modelsJsonFile = toJsonFile "pi-models.json" modelsConfig;
       mcpJsonFile = toJsonFile "pi-mcp.json" mcpConfig;
       settingsSeedFile = toJsonFile "pi-settings-seed.json" settingsSeed;
-      permissionsPolicyFile = toJsonFile "pi-permissions.json" permissionsPolicy;
+      permissionConfig =
+        let
+          perms = config.programs.harness.permissions;
+          denies =
+            patterns: reason:
+            lib.listToAttrs (
+              map (p: {
+                name = p;
+                value = {
+                  action = "deny";
+                  reason = reason;
+                };
+              }) patterns
+            );
+        in
+        {
+          "$schema" =
+            "https://raw.githubusercontent.com/gotgenes/pi-packages/main/packages/pi-permission-system/schemas/permissions.schema.json";
+          permission = {
+            "*" = "allow";
+            external_directory_read = {
+              "*" = "allow";
+            };
+            external_directory_write = {
+              "*" = "ask";
+            };
+            path = {
+              "*" = "allow";
+            }
+            // denies perms.secretsPatterns perms.secretsReason
+            // {
+              "/nix/store/*" = "allow";
+            };
+            path_write = {
+              "*" = "allow";
+            }
+            // denies perms.protectedWritePatterns perms.protectedWriteReason
+            // denies perms.metaFilePatterns perms.metaFileReason;
+            bash = {
+              "*" = "ask";
+            }
+            // lib.listToAttrs (
+              map (p: {
+                name = p;
+                value = "allow";
+              }) perms.bashAllowPatterns
+            )
+            // lib.listToAttrs (
+              map (p: {
+                name = p;
+                value = "ask";
+              }) perms.bashAskPatterns
+            )
+            // lib.listToAttrs (
+              map (d: {
+                name = d.pattern;
+                value = {
+                  action = "deny";
+                  reason = d.reason;
+                };
+              }) perms.bashDenyPatterns
+            );
+          };
+          commandEffects = {
+            git.subcommands = {
+              log = "read";
+              show = "read";
+              status = "read";
+              diff = "read";
+              blame = "read";
+              ls-files = "read";
+              describe = "read";
+              rev-parse = "read";
+            };
+            nix.effects = [ "read" ];
+            jq.effects = [ "read" ];
+          };
+        };
+      permissionConfigFile = toJsonFile "pi-permission-config.json" permissionConfig;
       keybindingsJsonFile = toJsonFile "pi-keybindings.json" keybindingsOverrides;
       aftJsonFile = toJsonFile "aft.jsonc" aftConfig;
       fffJsonFile = toJsonFile "pi-fff.json" {
         enabledFeatures = [ "autocomplete" ];
       };
-      guardrailsConfig = {
-        version = "0.19.0";
-        enabled = true;
-        features = {
-          policies = true;
-          permissionGate = true;
-          pathAccess = true;
-        };
-        permissionGate = {
-          customPatterns = [
-            {
-              pattern = ''\bgit\s+checkout\s+--\s*\.'';
-              description = "Discards all uncommitted changes";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+restore\s+\.'';
-              description = "Discards all uncommitted changes";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+stash\s+drop\b'';
-              description = "Permanently deletes a stash";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+branch\s+(-[^\s]*)*-D'';
-              description = "Force deletes branch (even if unmerged)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+push\s+\S+\s+--delete\b'';
-              description = "Deletes remote branch";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+push\s+\S+\s+:\S+'';
-              description = "Deletes remote branch (old syntax)";
-              regex = true;
-            }
-            {
-              pattern = ''\bDELETE\s+FROM\s+\w+\s+WHERE\b.*\bid\s*='';
-              description = "SQL DELETE with specific ID";
-              regex = true;
-            }
-            # стандартный dangerous-набор guardrails: customPatterns вытесняет встроенные
-            # (useBuiltinMatchers=false), возвращаем его. Покрытые autoDeny (rm -rf, mkfs.,
-            # chmod -R 777) не дублируем.
-            {
-              pattern = "sudo";
-              description = "superuser command";
-            }
-            {
-              pattern = "dd of=";
-              description = "disk write operation";
-            }
-            {
-              pattern = "chown -R";
-              description = "recursive ownership change";
-            }
-            {
-              pattern = "doas";
-              description = "privileged command execution";
-            }
-            {
-              pattern = "pkexec";
-              description = "privileged command execution";
-            }
-            {
-              pattern = "shred";
-              description = "secure file overwrite";
-            }
-            {
-              pattern = "wipefs";
-              description = "filesystem signature wipe";
-            }
-            {
-              pattern = "blkdiscard";
-              description = "block device discard";
-            }
-            {
-              pattern = "fdisk";
-              description = "disk partitioning";
-            }
-            {
-              pattern = "parted";
-              description = "disk partitioning";
-            }
-            {
-              pattern = "docker run --privileged";
-              description = "container with privileged mode";
-            }
-          ];
-          autoDenyPatterns = [
-            {
-              pattern = ''\brm\s+(-[^\s]*)*-[rRf]'';
-              description = "rm with recursive or force flags";
-              regex = true;
-            }
-            {
-              pattern = ''\brm\s+--recursive'';
-              description = "rm with --recursive flag";
-              regex = true;
-            }
-            {
-              pattern = ''\brm\s+--force'';
-              description = "rm with --force flag";
-              regex = true;
-            }
-            {
-              pattern = ''\bsudo\s+rm\b'';
-              description = "sudo rm";
-              regex = true;
-            }
-            {
-              pattern = ''\brmdir\s+--ignore-fail-on-non-empty'';
-              description = "rmdir ignore-fail";
-              regex = true;
-            }
-            {
-              pattern = ''\bchmod\s+(-[^\s]+\s+)*777\b'';
-              description = "chmod 777 (world writable)";
-              regex = true;
-            }
-            {
-              pattern = ''\bchmod\s+-[Rr].*777'';
-              description = "recursive chmod 777";
-              regex = true;
-            }
-            {
-              pattern = ''\bchown\s+-[Rr].*\broot\b'';
-              description = "recursive chown to root";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+reset\s+--hard\b'';
-              description = "git reset --hard (use --soft or stash)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+clean\s+(-[^\s]*)*-[fd]'';
-              description = "git clean with force/directory flags";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+push\s+.*--force(?!-with-lease)'';
-              description = "git push --force (use --force-with-lease)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+push\s+(-[^\s]*)*-f\b'';
-              description = "git push -f (use --force-with-lease)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+stash\s+clear\b'';
-              description = "git stash clear (deletes ALL stashes)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+reflog\s+expire\b'';
-              description = "git reflog expire (destroys recovery mechanism)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+gc\s+.*--prune=now'';
-              description = "git gc --prune=now (can lose dangling commits)";
-              regex = true;
-            }
-            {
-              pattern = ''\bgit\s+filter-branch\b'';
-              description = "git filter-branch (rewrites entire history)";
-              regex = true;
-            }
-            {
-              pattern = ''\bmkfs\.'';
-              description = "filesystem format command";
-              regex = true;
-            }
-            {
-              pattern = ''\bdd\s+.*of=/dev/'';
-              description = "dd writing to device";
-              regex = true;
-            }
-            {
-              pattern = ''\bkill\s+-9\s+-1\b'';
-              description = "kill all processes";
-              regex = true;
-            }
-            {
-              pattern = ''\bkillall\s+-9\b'';
-              description = "killall -9";
-              regex = true;
-            }
-            {
-              pattern = ''\bpkill\s+-9\b'';
-              description = "pkill -9";
-              regex = true;
-            }
-            {
-              pattern = ''\bhistory\s+-c\b'';
-              description = "clearing shell history";
-              regex = true;
-            }
-            {
-              pattern = ''DELETE\s+FROM\s+\w+\s*;'';
-              description = "DELETE without WHERE clause (will delete ALL rows)";
-              regex = true;
-            }
-            {
-              pattern = ''DELETE\s+\*\s+FROM'';
-              description = "DELETE * (will delete ALL rows)";
-              regex = true;
-            }
-            {
-              pattern = ''\bTRUNCATE\s+TABLE\b'';
-              description = "TRUNCATE TABLE (will delete ALL rows)";
-              regex = true;
-            }
-            {
-              pattern = ''\bDROP\s+TABLE\b'';
-              description = "DROP TABLE";
-              regex = true;
-            }
-            {
-              pattern = ''\bDROP\s+DATABASE\b'';
-              description = "DROP DATABASE";
-              regex = true;
-            }
-            {
-              pattern = ''\bDROP\s+SCHEMA\b'';
-              description = "DROP SCHEMA";
-              regex = true;
-            }
-          ];
-        };
-        # доступ вне cwd намеренно свободен: агент работает по всему $HOME, защиту дают policies ниже
-        pathAccess = {
-          mode = "allow";
-        };
-        policies = {
-          rules = [
-            {
-              id = "secrets";
-              description = "Files containing secrets: no read, no write, no bash";
-              patterns = [
-                { pattern = ".env"; }
-                { pattern = ".env.local"; }
-                { pattern = ".env.development"; }
-                { pattern = ".env.production"; }
-                { pattern = ".env.staging"; }
-                { pattern = ".env.test"; }
-                { pattern = ".env.*.local"; }
-                { pattern = "*.env"; }
-                {
-                  pattern = ''^~/\.ssh(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''^~/\.gnupg(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''^~/\.aws(/|$)'';
-                  regex = true;
-                }
-                { pattern = "*-credentials.json"; }
-                { pattern = "*serviceAccount*.json"; }
-                { pattern = "*service-account*.json"; }
-                {
-                  pattern = ''^~/\.azure(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''^~/\.kube(/|$)'';
-                  regex = true;
-                }
-                { pattern = "kubeconfig"; }
-                { pattern = "*-secret.yaml"; }
-                { pattern = "secrets.yaml"; }
-                {
-                  pattern = ''^~/\.docker(/|$)'';
-                  regex = true;
-                }
-                { pattern = "*.pem"; }
-                { pattern = "*.key"; }
-                { pattern = "*.p12"; }
-                { pattern = "*.pfx"; }
-                { pattern = "*.tfstate"; }
-                { pattern = "*.tfstate.backup"; }
-                {
-                  pattern = ''(^|/)\.terraform(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''(^|/)\.vercel(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''(^|/)\.netlify(/|$)'';
-                  regex = true;
-                }
-                { pattern = "firebase-adminsdk*.json"; }
-                { pattern = "serviceAccountKey.json"; }
-                {
-                  pattern = ''(^|/)\.supabase(/|$)'';
-                  regex = true;
-                }
-                { pattern = "~/.netrc"; }
-                { pattern = "~/.npmrc"; }
-                { pattern = "~/.pypirc"; }
-                { pattern = "~/.git-credentials"; }
-                { pattern = ".git-credentials"; }
-                { pattern = "dump.sql"; }
-                { pattern = "backup.sql"; }
-                { pattern = "*.dump"; }
-              ];
-              # /nix/store неизменяем: store-пути защите не подлежат
-              allowedPatterns = [
-                {
-                  pattern = "^/nix/store(/|$)";
-                  regex = true;
-                }
-              ];
-              protection = "noAccess";
-              onlyIfExists = false;
-            }
-            {
-              id = "system-readonly";
-              description = "System and build output paths are read-only";
-              patterns = [
-                {
-                  pattern = "^/etc(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = "^/usr(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = "^/bin(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = "^/sbin(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = "^/boot(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = "^/root(/|$)";
-                  regex = true;
-                }
-                { pattern = "~/.bash_history"; }
-                { pattern = "~/.zsh_history"; }
-                { pattern = "~/.node_repl_history"; }
-                { pattern = "~/.bashrc"; }
-                { pattern = "~/.zshrc"; }
-                { pattern = "~/.profile"; }
-                { pattern = "~/.bash_profile"; }
-                { pattern = "package-lock.json"; }
-                { pattern = "yarn.lock"; }
-                { pattern = "pnpm-lock.yaml"; }
-                { pattern = "Gemfile.lock"; }
-                { pattern = "poetry.lock"; }
-                { pattern = "Pipfile.lock"; }
-                { pattern = "composer.lock"; }
-                { pattern = "Cargo.lock"; }
-                { pattern = "go.sum"; }
-                { pattern = "flake.lock"; }
-                { pattern = "bun.lockb"; }
-                { pattern = "uv.lock"; }
-                { pattern = "npm-shrinkwrap.json"; }
-                { pattern = "*.lock"; }
-                { pattern = "*.lockb"; }
-                { pattern = "*.min.js"; }
-                { pattern = "*.min.css"; }
-                { pattern = "*.bundle.js"; }
-                { pattern = "*.chunk.js"; }
-                {
-                  pattern = "(^|/)dist/";
-                  regex = true;
-                }
-                {
-                  pattern = "(^|/)build/";
-                  regex = true;
-                }
-                {
-                  pattern = ''(^|/)\.next(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''(^|/)\.nuxt(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''(^|/)\.output(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = "(^|/)__pycache__(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = ''(^|/)\.venv(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = "(^|/)venv(/|$)";
-                  regex = true;
-                }
-                {
-                  pattern = "(^|/)target(/|$)";
-                  regex = true;
-                }
-              ];
-              # store-пути неизменяемы: dist/build/.min.js/lock внутри /nix/store
-              # не являются build-output проекта
-              allowedPatterns = [
-                {
-                  pattern = "^/nix/store(/|$)";
-                  regex = true;
-                }
-              ];
-              protection = "readOnly";
-              onlyIfExists = false;
-            }
-            {
-              id = "no-delete";
-              description = "Project meta files must not be deleted or moved";
-              patterns = [
-                {
-                  pattern = ''^~/\.claude(/|$)'';
-                  regex = true;
-                }
-                { pattern = "CLAUDE.md"; }
-                { pattern = "LICENSE"; }
-                { pattern = "LICENSE.*"; }
-                { pattern = "COPYING"; }
-                { pattern = "COPYING.*"; }
-                { pattern = "NOTICE"; }
-                { pattern = "PATENTS"; }
-                { pattern = "README.md"; }
-                { pattern = "README.*"; }
-                { pattern = "CONTRIBUTING.md"; }
-                { pattern = "CHANGELOG.md"; }
-                { pattern = "CODE_OF_CONDUCT.md"; }
-                { pattern = "SECURITY.md"; }
-                {
-                  pattern = ''(^|/)\.git(/|$)'';
-                  regex = true;
-                }
-                { pattern = ".gitignore"; }
-                { pattern = ".gitattributes"; }
-                { pattern = ".gitmodules"; }
-                {
-                  pattern = ''(^|/)\.github(/|$)'';
-                  regex = true;
-                }
-                { pattern = ".gitlab-ci.yml"; }
-                {
-                  pattern = ''(^|/)\.circleci(/|$)'';
-                  regex = true;
-                }
-                { pattern = "Jenkinsfile"; }
-                { pattern = ".travis.yml"; }
-                { pattern = "azure-pipelines.yml"; }
-                { pattern = "Dockerfile"; }
-                { pattern = "Dockerfile.*"; }
-                { pattern = "docker-compose.yml"; }
-                { pattern = "docker-compose.*.yml"; }
-                { pattern = ".dockerignore"; }
-              ];
-              # /nix/store неизменяем: store-пути защите не подлежат
-              allowedPatterns = [
-                {
-                  pattern = "^/nix/store(/|$)";
-                  regex = true;
-                }
-              ];
-              protection = "readOnly";
-              onlyIfExists = false;
-              blockMessage = "{file} is a protected project file. Deleting or moving it is not allowed; explain why and ask the user to do it manually.";
-            }
-            {
-              id = "home-dot-readonly";
-              description = "~/.pi and ~/.config are managed by home-manager; no imperative edits";
-              patterns = [
-                {
-                  pattern = ''^~/\.pi(/|$)'';
-                  regex = true;
-                }
-                {
-                  pattern = ''^~/\.config(/|$)'';
-                  regex = true;
-                }
-              ];
-              protection = "readOnly";
-              onlyIfExists = false;
-              blockMessage = "~/.pi and ~/.config are managed declaratively by home-manager (pi.nix). Do not edit them with edit/write/bash; change the NixOS config and run nixos-rebuild switch instead.";
-            }
-          ];
-        };
-      };
-
-      guardrailsJsonFile = toJsonFile "pi-guardrails.json" guardrailsConfig;
 
       piPlanCmd = /* bash */ ''
         mkdir -p "$out"
@@ -2035,8 +1576,8 @@ in
         - If the same error appears twice in a row, stop and explain what you tried.
       '';
       npmPins = {
-        "@aliou/pi-guardrails" = "0.19.0";
         "@cortexkit/aft-pi" = config.programs.harness.aftVersion;
+        "@gotgenes/pi-permission-system" = "40.3.0";
         "pi-herdr-subagents" = "0.2.1";
         "pi-lsp-extension" = "1.4.0";
       };
@@ -2240,9 +1781,6 @@ in
           cp --reflink=never "${modelsJsonFile}" "$agent_dir/models.json"
           chmod 600 "$agent_dir/models.json"
 
-          cp --reflink=never "${permissionsPolicyFile}" "$agent_dir/pi-permissions.jsonc"
-          chmod 600 "$agent_dir/pi-permissions.jsonc"
-
           cp --reflink=never "${keybindingsJsonFile}" "$agent_dir/keybindings.json"
           chmod 600 "$agent_dir/keybindings.json"
 
@@ -2254,15 +1792,18 @@ in
           chmod 644 "$agent_dir/extensions/protei-auto.ts"
 
           rm -f "$agent_dir/extensions/damage-control.ts" \
+                "$agent_dir/extensions/guardrails.json" \
                 "$agent_dir/extensions/tool-counter.ts" \
                 "$agent_dir/extensions/session-replay.ts" \
                 "$agent_dir/extensions/context-keeper.ts" \
                 "$agent_dir/extensions/routed-model.ts" \
                 "$agent_dir/pi-statusline.json" \
+                "$agent_dir/pi-permissions.jsonc" \
                 "${config.home.homeDirectory}/.pi/damage-control-rules.json" \
                 "$cortexkit_dir/magic-context.jsonc"
-          cp --reflink=never "${guardrailsJsonFile}" "$agent_dir/extensions/guardrails.json"
-          chmod 644 "$agent_dir/extensions/guardrails.json"
+          mkdir -p "$agent_dir/extensions/pi-permission-system"
+          cp --reflink=never "${permissionConfigFile}" "$agent_dir/extensions/pi-permission-system/config.json"
+          chmod 600 "$agent_dir/extensions/pi-permission-system/config.json"
           cp --reflink=never "${fffJsonFile}" "$agent_dir/extensions/pi-fff.json"
           chmod 644 "$agent_dir/extensions/pi-fff.json"
           cp --reflink=never "${todoReminderFile}" "$agent_dir/extensions/todo-reminder.ts"
@@ -2328,13 +1869,6 @@ in
               -e 's/Ctrl+J/Ctrl+I/g' \
               "$subagent_done"
             grep -qF '"ctrl+i"' "$subagent_done" || log "WARNING: pi-herdr-subagents key patch did not apply"
-          fi
-
-          perm="$npm_dir/node_modules/pi-permission-system/src/index.ts"
-          if [[ -f "$perm" ]]; then
-            ${pkgs.gnused}/bin/sed -i \
-              's/const allTools = pi.getAllTools();/const allTools = pi.getAllTools().filter((tool) => pi.getActiveTools().includes(getEventToolName(tool) ?? ""));/' \
-              "$perm"
           fi
 
           fff_dir="$npm_dir/node_modules/pi-fff/src"

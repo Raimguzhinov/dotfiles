@@ -13,6 +13,7 @@
   flake.homeModules.opencode =
     {
       config,
+      lib,
       osConfig,
       pkgs,
       pkgs-unstable,
@@ -311,10 +312,56 @@
               };
             };
 
-            permission = {
-              read."~/.config/opencode/*" = "allow";
-              external_directory."~/.config/opencode/*" = "allow";
-            };
+            permission =
+              let
+                perms = config.programs.harness.permissions;
+              in
+              {
+                "*" = "allow";
+                read = {
+                  "*" = "allow";
+                }
+                // lib.listToAttrs (
+                  map (p: {
+                    name = p;
+                    value = "deny";
+                  }) perms.secretsPatterns
+                );
+                edit = {
+                  "*" = "allow";
+                }
+                // lib.listToAttrs (
+                  map (p: {
+                    name = p;
+                    value = "deny";
+                  }) (perms.protectedWritePatterns ++ perms.metaFilePatterns ++ perms.secretsPatterns)
+                );
+                bash = {
+                  "*" = "ask";
+                }
+                // lib.listToAttrs (
+                  map (p: {
+                    name = p;
+                    value = "allow";
+                  }) perms.bashAllowPatterns
+                )
+                // lib.listToAttrs (
+                  map (p: {
+                    name = p;
+                    value = "ask";
+                  }) perms.bashAskPatterns
+                )
+                // lib.listToAttrs (
+                  map (d: {
+                    name = d.pattern;
+                    value = "deny";
+                  }) perms.bashDenyPatterns
+                );
+                external_directory = {
+                  "*" = "ask";
+                  "~/.config/opencode/*" = "allow";
+                };
+              };
 
             plugin = [
               "opencode-claude-auth@latest"

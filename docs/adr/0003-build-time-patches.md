@@ -6,7 +6,7 @@ We decided that packages which need a source patch are built at **build time** i
 
 No `.patch` files: the repo keeps its "no standalone code files" rule. The inline-in-Nix vendored build is already used by `pi-acp` (a plain build from source, no patch).
 
-**Legacy exception.** `pi-fff`, `pi-lsp-extension`, `pi-herdr-subagents`, and `pi-permission-system` are still patched with `sed` at activation time. Three of the four patches have a `grep` pre-check plus a `WARNING` log when a substitution does not apply, so a drift is visible in the activation log, but it does not fail the build. Migrating these four to the build-time pattern is pending, not part of this PR.
+**Legacy exception.** `pi-fff`, `pi-lsp-extension`, and `pi-herdr-subagents` are still patched with `sed` at activation time. Each patch has a `grep` pre-check plus a `WARNING` log when a substitution does not apply, so a drift is visible in the activation log, but it does not fail the build. The fourth historical patch (`pi-permission-system`) was removed together with the package in ADR-0006. Migrating the remaining three to the build-time pattern is pending, not part of this PR.
 
 Considered options:
 
