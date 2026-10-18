@@ -17,6 +17,12 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
 
 - import-tree loads every `.nix` under `nixos/modules/` as a flake-parts
   module. Prefix files that are not modules with `_` (`_disko.nix`).
+- A feature module exports `flake.nixosModules.<name>` or
+  `flake.homeModules.<name>` and takes effect only once the host lists it:
+  nixosModules in `hosts/<host>/default.nix`, homeModules in the home-manager
+  imports of `hosts/<host>/configuration.nix`.
+- Hosts: `raimguzhinov` (`hosts/dell-xps-13-9320`, the current machine) and
+  `thinkpad-t495` (`hosts/lenovo-thinkpad-t495`).
 - Desktop packages go to `home.packages` of user `dias`.
   `environment.systemPackages` holds only what needs system-level polkit.
 - One `inherit` per line.
@@ -39,6 +45,9 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
 
 - After editing `nixos/` for the current host, run
   `nixos-rebuild build --flake ~/dotfiles/nixos#raimguzhinov` (no sudo).
+- Format edited Nix with `nixfmt <file>`: pre-commit runs `nixfmt --check` and,
+  for `pi.nix`, `scripts/check_pi_theme_tokens.py`. All hooks:
+  `pre-commit run --all-files`.
 - `switch`, `nix build`, and builds of other hosts or branches run only on
   request: they target another machine or need the user at the fingerprint
   reader.
