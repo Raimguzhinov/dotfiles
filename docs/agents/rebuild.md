@@ -20,3 +20,15 @@ VM with a GL display:
 nixos-rebuild build-vm --flake ~/dotfiles/nixos#raimguzhinov
 ./result/bin/run-raimguzhinov-vm -device virtio-vga-gl -display gtk,gl=on
 ```
+
+## Build error diagnostics
+
+- Deep nix type errors: eval the real config path instead of
+  transcribing the attrset to /tmp:
+  `nix eval --impure .#nixosConfigurations.raimguzhinov.config.<failing path>`.
+  It evaluates the whole configuration, so expect several minutes
+  (use `--json` to inspect lists and attrsets).
+- `definition N-entry M ... is not of type ...` — M is the 1-based
+  index of the bad element in an N-element list definition.
+- Long builds: `... 2>&1 | tee /tmp/build.log` so the output survives
+  an interrupted command.

@@ -63,8 +63,10 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
   right before editing it.
 - When the permission system denies a deletion (recursive `rm`,
   `find -delete`), ask the user to run it.
-- Read GitHub files with `gh` or the gh_grep MCP: URL tools block GitHub
-  hosts.
+- GitHub file reads: `git clone --depth 1 <repo>` (`gh api` is dead on
+  this host, every call 404s). `gh` CLI for issues/PRs and gh_grep MCP
+  for code search work. URL tools (aft_outline, web_url_read) block
+  GitHub hosts.
 - After two attempts against an external blocker, give the user one line of
   options and move to the next task.
 
