@@ -2,78 +2,91 @@
 # 4 секрета (litellm key, youtrack token, gitlab token, lightrag url) не
 # попадают в store: в opencode.json встраиваются токены {file:<path>},
 # opencode читает sops-nix-файлы при старте (packages/core/src/config/variable.ts).
-{ ... }:
+{ inputs, ... }:
 {
   perSystem =
-    { pkgs-unstable, ... }:
+    { system, ... }:
     {
-      packages.opencode = pkgs-unstable.opencode;
+      packages.opencode = inputs.opencode.packages.${system}.opencode;
     };
 
   flake.homeModules.opencode =
     {
       config,
-      lib,
+      inputs,
       osConfig,
       pkgs,
-      pkgs-unstable,
       ...
     }:
+    let
+      op = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system};
+      thinkingVariants = [
+        {
+          id = "off";
+          body.chat_template_kwargs.enable_thinking = false;
+        }
+        {
+          id = "low";
+          body.chat_template_kwargs = {
+            enable_thinking = true;
+            reasoning_effort = "low";
+          };
+        }
+        {
+          id = "medium";
+          body.chat_template_kwargs = {
+            enable_thinking = true;
+            reasoning_effort = "medium";
+          };
+        }
+        {
+          id = "xhigh";
+          body.chat_template_kwargs = {
+            enable_thinking = true;
+            reasoning_effort = "xhigh";
+          };
+        }
+      ];
+    in
     {
       config = {
 
-        home.packages = [
-          pkgs-unstable.opencode-desktop
-        ];
+        home.packages = [ op.opencode-desktop ];
 
         home.sessionVariables.ORT_DYLIB_PATH = "${pkgs.onnxruntime}/lib/libonnxruntime.so";
 
         programs.opencode = {
           enable = true;
-          package = pkgs-unstable.opencode;
+          package = op.opencode;
 
+          # Формат конфигурации opencode 2.x (схема @opencode/schema/config)
           settings = {
             share = "disabled";
-            autoupdate = false;
+            update = "disable";
             model = "opencode/longcat-2.5-preview-free";
-            small_model = "opencode/longcat-2.5-preview-free";
             default_agent = "build";
             # MC ведёт свою компакцию; нативную автокомпакцию выключено
             compaction = {
               auto = false;
-              prune = false;
             };
 
-            provider = {
+            providers = {
               Protei = {
-                npm = "@ai-sdk/openai-compatible";
                 name = "Protei";
-                options = {
+                package = "aisdk:@ai-sdk/openai-compatible";
+                settings = {
                   baseURL = "https://agent.ai.protei.ru/api";
                   apiKey = "{file:${config.sops.secrets."work_ai/litellm_api_key".path}}";
                 };
                 models = {
                   Strict = {
                     name = "Protei Strict";
-                    id = "agent_proteya";
-                    description = "Строгие параметры. Модель следует инструкциям. 'presence penalty' равный 1.5 помогает избегать повторений";
-                    status = "active";
-                    tool_call = true;
-                    attachment = true;
-                    reasoning = true;
-                    temperature = true;
+                    modelID = "agent_proteya";
                     limit = {
                       context = 262144;
                       output = 16000;
                     };
-                    modalities = {
-                      input = [
-                        "text"
-                        "image"
-                      ];
-                      output = [ "text" ];
-                    };
-                    options = {
+                    body = {
                       temperature = 0.7;
                       topP = 0.8;
                       topK = 20;
@@ -81,49 +94,16 @@
                       presencePenalty = 1.5;
                       repetitionPenalty = 1.0;
                     };
-                    variants = {
-                      off.chat_template_kwargs.enable_thinking = false;
-                      low = {
-                        disabled = false;
-                        chat_template_kwargs = {
-                          enable_thinking = true;
-                          reasoning_effort = "low";
-                        };
-                      };
-                      medium = {
-                        disabled = false;
-                        chat_template_kwargs = {
-                          enable_thinking = true;
-                          reasoning_effort = "medium";
-                        };
-                      };
-                      xhigh.chat_template_kwargs = {
-                        enable_thinking = true;
-                        reasoning_effort = "xhigh";
-                      };
-                    };
+                    variants = thinkingVariants;
                   };
                   Coding = {
                     name = "Protei Coding";
-                    id = "agent_proteya";
-                    description = "Хорошо подходит для задач программирования";
-                    status = "active";
-                    tool_call = true;
-                    attachment = true;
-                    reasoning = true;
-                    temperature = true;
+                    modelID = "agent_proteya";
                     limit = {
                       context = 262144;
                       output = 65536;
                     };
-                    modalities = {
-                      input = [
-                        "text"
-                        "image"
-                      ];
-                      output = [ "text" ];
-                    };
-                    options = {
+                    body = {
                       temperature = 1.0;
                       topP = 0.95;
                       topK = 20;
@@ -131,66 +111,29 @@
                       presencePenalty = 0.0;
                       repetitionPenalty = 1.0;
                     };
-                    variants = {
-                      off.chat_template_kwargs.enable_thinking = false;
-                      low = {
-                        disabled = false;
-                        chat_template_kwargs = {
-                          enable_thinking = true;
-                          reasoning_effort = "low";
-                        };
-                      };
-                      medium = {
-                        disabled = false;
-                        chat_template_kwargs = {
-                          enable_thinking = true;
-                          reasoning_effort = "medium";
-                        };
-                      };
-                      xhigh.chat_template_kwargs = {
-                        enable_thinking = true;
-                        reasoning_effort = "xhigh";
-                      };
-                    };
+                    variants = thinkingVariants;
                   };
                   title_model = {
-                    id = "title_model";
                     name = "title_model";
-                    status = "active";
-                    tool_call = false;
-                    attachment = false;
-                    reasoning = false;
-                    temperature = false;
+                    modelID = "title_model";
                     limit = {
                       context = 8000;
                       output = 80;
                     };
-                    modalities = {
+                    capabilities = {
+                      tools = false;
                       input = [ "text" ];
                       output = [ "text" ];
                     };
                   };
                   Small = {
                     name = "Protei Small";
-                    id = "agent_proteya_slow";
-                    description = "Быстрая модель для мелких задач (заголовки, саммари)";
-                    status = "active";
-                    tool_call = true;
-                    attachment = true;
-                    reasoning = true;
-                    temperature = true;
+                    modelID = "agent_proteya_slow";
                     limit = {
                       context = 131072;
                       output = 8192;
                     };
-                    modalities = {
-                      input = [
-                        "text"
-                        "image"
-                      ];
-                      output = [ "text" ];
-                    };
-                    options = {
+                    body = {
                       temperature = 1.0;
                       topP = 0.95;
                       topK = 20;
@@ -198,179 +141,159 @@
                       presencePenalty = 0.0;
                       repetitionPenalty = 1.0;
                     };
-                    variants = {
-                      off.chat_template_kwargs.enable_thinking = false;
-                      low.chat_template_kwargs = {
-                        enable_thinking = true;
-                        reasoning_effort = "low";
-                      };
-                      medium.chat_template_kwargs = {
-                        enable_thinking = true;
-                        reasoning_effort = "medium";
-                      };
-                      xhigh.chat_template_kwargs = {
-                        enable_thinking = true;
-                        reasoning_effort = "xhigh";
-                      };
-                    };
+                    variants = thinkingVariants;
                   };
                 };
               };
               llamaCpp = {
                 name = "Local llama.cpp";
-                npm = "@ai-sdk/openai-compatible";
-                options = {
+                package = "aisdk:@ai-sdk/openai-compatible";
+                settings = {
                   apiKey = "local";
                   baseURL = "http://localhost:8085/v1";
                 };
                 models."ornith-ai/Ornith-1.5-35B-A3B" = {
                   name = "Ornith 1.5 35B A3B";
-                  description = "Локальная модель для offline-кодинга";
                   limit = {
                     context = 65536;
                     output = 8192;
                   };
-                  options = {
+                  body = {
                     temperature = 0.6;
                     topK = 20;
                     topP = 0.95;
                   };
-                  reasoning = true;
-                  tool_call = true;
-                  variants = {
-                    low.chat_template_kwargs = {
-                      enable_thinking = true;
-                      reasoning_effort = "low";
-                    };
-                    off.chat_template_kwargs.enable_thinking = false;
-                  };
+                  variants = [
+                    {
+                      id = "low";
+                      body.chat_template_kwargs = {
+                        enable_thinking = true;
+                        reasoning_effort = "low";
+                      };
+                    }
+                    {
+                      id = "off";
+                      body.chat_template_kwargs.enable_thinking = false;
+                    }
+                  ];
                 };
               };
             };
 
-            agent = {
+            agents = {
               plan.model = "Protei/Strict";
               build.model = "Protei/Coding";
               title.model = "Protei/title_model";
             };
 
             mcp = {
-              youtrack = {
-                type = "remote";
-                url = "https://youtrackmcp.ai.protei.ru/mcp";
-                enabled = true;
-                headers."youtrack-token" = "{file:${config.sops.secrets."youtrack/token".path}}";
-              };
-              rag = {
-                type = "local";
-                command = [
-                  "uvx"
-                  "--from"
-                  "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/lightrag-mcp.git"
-                  "lightrag-mcp"
-                ];
-                enabled = true;
-                environment = {
-                  LIGHTRAG_BASE_URL = "{file:${config.sops.secrets."work_ai/lightrag_url".path}}";
-                  LIGHTRAG_TIMEOUT = "60";
-                  LIGHTRAG_VERIFY_SSL = "False";
+              servers = {
+                youtrack = {
+                  type = "remote";
+                  url = "https://youtrackmcp.ai.protei.ru/mcp";
+                  headers."youtrack-token" = "{file:${config.sops.secrets."youtrack/token".path}}";
                 };
-              };
-              gitlab = {
-                type = "local";
-                command = [
-                  "uvx"
-                  "--from"
-                  "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/gitlab.git"
-                  "gitlab-mcp-server"
-                ];
-                enabled = true;
-                environment = {
-                  GITLAB_URL = "https://git.protei.ru";
-                  GITLAB_TOKEN = "{file:${config.sops.secrets."git/gitlab_mcp_token".path}}";
+                rag = {
+                  type = "local";
+                  command = [
+                    "uvx"
+                    "--from"
+                    "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/lightrag-mcp.git"
+                    "lightrag-mcp"
+                  ];
+                  environment = {
+                    LIGHTRAG_BASE_URL = "{file:${config.sops.secrets."work_ai/lightrag_url".path}}";
+                    LIGHTRAG_TIMEOUT = "60";
+                    LIGHTRAG_VERIFY_SSL = "False";
+                  };
                 };
-              };
-              context7 = {
-                type = "remote";
-                url = "https://mcp.context7.com/mcp";
-                enabled = true;
-              };
-              gh_grep = {
-                type = "remote";
-                url = "https://mcp.grep.app";
-                enabled = true;
-              };
-              searxng = {
-                type = "local";
-                command = [
-                  "npx"
-                  "-y"
-                  "mcp-searxng"
-                ];
-                enabled = true;
-                environment.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
+                gitlab = {
+                  type = "local";
+                  command = [
+                    "uvx"
+                    "--from"
+                    "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/gitlab.git"
+                    "gitlab-mcp-server"
+                  ];
+                  environment = {
+                    GITLAB_URL = "https://git.protei.ru";
+                    GITLAB_TOKEN = "{file:${config.sops.secrets."git/gitlab_mcp_token".path}}";
+                  };
+                };
+                context7 = {
+                  type = "remote";
+                  url = "https://mcp.context7.com/mcp";
+                };
+                gh_grep = {
+                  type = "remote";
+                  url = "https://mcp.grep.app";
+                };
+                searxng = {
+                  type = "local";
+                  command = [
+                    "npx"
+                    "-y"
+                    "mcp-searxng"
+                  ];
+                  environment.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
+                };
               };
             };
 
-            permission =
+            # Правила применяются last-match-wins, порядок: общее, потом специфичное
+            permissions =
               let
                 perms = config.programs.harness.permissions;
-              in
-              {
-                "*" = "allow";
-                read = {
-                  "*" = "allow";
-                }
-                // lib.listToAttrs (
-                  map (p: {
-                    name = p;
-                    value = "deny";
-                  }) perms.secretsPatterns
-                );
-                edit = {
-                  "*" = "allow";
-                }
-                // lib.listToAttrs (
-                  map (p: {
-                    name = p;
-                    value = "deny";
-                  }) (perms.protectedWritePatterns ++ perms.metaFilePatterns ++ perms.secretsPatterns)
-                );
-                bash = {
-                  "*" = "ask";
-                }
-                // lib.listToAttrs (
-                  map (p: {
-                    name = p;
-                    value = "allow";
-                  }) perms.bashAllowPatterns
-                )
-                // lib.listToAttrs (
-                  map (p: {
-                    name = p;
-                    value = "ask";
-                  }) perms.bashAskPatterns
-                )
-                // lib.listToAttrs (
-                  map (d: {
-                    name = d.pattern;
-                    value = "deny";
-                  }) perms.bashDenyPatterns
-                );
-                external_directory = {
-                  "*" = "ask";
-                  "~/.config/opencode/*" = "allow";
+                shell = effect: pattern: {
+                  action = "shell";
+                  resource = pattern;
+                  effect = effect;
                 };
-              };
+              in
+              [
+                {
+                  action = "*";
+                  resource = "*";
+                  effect = "allow";
+                }
+              ]
+              ++ map (p: {
+                action = "read";
+                resource = p;
+                effect = "deny";
+              }) perms.secretsPatterns
+              ++ map (p: {
+                action = "edit";
+                resource = p;
+                effect = "deny";
+              }) (perms.protectedWritePatterns ++ perms.metaFilePatterns ++ perms.secretsPatterns)
+              ++ [ (shell "ask" "*") ]
+              ++ map (shell "allow") perms.bashAllowPatterns
+              ++ map (shell "ask") perms.bashAskPatterns
+              ++ map (d: shell "deny" d.pattern) perms.bashDenyPatterns
+              ++ [
+                {
+                  action = "external_directory";
+                  resource = "*";
+                  effect = "ask";
+                }
+                {
+                  action = "external_directory";
+                  resource = "~/.config/opencode/*";
+                  effect = "allow";
+                }
+              ];
 
-            plugin = [
-              "opencode-claude-auth@latest"
+            plugins = [
+              "opencode-claude-auth@3.0.0"
               "@cortexkit/aft-opencode@${config.programs.harness.aftVersion}"
+              # отключает встроенные shell и patch opencode, модель использует bash и apply_patch AFT
+              "-opencode.tool.shell"
+              "-opencode.tool.patch"
             ];
 
             lsp = {
               typescript = {
-                disabled = false;
                 command = [
                   "typescript-language-server"
                   "--stdio"
@@ -385,17 +308,14 @@
                 ];
               };
               rust = {
-                disabled = false;
                 command = [ "rust-analyzer" ];
                 extensions = [ ".rs" ];
               };
               nix = {
-                disabled = false;
                 command = [ "nixd" ];
                 extensions = [ ".nix" ];
               };
               basedpyright = {
-                disabled = false;
                 command = [
                   "basedpyright-langserver"
                   "--stdio"
@@ -407,7 +327,6 @@
                 env.PYRIGHT_PYTHON_PATH = "./.venv/bin/python";
               };
               gopls = {
-                disabled = false;
                 command = [ "gopls" ];
                 extensions = [ ".go" ];
               };

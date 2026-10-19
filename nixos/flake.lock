@@ -440,6 +440,22 @@
         "url": "https://channels.nixos.org/nixos-unstable/nixexprs.tar.xz"
       }
     },
+    "nixpkgs_5": {
+      "locked": {
+        "lastModified": 1790510107,
+        "narHash": "sha256-EVMNYv7hYDDD9TGVT/hIyTYgpiXA8y3m5xIEIxuGNU0=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "3181085bfd08663b6b9e60bc7a8395c2aaa741bd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "noctalia": {
       "inputs": {
         "nixpkgs": "nixpkgs_3"
@@ -500,6 +516,24 @@
         "type": "github"
       }
     },
+    "opencode": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_5"
+      },
+      "locked": {
+        "lastModified": 1792382385,
+        "narHash": "sha256-dsnKTuPlPGITtcs/XagcJ/6k5aMFiX+AIvEI2aYrNBw=",
+        "owner": "anomalyco",
+        "repo": "opencode",
+        "rev": "ba06ff9e0bf2dcefbbbc3a1d6094f3572d77c84e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "anomalyco",
+        "repo": "opencode",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "claude-code": "claude-code",
@@ -523,6 +557,7 @@
         "noctalia": "noctalia",
         "nvf": "nvf",
         "obsidian-plugins": "obsidian-plugins",
+        "opencode": "opencode",
         "sops-nix": "sops-nix",
         "zen-browser": "zen-browser"
       }
