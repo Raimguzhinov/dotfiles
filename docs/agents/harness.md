@@ -7,7 +7,8 @@ Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
   module renders them into its own schema.
 - MCP servers: package and args in `programs.harness.*`, one entry per client.
   pi and claude take `command` + `args`, opencode takes a `command` list.
-- Permission rules: `programs.harness.permissions`, model in ADR-0006. pi and
+- Permission rules: `programs.harness.permissions`, model in ADR-0006, meta-files
+  ask and `.env.example` in ADR-0008. pi and
   opencode render them; claude does not use them.
 - aft: version pin `programs.harness.aftVersion`. The binary comes from npm,
   not Nix (cache `~/.cache/aft/bin/`). The "update" at startup is an index

@@ -353,7 +353,7 @@ in
         search.rerank = {
           backend = "remote";
           model = "bge-reranker-v2-m3";
-          endpoint = "https://rerank.ai.protei.ru/api/v1";
+          endpoint = "https://rerank.ai.protei.ru/api/";
           api_key_env = "PROTEI_AI_API_KEY";
           top_n = 20;
         };
@@ -367,15 +367,23 @@ in
       permissionConfig =
         let
           perms = config.programs.harness.permissions;
-          denies =
-            patterns: reason:
+          rules =
+            action: patterns: reason:
             lib.listToAttrs (
               map (p: {
                 name = p;
                 value = {
-                  action = "deny";
+                  action = action;
                   reason = reason;
                 };
+              }) patterns
+            );
+          allows =
+            patterns:
+            lib.listToAttrs (
+              map (p: {
+                name = p;
+                value = "allow";
               }) patterns
             );
         in
@@ -394,15 +402,17 @@ in
             path = {
               "*" = "allow";
             }
-            // denies perms.secretsPatterns perms.secretsReason
+            // rules "deny" perms.secretsPatterns perms.secretsReason
+            // allows perms.secretsExceptions
             // {
               "/nix/store/*" = "allow";
             };
             path_write = {
               "*" = "allow";
             }
-            // denies perms.protectedWritePatterns perms.protectedWriteReason
-            // denies perms.metaFilePatterns perms.metaFileReason;
+            // rules "deny" perms.protectedWritePatterns perms.protectedWriteReason
+            // allows perms.protectedWriteExceptions
+            // rules "ask" perms.metaFilePatterns perms.metaFileReason;
             bash = {
               "*" = "ask";
             }
@@ -438,6 +448,9 @@ in
               ls-files = "read";
               describe = "read";
               rev-parse = "read";
+              # pathspec — read-ссылка на файлы, запись идёт в .git; сама команда под bash-правилами
+              add = "read";
+              commit = "read";
             };
             nix.effects = [ "read" ];
             jq.effects = [ "read" ];

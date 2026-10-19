@@ -92,6 +92,9 @@
         - суть: reduce your previous answer to the single thing that matters most.
         - пронумеруй: rewrite your previous answer with reference codes.
 
+        ## Git
+        - Switch branches with `git switch` (not `git checkout`); discard changes with `git restore`.
+
         ## Examples
         User: Файл legacy-config.json ещё где-то используется?
         Good: Нет. Нашёлся только сам файл.
@@ -248,6 +251,11 @@
               type = lib.types.str;
               default = "Секрет: чтение и запись через агента запрещены";
             };
+            options.secretsExceptions = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ "*.env.example" ];
+              description = "Файлы, совпадающие с secretsPatterns, но не содержащие секретов по определению (.env.example): чтение разрешено (ADR-0008)";
+            };
             options.protectedWritePatterns = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [
@@ -290,6 +298,11 @@
               type = lib.types.str;
               default = "Путь под управлением (NixOS-конфиг, лок-файл или артефакт сборки): меняй декларативный конфиг, а не файл напрямую";
             };
+            options.protectedWriteExceptions = lib.mkOption {
+              type = lib.types.listOf lib.types.str;
+              default = [ "~/.pi/agent/skills/*" ];
+              description = "Исключения для protectedWritePatterns: запись разрешена (ADR-0008); store скиллов агента";
+            };
             options.metaFilePatterns = lib.mkOption {
               type = lib.types.listOf lib.types.str;
               default = [
@@ -322,7 +335,7 @@
                 "*docker-compose*.yml"
                 "*.dockerignore"
               ];
-              description = "Мета-файлы репозитория: не удаляются и не перезаписываются агентом";
+              description = "Мета-файлы репозитория: удаление/перезапись — ask (pi yolo: allow + review log, opencode: prompt), чтение свободно (ADR-0008)";
             };
             options.metaFileReason = lib.mkOption {
               type = lib.types.str;
@@ -396,6 +409,9 @@
               default = [
                 # sudo поднимает пол до ask: привилегированная команда всегда через пользователя
                 "sudo *"
+                # checkout/restore — ask; checkout -- остаётся deny (см. bashDenyPatterns)
+                "git checkout *"
+                "git restore *"
               ];
               description = "Явные ask-паттерны (кроме дефолта)";
             };
@@ -431,12 +447,8 @@
                   reason = "find -delete запрещён (AGENTS.md): удаление делает пользователь";
                 }
                 {
-                  pattern = "git checkout *";
-                  reason = "git checkout может отбросить незакоммиченные изменения: используй git switch";
-                }
-                {
-                  pattern = "git restore *";
-                  reason = "git restore отбрасывает незакоммиченные изменения: согласуй с пользователем";
+                  pattern = "git checkout -- *";
+                  reason = "git checkout -- отбрасывает незакоммиченные изменения: согласуй с пользователем";
                 }
                 {
                   pattern = "git stash drop *";

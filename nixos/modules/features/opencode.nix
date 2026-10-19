@@ -263,10 +263,25 @@
                 effect = "deny";
               }) perms.secretsPatterns
               ++ map (p: {
+                action = "read";
+                resource = p;
+                effect = "allow";
+              }) perms.secretsExceptions
+              ++ map (p: {
                 action = "edit";
                 resource = p;
                 effect = "deny";
-              }) (perms.protectedWritePatterns ++ perms.metaFilePatterns ++ perms.secretsPatterns)
+              }) (perms.protectedWritePatterns ++ perms.secretsPatterns)
+              ++ map (p: {
+                action = "edit";
+                resource = p;
+                effect = "ask";
+              }) perms.metaFilePatterns
+              ++ map (p: {
+                action = "edit";
+                resource = p;
+                effect = "allow";
+              }) perms.protectedWriteExceptions
               ++ [ (shell "ask" "*") ]
               ++ map (shell "allow") perms.bashAllowPatterns
               ++ map (shell "ask") perms.bashAskPatterns
