@@ -55,6 +55,8 @@
 
         home.sessionVariables.ORT_DYLIB_PATH = "${pkgs.onnxruntime}/lib/libonnxruntime.so";
 
+        programs.harness.configFiles.opencode = config.xdg.configFile."opencode/opencode.json".source;
+
         programs.opencode = {
           enable = true;
           package = op.opencode;

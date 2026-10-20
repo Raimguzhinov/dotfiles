@@ -3,6 +3,48 @@
 # в своих модулях (pi.nix, claude.nix, opencode.nix).
 { inputs, ... }:
 {
+  perSystem =
+    {
+      lib,
+      pkgs,
+      system,
+      ...
+    }:
+    let
+      configFiles =
+        lib.concatMapAttrs
+          (
+            host: nixos:
+            lib.concatMapAttrs (
+              user: hm:
+              lib.mapAttrs' (name: lib.nameValuePair "${host}-${user}-${name}") (
+                hm.programs.harness.configFiles or { }
+              )
+            ) (nixos.config.home-manager.users or { })
+          )
+          (
+            lib.filterAttrs (
+              _: nixos: nixos.pkgs.stdenv.hostPlatform.system == system
+            ) inputs.self.nixosConfigurations
+          );
+    in
+    {
+      checks.harness-configs =
+        pkgs.runCommand "harness-configs"
+          {
+            nativeBuildInputs = [ pkgs.jq ];
+          }
+          ''
+            ${lib.concatStrings (
+              lib.mapAttrsToList (name: file: ''
+                echo ${name}
+                jq empty ${file}
+              '') configFiles
+            )}
+            touch "$out"
+          '';
+    };
+
   flake.homeModules.harness =
     {
       config,
@@ -203,6 +245,13 @@
         type = lib.types.bool;
         default = true;
         description = "Index new repositories automatically when an MCP session starts";
+      };
+
+      options.programs.harness.configFiles = lib.mkOption {
+        type = lib.types.attrsOf lib.types.path;
+        default = { };
+        internal = true;
+        description = "Generated agent configs that the harness-configs flake check parses as JSON";
       };
 
       options.programs.harness.permissions = lib.mkOption {

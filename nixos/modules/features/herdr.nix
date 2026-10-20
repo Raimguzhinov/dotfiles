@@ -365,6 +365,7 @@ in
   perSystem =
     {
       lib,
+      pkgs,
       pkgs-unstable,
       system,
       ...
@@ -376,6 +377,12 @@ in
       ])
       {
         packages.herdr = pkgs-unstable.herdr;
+        checks.herdr-config = pkgs.runCommand "herdr-config" { nativeBuildInputs = [ pkgs.python3 ]; } ''
+          python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' ${
+            (pkgs.formats.toml { }).generate "herdr-config.toml" (herdrSettings pkgs pkgs-unstable.herdr)
+          }
+          touch "$out"
+        '';
       };
 
   flake.homeModules.herdr =

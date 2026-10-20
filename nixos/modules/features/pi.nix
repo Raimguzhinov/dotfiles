@@ -43,9 +43,12 @@
 #   pi-add-dir, @gotgenes/pi-permission-system, pi-fff, pi-undo-redo
 #
 # Карта файла (секции в порядке следования)
+#   piExtensionDeps      npm-экстеншены и их версии
+#   piExtensionsLock     package-lock экстеншенов
+#   mkPiExtensions       сборка экстеншенов в store, патчи upstream
 #   modelsConfig         модели Protei (id, reasoning, API-ключ)
 #   mcpConfig            MCP-серверы
-#   settingsSeed         seed settings.json (npm-плагины)
+#   settingsSeed         seed settings.json (пути экстеншенов в store)
 #   permissionConfig     конфиг @gotgenes/pi-permission-system (ADR-0006)
 #   keybindingsOverrides маппинги клавиш
 #   aftConfig            конфиг aft (lsp.disabled из lspOwnership harness.nix)
@@ -54,10 +57,10 @@
 #   todoReminderFile     todo-напоминатель
 #   gatesFile            run_gates
 #   appendSystemFile     приложение к системному промпту
-#   npmPins              пины npm-пакетов
-#   home.activation      деплой в ~/.pi (setupPi)
+#   home.file            конфиги в ~/.pi и ~/.config/cortexkit
+#   home.activation      merge settings.json (setupPi)
 #
-{ ... }:
+{ lib, ... }:
 let
   mkPiAcp =
     {
@@ -84,6 +87,270 @@ let
         mainProgram = "pi-acp";
       };
     });
+
+  piExtensionDeps = {
+    "@cortexkit/aft-pi" = "0.59.0";
+    "@gotgenes/pi-permission-system" = "40.3.0";
+    "@juicesharp/rpiv-todo" = "2.12.0";
+    "pi-add-dir" = "1.3.1";
+    "pi-fff" = "0.1.13";
+    "pi-herdr-subagents" = "0.2.1";
+    "pi-lsp-extension" = "1.4.0";
+    "pi-undo-redo" = "0.1.3";
+  };
+
+  piExtensionsLock = {
+    "node_modules/@cortexkit/aft-bridge" = {
+      version = "0.59.0";
+      integrity = "sha512-RFmIQ6+R5tM0Mxbt3kQsKF5YoERAx90SyyVJ4MK1yXzllShA9mclUg+5NFCnzmM3tiewpTUUqFpDqDCskYPxTQ==";
+      dependencies = {
+        "@cortexkit/subc-client" = "^0.20.0";
+        "undici" = "^7.25.0";
+      };
+    };
+    "node_modules/@cortexkit/aft-linux-x64" = {
+      version = "0.59.0";
+      integrity = "sha512-zbt9EL2rmC5ca+5evghb7AoxaXUPkIDVLQmR7aE6VKA1NKT7gNhO/g1FEnX315CLmpWtGnwZeO1qpZvKSfRrvg==";
+      optional = true;
+    };
+    "node_modules/@cortexkit/aft-pi" = {
+      version = "0.59.0";
+      integrity = "sha512-0fxDsNi59RvJC5QIYsQWEU8Yn+JbyBL8b0DxNIrMPp7IBqBHziMZ6DwETCPBp2LA7w2PIZ07n2fl2ZOUzXZMLg==";
+      dependencies = {
+        "@cortexkit/aft-bridge" = "0.59.0";
+        "comment-json" = "^5.0.0";
+        "diff" = "^8.0.4";
+        "zod" = "^4.4.3";
+      };
+      optionalDependencies = {
+        "@cortexkit/aft-linux-x64" = "0.59.0";
+      };
+    };
+    "node_modules/@cortexkit/subc-client" = {
+      version = "0.20.0";
+      integrity = "sha512-nH0A6QFFYD/ac7cDfUX9fL9jRWK/XjKz84IDFlUu5Rq1cvqYML3l/iY9RduT0lLTMbvcnmawT9v9NqbxlDvE5w==";
+    };
+    "node_modules/@ff-labs/fff-bin-linux-x64-gnu" = {
+      version = "0.9.6";
+      integrity = "sha512-OdROw237Ne7qy3HbTB78eovQMusccJ0PhRNAB6AmFuo+MiAzi1AdYs9iTAPYHqEH3uwEu0fdVFo9GTZcdnm03g==";
+      optional = true;
+    };
+    "node_modules/@ff-labs/fff-node" = {
+      version = "0.9.6";
+      integrity = "sha512-2LbHJjwW/7vOLh1lSv0ipzA9Du5+LatUGiumQFaO9IcjMT8YgpmrCp/RRMyInsG0iBIX6A0WSxgei8qOFJLlNw==";
+      dependencies = {
+        "ffi-rs" = "^1.0.0";
+      };
+      optionalDependencies = {
+        "@ff-labs/fff-bin-linux-x64-gnu" = "0.9.6";
+      };
+    };
+    "node_modules/@gotgenes/pi-permission-system" = {
+      version = "40.3.0";
+      integrity = "sha512-B3iAs1YOnyUdeh66P40+YEJ0G3WBFsEpJAtXv/pY0CyhpIoErCoLBNKN2Sx9+Cg3VXmGMC1h/3T7r+b0d97oVg==";
+      dependencies = {
+        "tree-sitter-bash" = "^0.25.1";
+        "web-tree-sitter" = "^0.26.9";
+        "zod" = "^4.4.3";
+      };
+    };
+    "node_modules/@juicesharp/rpiv-config" = {
+      version = "2.13.9";
+      integrity = "sha512-wCy7w4PNi+9pVD5gsbsIxq6ysdoFKXGPIQfOICyITW/+Jg6OGlFZa/tG99J9OZvTHDM8ZwUvqXNrFRsU6Z8NTQ==";
+    };
+    "node_modules/@juicesharp/rpiv-todo" = {
+      version = "2.12.0";
+      integrity = "sha512-bTILerGqMGrWMUkahHzXTuYa4iPkRX/LTl12HPppcCdPg7pGwrC1K7/ZtPfp7Xi4cXzqEoyZpeUM6IA8y5gtEQ==";
+      dependencies = {
+        "@juicesharp/rpiv-config" = "^2.12.0";
+      };
+    };
+    "node_modules/@yuuang/ffi-rs-linux-x64-gnu" = {
+      version = "1.3.7";
+      integrity = "sha512-upEz1Q98T51x2In872fsjgHCJbE3e8r9JxhJD+5NvSMk6BpieYWRodTbsMxV6oKWmfl12loKwF2j4OBSWKl0lA==";
+      optional = true;
+    };
+    "node_modules/array-timsort" = {
+      version = "1.0.3";
+      integrity = "sha512-/+3GRL7dDAGEfM6TseQk/U+mi18TU2Ms9I3UlLdUMhz2hbvGNTKdj9xniwXfUqgYhHxRx0+8UnKkvlNwVU+cWQ==";
+    };
+    "node_modules/better-result" = {
+      version = "2.10.0";
+      integrity = "sha512-oQhh0y1qo2/ZKdAAEvHZAqKKiHOFU5k/bW96fE2ScgQOVkJRiHwB+nOS1SgFsYqRlxMDWvefXi9Q3px7QvgNDw==";
+    };
+    "node_modules/comment-json" = {
+      version = "5.0.0";
+      integrity = "sha512-uiqLcOiVDJtBP8WGkZHEP+FZIhTzP1dxvn59EfoYUi9gqupjrBWVQkO2atDrbnKPwLeotFYDsuNb26uBMqB+hw==";
+      dependencies = {
+        "array-timsort" = "^1.0.3";
+        "esprima" = "^4.0.1";
+      };
+    };
+    "node_modules/diff" = {
+      version = "8.0.4";
+      integrity = "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==";
+    };
+    "node_modules/esprima" = {
+      version = "4.0.1";
+      integrity = "sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==";
+    };
+    "node_modules/ffi-rs" = {
+      version = "1.3.7";
+      integrity = "sha512-5MMZQS2t/6f/ec3sx0f51gBcKGZPGfolPAW04lvLOSYnr7gmOKs8YzH1Rh+34WGO+VtcgcTuxaUUoJLcR4Tirg==";
+      optionalDependencies = {
+        "@yuuang/ffi-rs-linux-x64-gnu" = "1.3.7";
+      };
+    };
+    "node_modules/node-addon-api" = {
+      version = "8.9.2";
+      integrity = "sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==";
+    };
+    "node_modules/node-gyp-build" = {
+      version = "4.8.4";
+      integrity = "sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==";
+    };
+    "node_modules/pi-add-dir" = {
+      version = "1.3.1";
+      integrity = "sha512-y1kLHZEgP9xkBY2PeaVhrIntJTf0mSBCOPVfzzdjiJi03mkNcqcTouDLtmLXm5aOwNl5WCjR6Kw5eaMnj2kE2g==";
+    };
+    "node_modules/pi-fff" = {
+      version = "0.1.13";
+      integrity = "sha512-poQ+jTGu6cqmWI0Xq/WlSmhTTisieUT7tYhqzUbeUM5FRYioo2tKOsYY+lHA6s+Bmj9zXRiDbljdsR9Hmv2C1g==";
+      dependencies = {
+        "@ff-labs/fff-node" = "^0.9.4";
+        "better-result" = "^2.8.2";
+      };
+    };
+    "node_modules/pi-herdr-subagents" = {
+      version = "0.2.1";
+      integrity = "sha512-6YTpUwyjnOcGxgZ6Hf7eOrLX+0rTMk47TstmLZXeDQ4wg+oZm6Et1IjCJREQ/WFRwDuX3Y0Zdq7VYCFKRNwMdA==";
+    };
+    "node_modules/pi-lsp-extension" = {
+      version = "1.4.0";
+      integrity = "sha512-FOwGIivoZt5YfVY/LGqQZf4+wPXT+73loKOQ3Lu6zeG2UAPCxelHT21zXG/qCVD32epq8FymH9dJ8EnotXkv4Q==";
+      dependencies = {
+        "tree-sitter-wasms" = "^0.1.13";
+        "vscode-languageserver-protocol" = "^3.17.5";
+        "web-tree-sitter" = "^0.24.7";
+      };
+    };
+    "node_modules/pi-lsp-extension/node_modules/web-tree-sitter" = {
+      version = "0.24.7";
+      integrity = "sha512-CdC/TqVFbXqR+C51v38hv6wOPatKEUGxa39scAeFSm98wIhZxAYonhRQPSMmfZ2w7JDI0zQDdzdmgtNk06/krQ==";
+    };
+    "node_modules/pi-undo-redo" = {
+      version = "0.1.3";
+      integrity = "sha512-IV/4jSrh4YWMGj/bMIey1rmIHeRQgYDEYULwBDRtM+IT1pfWoIoy7u9BHHmrHknsuPT5DeYnlMx36CtKGuuEnA==";
+    };
+    "node_modules/tree-sitter-bash" = {
+      version = "0.25.1";
+      integrity = "sha512-7hMytuYIMoXOq24yRulgIxthE9YmggZIOHCyPTTuJcu6EU54tYD+4G39cUb28kxC6jMf/AbPfWGLQtgPTdh3xw==";
+      dependencies = {
+        "node-addon-api" = "^8.2.1";
+        "node-gyp-build" = "^4.8.2";
+      };
+      hasInstallScript = true;
+    };
+    "node_modules/tree-sitter-wasms" = {
+      version = "0.1.13";
+      integrity = "sha512-wT+cR6DwaIz80/vho3AvSF0N4txuNx/5bcRKoXouOfClpxh/qqrF4URNLQXbbt8MaAxeksZcZd1j8gcGjc+QxQ==";
+      dependencies = {
+        "tree-sitter-wasms" = "^0.1.11";
+      };
+    };
+    "node_modules/undici" = {
+      version = "7.30.1";
+      integrity = "sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==";
+    };
+    "node_modules/vscode-jsonrpc" = {
+      version = "9.0.3";
+      integrity = "sha512-qETYf9PCl1lVfwR+oBmMfc4vP2nqLNA35ABxorw3j06+xlKRgDVxbLgKm4Y/xPL0YWdeDjLoI4ImICIT3nB0zQ==";
+    };
+    "node_modules/vscode-languageserver-protocol" = {
+      version = "3.18.4";
+      integrity = "sha512-CCXbyr99dafRJzJH/0Ryk7ly5T8XPmSR0//OuF2w4m+9JiOin7zcAT5iET8GRE7Z9taFBejb3GbM0a0mbjdbrg==";
+      dependencies = {
+        "vscode-jsonrpc" = "9.0.3";
+        "vscode-languageserver-types" = "3.18.4";
+      };
+    };
+    "node_modules/vscode-languageserver-types" = {
+      version = "3.18.4";
+      integrity = "sha512-nQsacoiijvl0fRf2q28uFDrAVwRhdCa3QveiF7/CX0r18mLR5FU/1WskSsCKOjmEbtteKUnY8x8Yzxop+k0zwg==";
+    };
+    "node_modules/web-tree-sitter" = {
+      version = "0.26.13";
+      integrity = "sha512-5bUZ7vbQ1kcondet96wzP974+JfCZDeQ7bTpacICm2nnvHpa5cO0ByRsoMcAhUP+743vpkb4m0BFlVSm+Ye9VA==";
+    };
+    "node_modules/zod" = {
+      version = "4.6.7";
+      integrity = "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==";
+    };
+  };
+
+  mkPiExtensions =
+    {
+      buildNpmPackage,
+      linkFarm,
+      writeText,
+    }:
+    let
+      manifest = {
+        name = "pi-extensions";
+        version = "0";
+        dependencies = piExtensionDeps;
+      };
+      registryUrl =
+        path: version:
+        let
+          name = lib.last (lib.splitString "node_modules/" path);
+        in
+        "https://registry.npmjs.org/${name}/-/${baseNameOf name}-${version}.tgz";
+    in
+    buildNpmPackage {
+      pname = manifest.name;
+      inherit (manifest) version;
+      src = linkFarm "pi-extensions-src" {
+        "package.json" = writeText "package.json" (builtins.toJSON manifest);
+        "package-lock.json" = writeText "package-lock.json" (
+          builtins.toJSON {
+            inherit (manifest) name version;
+            lockfileVersion = 3;
+            requires = true;
+            packages = {
+              "" = manifest;
+            }
+            // lib.mapAttrs (
+              path: entry: entry // { resolved = registryUrl path entry.version; }
+            ) piExtensionsLock;
+          }
+        );
+      };
+      npmDepsHash = "sha256-4eq9dPUWM/5wYXpxoCVs6Xdev7b4iDcUkHP/ysqJ6Bk=";
+      npmFlags = [ "--legacy-peer-deps" ];
+      dontNpmBuild = true;
+
+      postConfigure = ''
+        substituteInPlace node_modules/pi-herdr-subagents/pi-extension/subagents/subagent-done.ts \
+          --replace-fail '"ctrl+j"' '"ctrl+i"' \
+          --replace-fail 'Ctrl+J' 'Ctrl+I'
+        substituteInPlace node_modules/pi-fff/src/fff-runtime.ts \
+          --replace-fail 'async findFiles(request: FindFilesRequest): Promise<FindFilesResult> {' 'async searchPathCandidates(query: string, limit = DEFAULT_FILE_CANDIDATE_LIMIT): Promise<AppResult<FffFileCandidate[], RuntimeInitializationError | FinderOperationError>> { const finderResult = await this.ensure(); if (finderResult.isErr()) return propagateError(finderResult); const normalizedQuery = normalizePathQuery(query); if (!normalizedQuery) return Result.ok([]); const search = safeFinderCall("mixedSearch", () => finderResult.value.mixedSearch(normalizedQuery, { pageSize: Math.max(limit, DEFAULT_FILE_CANDIDATE_LIMIT) })); if (search.isErr()) return propagateError(search); return Result.ok(search.value.items.slice(0, limit).map((entry, index) => normalizeCandidate(entry.item as FileItem, search.value.scores[index]))); } async findFiles(request: FindFilesRequest): Promise<FindFilesResult> {'
+        substituteInPlace node_modules/pi-fff/src/editor.ts \
+          --replace-fail 'this.runtime.searchFileCandidates(rawQuery, MAX_RESULTS)' 'this.runtime.searchPathCandidates(rawQuery, MAX_RESULTS)'
+        substituteInPlace node_modules/pi-lsp-extension/dist/index.js \
+          --replace-fail '".php": "php"' '".php": "php", ".nix": "nix"' \
+          --replace-fail 'java: { command: "jdtls", args: [] }' 'java: { command: "jdtls", args: [] }, nix: { command: "nixd", args: [] }' \
+          --replace-fail 'if (!existsSync3(configPath)) return null;' 'if (!existsSync3(configPath)) { const autoStart = [...new Set([["go.mod", "go"], ["Cargo.toml", "rust"], ["flake.nix", "nix"], ["default.nix", "nix"], ["shell.nix", "nix"], ["tsconfig.json", "typescript"], ["package.json", "typescript"], ["pyproject.toml", "python"], ["setup.py", "python"], ["requirements.txt", "python"]].filter(([marker]) => existsSync3(join2(dir, marker))).map(([, lang]) => lang))]; return autoStart.length > 0 ? { autoStart } : null; }'
+      '';
+
+      installPhase = ''
+        runHook preInstall
+        mkdir -p "$out"
+        cp -r node_modules "$out/"
+        runHook postInstall
+      '';
+    };
 in
 {
   perSystem =
@@ -91,6 +358,7 @@ in
     {
       packages.pi = pkgs-unstable.pi-coding-agent;
       packages.pi-acp = pkgs.callPackage mkPiAcp { };
+      checks.pi-extensions = pkgs.callPackage mkPiExtensions { };
     };
 
   flake.nixosModules.pi =
@@ -117,6 +385,8 @@ in
         ;
 
       piAgentDir = "${config.home.homeDirectory}/.pi/agent";
+
+      piExtensions = pkgs.callPackage mkPiExtensions { };
 
       readSecret = name: "!cat ${config.sops.secrets.${name}.path}";
 
@@ -305,16 +575,8 @@ in
         compaction = {
           reserveTokens = 41000;
         };
-        packages = [
-          "npm:@cortexkit/aft-pi"
-          "npm:@gotgenes/pi-permission-system"
-          "npm:@juicesharp/rpiv-todo"
-          "npm:pi-add-dir"
-          "npm:pi-fff"
-          "npm:pi-herdr-subagents"
-          "npm:pi-lsp-extension"
+        packages = map (name: "${piExtensions}/node_modules/${name}") (lib.attrNames piExtensionDeps) ++ [
           "${piPlan}"
-          "npm:pi-undo-redo"
         ];
       };
 
@@ -1605,15 +1867,25 @@ in
         - Do not repeat file contents or tool output back to the user.
         - If the same error appears twice in a row, stop and explain what you tried.
       '';
-      npmPins = {
-        "@cortexkit/aft-pi" = config.programs.harness.aftVersion;
-        "@gotgenes/pi-permission-system" = "40.3.0";
-        "pi-herdr-subagents" = "0.2.1";
-        "pi-lsp-extension" = "1.4.0";
-      };
     in
     {
       config = {
+
+        assertions = [
+          {
+            assertion = piExtensionDeps."@cortexkit/aft-pi" == config.programs.harness.aftVersion;
+            message = "piExtensionDeps in pi.nix pins @cortexkit/aft-pi to a version other than programs.harness.aftVersion";
+          }
+        ];
+
+        programs.harness.configFiles = {
+          pi-settings = settingsSeedFile;
+          pi-mcp = mcpJsonFile;
+          pi-keybindings = keybindingsJsonFile;
+          pi-permissions = permissionConfigFile;
+          pi-fff = fffJsonFile;
+          aft = aftJsonFile;
+        };
 
         home.packages = [
           pkgs-unstable.pi-coding-agent
@@ -1795,144 +2067,30 @@ in
                 stopBy: end
         '';
 
+        home.file.".pi/agent/models.json".source = modelsJsonFile;
+        home.file.".pi/agent/keybindings.json".source = keybindingsJsonFile;
+        home.file.".pi/agent/mcp.json".source = mcpJsonFile;
+        home.file.".pi/agent/APPEND_SYSTEM.md".source = appendSystemFile;
+        home.file.".pi/agent/extensions/protei-auto.ts".source = proteiAutoFile;
+        home.file.".pi/agent/extensions/todo-reminder.ts".source = todoReminderFile;
+        home.file.".pi/agent/extensions/gates.ts".source = gatesFile;
+        home.file.".pi/agent/extensions/pi-fff.json".source = fffJsonFile;
+        home.file.".pi/agent/extensions/pi-permission-system/config.json".source = permissionConfigFile;
+
+        xdg.configFile."cortexkit/aft.jsonc".source = aftJsonFile;
+
         home.activation.setupPi = mkAfter /* bash */ ''
           set -euo pipefail
 
-          agent_dir="${piAgentDir}"
-          cortexkit_dir="${config.home.homeDirectory}/.config/cortexkit"
+          settings="${piAgentDir}/settings.json"
 
-          log() { printf '[pi] %s\n' "$*" >&2; }
-
-          mkdir -p "$agent_dir" "$cortexkit_dir"
-
-          cp --reflink=never "${aftJsonFile}" "$cortexkit_dir/aft.jsonc"
-          chmod 644 "$cortexkit_dir/aft.jsonc"
-
-          cp --reflink=never "${modelsJsonFile}" "$agent_dir/models.json"
-          chmod 600 "$agent_dir/models.json"
-
-          cp --reflink=never "${keybindingsJsonFile}" "$agent_dir/keybindings.json"
-          chmod 600 "$agent_dir/keybindings.json"
-
-          cp --reflink=never "${appendSystemFile}" "$agent_dir/APPEND_SYSTEM.md"
-          chmod 644 "$agent_dir/APPEND_SYSTEM.md"
-
-          mkdir -p "$agent_dir/extensions"
-          cp --reflink=never "${proteiAutoFile}" "$agent_dir/extensions/protei-auto.ts"
-          chmod 644 "$agent_dir/extensions/protei-auto.ts"
-
-          rm -f "$agent_dir/extensions/damage-control.ts" \
-                "$agent_dir/extensions/guardrails.json" \
-                "$agent_dir/extensions/tool-counter.ts" \
-                "$agent_dir/extensions/session-replay.ts" \
-                "$agent_dir/extensions/context-keeper.ts" \
-                "$agent_dir/extensions/routed-model.ts" \
-                "$agent_dir/pi-statusline.json" \
-                "$agent_dir/pi-permissions.jsonc" \
-                "${config.home.homeDirectory}/.pi/damage-control-rules.json" \
-                "$cortexkit_dir/magic-context.jsonc"
-          mkdir -p "$agent_dir/extensions/pi-permission-system"
-          cp --reflink=never "${permissionConfigFile}" "$agent_dir/extensions/pi-permission-system/config.json"
-          chmod 600 "$agent_dir/extensions/pi-permission-system/config.json"
-          cp --reflink=never "${fffJsonFile}" "$agent_dir/extensions/pi-fff.json"
-          chmod 644 "$agent_dir/extensions/pi-fff.json"
-          cp --reflink=never "${todoReminderFile}" "$agent_dir/extensions/todo-reminder.ts"
-          chmod 644 "$agent_dir/extensions/todo-reminder.ts"
-          cp --reflink=never "${gatesFile}" "$agent_dir/extensions/gates.ts"
-          chmod 644 "$agent_dir/extensions/gates.ts"
-
-          cp --reflink=never "${mcpJsonFile}" "$agent_dir/mcp.json"
-          chmod 600 "$agent_dir/mcp.json"
-
-          if [[ -f "$agent_dir/settings.json" ]]; then
-            "${lib.getExe pkgs.jq}" --slurpfile seed "${settingsSeedFile}" '. * $seed[0]' \
-              "$agent_dir/settings.json" > "$agent_dir/settings.json.tmp" \
-              && mv "$agent_dir/settings.json.tmp" "$agent_dir/settings.json"
+          mkdir -p "${piAgentDir}"
+          if [[ -f "$settings" ]]; then
+            "${lib.getExe pkgs.jq}" --slurpfile seed "${settingsSeedFile}" '. * $seed[0]' "$settings" > "$settings.tmp"
+            mv "$settings.tmp" "$settings"
           else
-            cp --reflink=never "${settingsSeedFile}" "$agent_dir/settings.json"
-            chmod 644 "$agent_dir/settings.json"
+            install -m644 "${settingsSeedFile}" "$settings"
           fi
-
-          npm_dir="$agent_dir/npm"
-          wanted=(${lib.escapeShellArgs (map (lib.removePrefix "npm:") (lib.filter (lib.hasPrefix "npm:") settingsSeed.packages))})
-          export PATH="${
-            lib.makeBinPath [
-              pkgs.nodejs
-              pkgs.git
-              pkgs.coreutils
-            ]
-          }:$PATH"
-
-          if [[ -f "$npm_dir/package.json" ]]; then
-            while read -r dep; do
-              if ! printf '%s\n' "''${wanted[@]}" | grep -qxF -- "$dep"; then
-                log "Removing $dep"
-                npm --prefix "$npm_dir" uninstall "$dep" --legacy-peer-deps >/dev/null 2>&1 \
-                  || log "WARNING: npm uninstall $dep failed"
-              fi
-            done < <("${lib.getExe pkgs.jq}" -r '.dependencies // {} | keys[]' "$npm_dir/package.json")
-          fi
-
-          declare -A pins=(${
-            lib.concatStrings (
-              lib.mapAttrsToList (
-                name: version: " [${lib.escapeShellArg name}]=${lib.escapeShellArg version}"
-              ) npmPins
-            )
-          } )
-
-          for dep in "''${wanted[@]}"; do
-            pin="''${pins[$dep]:-}"
-            have="$("${lib.getExe pkgs.jq}" -r '.version // empty' "$npm_dir/node_modules/$dep/package.json" 2>/dev/null || true)"
-            if [[ ! -d "$npm_dir/node_modules/$dep" || ( -n "$pin" && "$have" != "$pin" ) ]]; then
-              log "Installing $dep''${pin:+@$pin}"
-              "${pkgs.coreutils}/bin/timeout" 180s npm --prefix "$npm_dir" install "$dep''${pin:+@$pin}" --legacy-peer-deps >/dev/null 2>&1 \
-                || log "WARNING: npm install $dep failed (no network?)"
-            fi
-          done
-
-          # ctrl+j захардкожен в 0.2.1, но в herdr он занят next_workspace
-          subagent_done="$npm_dir/node_modules/pi-herdr-subagents/pi-extension/subagents/subagent-done.ts"
-          if [[ -f "$subagent_done" ]] && grep -qF '"ctrl+j"' "$subagent_done"; then
-            ${pkgs.gnused}/bin/sed -i \
-              -e 's/"ctrl+j"/"ctrl+i"/' \
-              -e 's/Ctrl+J/Ctrl+I/g' \
-              "$subagent_done"
-            grep -qF '"ctrl+i"' "$subagent_done" || log "WARNING: pi-herdr-subagents key patch did not apply"
-          fi
-
-          fff_dir="$npm_dir/node_modules/pi-fff/src"
-          if [[ -f "$fff_dir/fff-runtime.ts" ]] && ! grep -qF 'async searchPathCandidates' "$fff_dir/fff-runtime.ts"; then
-            ${pkgs.gnused}/bin/sed -i \
-              's|^\tasync findFiles(request: FindFilesRequest): Promise<FindFilesResult> {$|\tasync searchPathCandidates(query: string, limit = DEFAULT_FILE_CANDIDATE_LIMIT): Promise<AppResult<FffFileCandidate[], RuntimeInitializationError \| FinderOperationError>> { const finderResult = await this.ensure(); if (finderResult.isErr()) return propagateError(finderResult); const normalizedQuery = normalizePathQuery(query); if (!normalizedQuery) return Result.ok([]); const search = safeFinderCall("mixedSearch", () => finderResult.value.mixedSearch(normalizedQuery, { pageSize: Math.max(limit, DEFAULT_FILE_CANDIDATE_LIMIT) })); if (search.isErr()) return propagateError(search); return Result.ok(search.value.items.slice(0, limit).map((entry, index) => normalizeCandidate(entry.item as FileItem, search.value.scores[index]))); }\n\n&|' \
-              "$fff_dir/fff-runtime.ts"
-          fi
-          if [[ -f "$fff_dir/editor.ts" ]] && grep -qF 'async searchPathCandidates' "$fff_dir/fff-runtime.ts" && ! grep -qF 'searchPathCandidates' "$fff_dir/editor.ts"; then
-            ${pkgs.gnused}/bin/sed -i \
-              's|this.runtime.searchFileCandidates(rawQuery, MAX_RESULTS)|this.runtime.searchPathCandidates(rawQuery, MAX_RESULTS)|' \
-              "$fff_dir/editor.ts"
-          fi
-          if [[ -f "$fff_dir/editor.ts" ]] && ! grep -qF 'searchPathCandidates' "$fff_dir/editor.ts"; then
-            log "WARNING: pi-fff directory autocomplete patch did not apply"
-          fi
-
-          lsp_ext="$npm_dir/node_modules/pi-lsp-extension/dist/index.js"
-          if [[ -f "$lsp_ext" ]] && ! grep -qF '".nix": "nix"' "$lsp_ext"; then
-            ${pkgs.gnused}/bin/sed -i \
-              -e 's/^  "\.php": "php"$/  ".php": "php",\n  ".nix": "nix"/' \
-              -e 's/^  java: { command: "jdtls", args: \[\] }$/  java: { command: "jdtls", args: [] },\n  nix: { command: "nixd", args: [] }/' \
-              "$lsp_ext"
-            grep -qF 'nix: { command: "nixd"' "$lsp_ext" || log "WARNING: pi-lsp-extension nix patch did not apply"
-          fi
-
-          if [[ -f "$lsp_ext" ]] && ! grep -qF 'existsSync3(join2(dir, marker))' "$lsp_ext"; then
-            ${pkgs.gnused}/bin/sed -i \
-              -e 's|^    if (!existsSync3(configPath)) return null;$|    if (!existsSync3(configPath)) { const autoStart = [...new Set([["go.mod", "go"], ["Cargo.toml", "rust"], ["flake.nix", "nix"], ["default.nix", "nix"], ["shell.nix", "nix"], ["tsconfig.json", "typescript"], ["package.json", "typescript"], ["pyproject.toml", "python"], ["setup.py", "python"], ["requirements.txt", "python"]].filter(([marker]) => existsSync3(join2(dir, marker))).map(([, lang]) => lang))]; return autoStart.length > 0 ? { autoStart } : null; }|' \
-              "$lsp_ext"
-            grep -qF 'existsSync3(join2(dir, marker))' "$lsp_ext" || log "WARNING: pi-lsp-extension autoStart patch did not apply"
-          fi
-
-          log "pi setup complete"
         '';
       };
     };

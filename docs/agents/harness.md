@@ -10,6 +10,12 @@ Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
 - Permission rules: `programs.harness.permissions`, model in ADR-0006, meta-files
   ask and `.env.example` in ADR-0008. pi and
   opencode render them; claude does not use them.
+- pi extensions: `piExtensionDeps` and `piExtensionsLock` in `pi.nix`, built
+  into the store by `mkPiExtensions` (upstream patches in `postConfigure`).
+  To add, remove or bump one: edit `piExtensionDeps`, regenerate the lock with
+  `npm install --package-lock-only --legacy-peer-deps` in a scratch dir, port
+  the entries into `piExtensionsLock` (linux-x64 optional binaries only, no
+  `resolved`), then update `npmDepsHash`.
 - aft: version pin `programs.harness.aftVersion`. The binary comes from npm,
   not Nix (cache `~/.cache/aft/bin/`). The "update" at startup is an index
   rebuild, not a software upgrade.
