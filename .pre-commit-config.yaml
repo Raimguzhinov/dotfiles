@@ -1,4 +1,4 @@
-# commit-msg хук требует отдельной установки: pre-commit install -t commit-msg
+# commit-msg и pre-push хуки требуют отдельной установки: pre-commit install -t commit-msg -t pre-push
 repos:
   - repo: local
     hooks:
@@ -17,3 +17,10 @@ repos:
         entry: bash scripts/check_commit_msg.sh
         language: system
         stages: [commit-msg]
+      - id: nix-flake-check
+        name: nix flake check
+        entry: nix flake check ./nixos
+        language: system
+        files: '^nixos/'
+        pass_filenames: false
+        stages: [pre-push]

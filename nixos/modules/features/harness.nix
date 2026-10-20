@@ -50,6 +50,7 @@
       config,
       lib,
       pkgs,
+      pkgs-unstable,
       ...
     }:
     let
@@ -233,6 +234,12 @@
         # non-UI: UI-сборка тянет graph-ui, у которого протух npmDepsHash
         default = inputs.codebase-memory-mcp.packages.${pkgs.stdenv.hostPlatform.system}.default;
         description = "codebase-memory-mcp package shared by pi, opencode and claude-code";
+      };
+
+      options.programs.harness.mcpNixos = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs-unstable.mcp-nixos;
+        description = "mcp-nixos package shared by pi, opencode and claude-code";
       };
 
       options.programs.harness.codebaseMemoryArgs = lib.mkOption {

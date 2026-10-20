@@ -325,6 +325,11 @@
             args = config.programs.harness.codebaseMemoryArgs;
             env.CBM_ALLOWED_ROOT = config.home.homeDirectory;
           };
+          nixos = {
+            type = "stdio";
+            command = lib.getExe config.programs.harness.mcpNixos;
+            args = [ ];
+          };
           searxng = {
             type = "stdio";
             command = "npx";

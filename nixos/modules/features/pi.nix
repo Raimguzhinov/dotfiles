@@ -32,6 +32,7 @@
 #   gh_grep         поиск кода по публичным GitHub-репозиториям
 #   chrome_devtools живой Chromium: страницы, консоль, сеть, скриншоты
 #   codebase_memory граф знаний индексируемых репозиториев
+#   nixos           пакеты, опции NixOS/Home Manager/nix-darwin, версии nixpkgs
 #   uc_dev
 #   context7        актуальные доки библиотек: resolve-library-id + query-docs
 #
@@ -539,6 +540,11 @@ in
             env = {
               CBM_ALLOWED_ROOT = config.home.homeDirectory;
             };
+          };
+          nixos = {
+            description = "NixOS, Home Manager and nix-darwin packages, options and nixpkgs versions";
+            command = lib.getExe config.programs.harness.mcpNixos;
+            args = [ ];
           };
           chrome-devtools = {
             description = "Chrome DevTools for the running Chromium: pages, console, network, screenshots, performance";
