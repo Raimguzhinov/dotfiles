@@ -20,10 +20,10 @@ Considered options:
 Consequences:
 
 - `bash` default is **ask** (was allow): middle commands ask once, and the session approval covers repeats. `sudo *` is pinned to ask explicitly.
-- Read commands are declared in `commandEffects` (`git log/show/status/diff/blame/ls-files/describe/rev-parse`, `nix`, `jq`), so their path arguments consult the read surface and stay silent outside cwd.
+- Read commands are declared in `commandEffects` (`git log/show/status/diff/blame/ls-files/describe/rev-parse`, `nix`, `jq`), so their path arguments consult the read surface and stay silent outside cwd. `git add` and `git commit` were later declared read as well: the pathspec is read, the write goes to `.git`, and both are routine working-set commands in the shared bash allowlist.
 - Secrets (`.env`, `~/.ssh`, `~/.gnupg`, keys, `*.pem`, dumps, ...) are denied in both directions on all tools and in bash.
 - `~/.pi`, `~/.config`, lockfiles, build output and repo meta-files (README, `.git`, CI, Dockerfiles) are write-denied with a reason; reading stays free.
-- No activation-time `sed` patch on the permission system; the legacy exception list in ADR-0003 shrinks to three packages.
+- No activation-time `sed` patch on the permission system: the package is taken stock from npm. (The remaining ADR-0003 legacy exceptions were later migrated to build time, 3ca31e8, so none remain.)
 - `nixpkgs` `formats.json` emits keys in **alphabetical** order, and the package resolves patterns last-match-wins: patterns are written so the intended winner is also the alphabetically last match (`*` sorts first, so the default never overrides specifics).
 - opencode has no directional path surfaces, so its `external_directory` stays bidirectional: reads outside the cwd ask there, while pi's `external_directory_read` is allow. Accepted for the reserve agent.
 - pi's rendered config enables `yoloMode`: every `ask` is rewritten to a standing `allow` (origin `yolo`, recorded in the review log) while `deny` rules are untouched; opencode has no such knob, so its asks prompt there.

@@ -2,7 +2,7 @@
 
 It was unclear which layer answers a language's LSP needs: the agent's native LSP extension or the gopls MCP server. A behavioral test in a real Go project showed the agent spontaneously uses search + native LSP diagnostics and never calls MCP tools on its own, so MCP tools are second-class for autonomous work.
 
-We decided: **LSP ownership** is a table, "language → owning server", per agent. Go is owned by the native LSP extension in the main agent (not by gopls MCP). gopls MCP stays installed in both agents as a supplementary path (it is first-class for agents that drive MCP natively, like the backup agent). The shared aft config's disabled-LSP list is **generated from the ownership table**; its content does not change, and the aft config stays shared by design — per-agent aft configs were rejected because the whole point of aft is that it is shared.
+We decided: **LSP ownership** is a table, "language → owning server", covering the two agents that run aft (pi, opencode). The shared aft config's disabled-LSP list is **generated from the table's keys**: every language in the table is served by the agent's native LSP layer, not by aft, and the aft config stays shared by design — per-agent aft configs were rejected because the whole point of aft is that it is shared. claude-code does not run aft; its LSP servers are declared in `programs.claude-code.lspServers` and sit outside the table by design. The gopls MCP server was removed (f493b54) once the native extension served the same language; no agent has an LSP-via-MCP installed. Languages owned by nobody appear as empty rows (e.g. java: no jdtls binary is installed anywhere).
 
 Consequences:
 

@@ -1,6 +1,6 @@
 # Bounded context over unbounded (reject the context manager)
 
-Long sessions compact constantly. We trialed Magic Context (ADR-0001) as the context manager: it keeps every chunk of session knowledge without compaction. In practice the un-compacted window accumulated mostly low-value material, and whenever the model hallucinated or latched onto a side task the context manager preserved that too. The dilution pushed the essential signal to a negligible share and the model degraded.
+Long sessions compact constantly. After a home-grown context-keeper extension (masking secrets out of compaction summaries), we trialed Magic Context (cortexkit) as the full context manager: it keeps every chunk of session knowledge without compaction. In practice the un-compacted window accumulated mostly low-value material, and whenever the model hallucinated or latched onto a side task the context manager preserved that too. The dilution pushed the essential signal to a negligible share and the model degraded.
 
 Decision: **no context manager.** The agent's window stays owned by **native compaction** — bounded, discards knowledge, keeps the signal concentrated. We accept losing some knowledge in exchange for a focused window.
 
