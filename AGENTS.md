@@ -28,6 +28,10 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
 - One `inherit` per line.
 - In `perSystem`, check the platform with `system` + `builtins.elem`:
   `pkgs.stdenv.isLinux` recurses there.
+- A module top-level `let` can reference `lib` but not `pkgs`: neither
+  flake-parts nor home-manager provides `pkgs` outside `perSystem` /
+  homeModules. Keep the source as a bare string at top level and
+  `pkgs.writeText` it where `pkgs` is in scope.
 - In `home.activation`, a command that calls external binaries or the network
   logs `WARNING` on failure and lets activation continue. `set -e` is only for
   pure file operations.
@@ -37,6 +41,8 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
 - Change `flake.lock` through nix only: `nix flake lock --update-input NAME`.
 - `~/.config` and `~/.pi` are generated from Nix: edit the module that writes
   them.
+- No non-`.nix` files under `nixos/`: extension and tool sources stay inline in
+  the module that ships them (`pkgs.writeText`, the pi.nix pattern).
 - When a build fails inside an external flake input, report options to the
   user (update the input, wait for an upstream fix, drop the dependency).
   Local overrides, patches and re-pinned hashes rot on the next update.

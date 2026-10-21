@@ -57,6 +57,7 @@
 #   piStats / piEval     статистика сессий / eval-харнес
 #   todoReminderFile     todo-напоминатель
 #   gatesFile            run_gates
+#   bashGuardSource      bash-guard.ts source (pre-execution блок bash code-search/read)
 #   appendSystemFile     приложение к системному промпту
 #   home.file            конфиги в ~/.pi и ~/.config/cortexkit
 #   home.activation      merge settings.json (setupPi)
@@ -352,6 +353,252 @@ let
         runHook postInstall
       '';
     };
+
+  bashGuardSource = /* typescript */ ''
+    import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+    import { homedir } from "node:os";
+    import { resolve, sep } from "node:path";
+
+    const BANNED = new Set(["grep", "egrep", "fgrep", "rg", "find", "cat", "sed", "head", "tail"]);
+    const VALUE_SHORT: Record<string, string> = {
+      grep: "ABCDefgjmmtTu",
+      egrep: "ABCDefgjmmtTu",
+      fgrep: "ABCDefgjmmtTu",
+      rg: "ABCDefgjmmtTu",
+      sed: "e",
+      head: "cn",
+      tail: "cn",
+      cat: "",
+      find: "",
+    };
+
+    const REASON =
+      "[bash-guard] Blocked: bash reading/searching project files is not allowed (AGENTS.md). Search: grep or aft_search tool. File content: read (startLine/endLine) or aft_zoom. Structure: aft_outline. Edits: edit tool.";
+
+    function tokenize(command: string): string[][][] {
+      const pipelines: string[][][] = [];
+      let stage: string[] = [];
+      let i = 0;
+      const n = command.length;
+      let word = "";
+      let seen = false;
+      let paren = 0;
+      let backtick = false;
+      const pushWord = () => {
+        if (seen) {
+          stage.push(word);
+          word = "";
+          seen = false;
+        }
+      };
+      const flushStage = () => {
+        pushWord();
+        if (stage.length) pipelines[pipelines.length - 1]!.push(stage);
+        stage = [];
+      };
+      const flushPipeline = () => {
+        flushStage();
+        pipelines.push([]);
+      };
+      flushPipeline();
+      while (i < n) {
+        const ch = command[i];
+        const atTop = paren === 0 && !backtick;
+        if (atTop && ch === "\\" && i + 1 < n) {
+          word += command[i + 1];
+          seen = true;
+          i += 2;
+          continue;
+        }
+        if (atTop && (ch === "'" || ch === '"')) {
+          let j = i + 1;
+          while (j < n && command[j] !== ch) j++;
+          const end = Math.min(j, n);
+          word += command.slice(i + 1, end);
+          seen = true;
+          i = Math.min(j + 1, n);
+          continue;
+        }
+        if (atTop && ch === "|") {
+          if (command[i + 1] === "|") {
+            flushStage();
+            flushPipeline();
+            i += 2;
+          } else {
+            flushStage();
+            i += 1;
+          }
+          continue;
+        }
+        if (atTop && (ch === "&" || ch === ";" || ch === "\n")) {
+          const isRedirectAmp = ch === "&" && seen && word.endsWith(">");
+          if (!isRedirectAmp) {
+            if (ch === "&" && command[i + 1] === "&") i += 1;
+            flushStage();
+            flushPipeline();
+            i += 1;
+            continue;
+          }
+        }
+        if (atTop && ch === "$" && command[i + 1] === "(") {
+          word += "$(";
+          seen = true;
+          paren = 1;
+          i += 2;
+          continue;
+        }
+        if (backtick) {
+          if (ch === "`") backtick = false;
+          word += ch;
+          seen = true;
+          i += 1;
+          continue;
+        }
+        if (paren > 0) {
+          if (ch === "(") paren += 1;
+          else if (ch === ")") {
+            paren -= 1;
+            if (paren === 0) {
+              word += ")";
+              i += 1;
+              continue;
+            }
+          }
+          word += ch;
+          seen = true;
+          i += 1;
+          continue;
+        }
+        if (ch === "`") {
+          backtick = true;
+          word += ch;
+          seen = true;
+          i += 1;
+          continue;
+        }
+        if (/\s/.test(ch)) {
+          pushWord();
+          i += 1;
+          continue;
+        }
+        word += ch;
+        seen = true;
+        i += 1;
+      }
+      flushStage();
+      return pipelines;
+    }
+
+    function stageArgs(tokens: string[]): string[] {
+      const out: string[] = [];
+      let skipNext = false;
+      for (const t of tokens) {
+        if (skipNext) {
+          skipNext = false;
+          continue;
+        }
+        if (/^<\(/.test(t)) continue;
+        if (/^[0-9]*(>>|>|<)$/.test(t) || /^[0-9]*<</.test(t)) {
+          skipNext = true;
+          continue;
+        }
+        if (/^[0-9]*[<>]/.test(t)) continue;
+        out.push(t);
+      }
+      return out;
+    }
+
+    export function bashGuardVerdict(command: string, root: string): string | null {
+      const rootAbs = resolve(root);
+      const inProject = (p: string): boolean => {
+        if (p.includes("$") || p.includes("`")) return false;
+        let q = p;
+        if (q === "~" || q.startsWith("~/")) q = homedir() + q.slice(1);
+        const glob = q.search(/[*?[]/);
+        if (glob >= 0) q = q.slice(0, glob);
+        const r = resolve(cwd, q);
+        return r === rootAbs || r.startsWith(rootAbs + sep);
+      };
+      let cwd = rootAbs;
+      for (const pipe of tokenize(command)) {
+        for (let si = 0; si < pipe.length; si++) {
+          const args = stageArgs(pipe[si]);
+          let idx = 0;
+          while (idx < args.length && /^[A-Za-z_][A-Za-z0-9_]*=/.test(args[idx])) idx++;
+          if (idx >= args.length) continue;
+          const name = args[idx].slice(args[idx].lastIndexOf("/") + 1);
+          const rest = args.slice(idx + 1);
+          if (name === "cd" || name === "pushd") {
+            const t = rest[0];
+            if (t && !t.includes("$") && !t.includes("`")) cwd = resolve(cwd, t === "~" ? homedir() : t);
+            continue;
+          }
+          if (!BANNED.has(name)) continue;
+          const fromPipe = si > 0;
+          const valueChars = VALUE_SHORT[name] ?? "";
+          const operands: string[] = [];
+          let hasVersion = false;
+          let explicitPattern = false;
+          let literal = false;
+          for (let k = 0; k < rest.length; k++) {
+            const t = rest[k];
+            if (literal) {
+              operands.push(t);
+              continue;
+            }
+            if (t === "--") {
+              literal = true;
+              continue;
+            }
+            if (t.startsWith("-") && t !== "-") {
+              if (/^(--version|--help)$/.test(t) || /^-(version|help|V)$/.test(t)) hasVersion = true;
+              const chars = t.slice(1).replace(/=.+$/, "");
+              if (t.startsWith("--") || /^\d+$/.test(chars)) continue;
+              let consumesNext = false;
+              for (const c of chars) if (valueChars.includes(c) && c === chars.at(-1)) consumesNext = true;
+              if (chars === "e") explicitPattern = true;
+              if (consumesNext) k++;
+              continue;
+            }
+            operands.push(t);
+          }
+          if (hasVersion) continue;
+          if (name === "find") {
+            const start = operands[0] ?? ".";
+            if (inProject(start)) return REASON;
+            continue;
+          }
+          if (name === "sed") {
+            const files = explicitPattern ? operands : operands.slice(1);
+            if (files.some((f) => inProject(f))) return REASON;
+            continue;
+          }
+          if (name === "cat" || name === "head" || name === "tail") {
+            if (operands.some((f) => inProject(f))) return REASON;
+            continue;
+          }
+          const paths = explicitPattern ? operands : operands.slice(1);
+          if (paths.length === 0) {
+            if (!fromPipe && inProject(cwd)) return REASON;
+            continue;
+          }
+          if (paths.some((p) => inProject(p))) return REASON;
+        }
+      }
+      return null;
+    }
+
+    export default function (pi: ExtensionAPI) {
+      pi.on("tool_call", (event, ctx) => {
+        if (event.toolName !== "bash") return;
+        const command = (event.input as { command?: string }).command;
+        if (!command) return;
+        const reason = bashGuardVerdict(command, ctx.cwd);
+        if (reason) return { block: true, reason };
+      });
+    }
+  '';
+
 in
 {
   perSystem =
@@ -360,6 +607,80 @@ in
       packages.pi = pkgs-unstable.pi-coding-agent;
       packages.pi-acp = pkgs.callPackage mkPiAcp { };
       checks.pi-extensions = pkgs.callPackage mkPiExtensions { };
+      checks."bash-guard" =
+        let
+          guard = pkgs.writeText "bash-guard.ts" bashGuardSource;
+          cases = [
+            "grep -n 'phone/list' services/api/protos/uc/mkd_adapter.proto"
+            "grep -rn 'GetSipDomain' services/api/protos/uc/*.proto"
+            "cd /home/dias/Work/core && grep -n 'PpsPhoneList\\|PpsPhone\\|SipTrunk\\|SipDomain' services/api/protos/uc/mkd_adapter.proto"
+            "grep -n 'GetUsersShortInfo\\|UserInfo\\|GeneralUserInfo' services/api/protos/uc/user.proto | head -40"
+            "grep -n 'company_id\\|companyName\\|Company' services/api/protos/uc/*.proto | head -60"
+            "grep -n 'companyId' services/agent/... | head -30"
+            "cat /home/dias/Work/core/services/mkd-lk-api-gw/internal/middleware/trace.go"
+            "sed -n '515,545p' /home/dias/Work/core/docker-compose.yml"
+            "sed -n '495,520p' docker-compose.yml"
+            "head -20 src/config/config.go && grep -n 'company\\|Company' src/s..."
+            "cd /home/dias/Work/core/services/mkd-lk-api-gw && find . -type f \\( -name 'config*.go' -o -name 'config*.yml' \\)"
+            "find . -type f -not -path './swagger-api*' -not -name 'swagger.json' | head -80"
+            "head -40 docker-compose.yml"
+            "tail -30 services/api/protos/uc/call.proto"
+            "cat services/mkd-lk-api-gw/go.mod"
+            "grep -rn 'externalUserId' services/ --include='*.go' | head -20"
+            "grep 'pattern'"
+            "rg -n 'phone' services/"
+            "sed -i 's/old/new/g' services/x/main.go"
+            "grep -h '^app:' services/*/config/logs-collector.yml 2>/dev/null | sort | uniq -c"
+            "git status --short --branch | head -5"
+            "git status --short --branch | head -5; git -C /home/dias/Work/core branch --show-current"
+            "git log --oneline -5"
+            "go build ./..."
+            "GO111MODULE=on go build -gcflags=all=\"-trimpath=$(go env GOMODCACHE)\" ./cmd"
+            "ls docs/"
+            "wc -l docs/agent-api.md"
+            "make test"
+            "go test ./internal/... 2>&1 | grep FAIL"
+            "make build | tail -20"
+            "cat /home/dias/go/pkg/mod/git.protei.ru/protei-golang/passlib/v3@v3.2.0/service/user_session_info.go"
+            "grep -rn 'GetUserId' $(go env GOMODCACHE)/git.protei.ru/protei-golang/ 2>/dev/null | grep -v _test | head -15"
+            "grep --version"
+            "find / -name 'pi-agent' 2>/dev/null | head -5"
+            "cd /home/dias/go/pkg/mod && grep -rn 'func GetLogin' . 2>/dev/null | head -5"
+            "echo 'hello world' | head -1"
+            "git grep -n 'companyId' services/ | head"
+            "cat /etc/hostname"
+            "ls -la && pwd"
+            "sed -n '10,20p' /tmp/notes.txt"
+            "tail -f /var/log/nginx/error.log | head"
+            "git diff | head -40"
+            "go vet ./... && go test -run TestCompany ./... | head"
+            "head -5 /proc/cpuinfo"
+          ];
+          driver = pkgs.writeText "bash-guard-test.mjs" ''
+            import { bashGuardVerdict } from "${guard}";
+            const cases = ${builtins.toJSON cases};
+            const root = "/home/dias/Work/core";
+            const expect = [ "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass" ];
+            let failed = 0;
+            for (let i = 0; i < cases.length; i++) {
+              const blocked = bashGuardVerdict(cases[i], root) !== null;
+              const want = expect[i] === "block";
+              if (blocked !== want) {
+                console.error("FAIL want=" + expect[i] + " got=" + (blocked ? "block" : "pass") + ": " + cases[i]);
+                failed++;
+              }
+            }
+            if (failed > 0) {
+              console.error(failed + " of " + cases.length + " cases failed");
+              process.exit(1);
+            }
+            console.log("bash-guard: all " + cases.length + " cases pass");
+          '';
+        in
+        pkgs.runCommand "bash-guard-test" { nativeBuildInputs = [ pkgs.nodejs ]; } ''
+          node ${driver}
+          touch "$out"
+        '';
     };
 
   flake.nixosModules.pi =
@@ -1846,6 +2167,8 @@ in
         }
       '';
 
+      bashGuardFile = pkgs.writeText "bash-guard.ts" bashGuardSource;
+
       appendSystemFile = pkgs.writeText "pi-append-system.md" config.programs.harness.appendShared;
     in
     {
@@ -2054,6 +2377,7 @@ in
         home.file.".pi/agent/extensions/protei-auto.ts".source = proteiAutoFile;
         home.file.".pi/agent/extensions/todo-reminder.ts".source = todoReminderFile;
         home.file.".pi/agent/extensions/gates.ts".source = gatesFile;
+        home.file.".pi/agent/extensions/bash-guard.ts".source = bashGuardFile;
         home.file.".pi/agent/extensions/pi-fff.json".source = fffJsonFile;
         home.file.".pi/agent/extensions/pi-permission-system/config.json".source = permissionConfigFile;
 
