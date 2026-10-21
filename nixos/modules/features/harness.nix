@@ -607,6 +607,9 @@
           config.programs.harness.codebaseMemory
         ];
 
+        # Наш скилл, вне списка mattpocock/skills: npx skills его не трогает
+        home.file.".agents/skills/skills-faq/SKILL.md".source = ../../../skills/skills-faq/SKILL.md;
+
         # Одна команда на каждый switch: обновляет скиллы и пересоздаёт
         # симлинки. pi и opencode читают store нативно, claude-code получает
         # пер-скилловые симлинки в ~/.claude/skills
@@ -656,6 +659,15 @@
             log "WARNING: could not fetch thermo-nuclear-code-quality-review skill (no network?), keeping installed"
           fi
           ln -sfn "$skill_dir" "$HOME/.claude/skills/thermo-nuclear-code-quality-review"
+        '';
+
+        # Симлинк для claude-code: pi и opencode читают ~/.agents/skills
+        # нативно, npx свой скилл не линкует. Имя после updateCursorSkill,
+        # чтобы идти после npx
+        home.activation.updateLocalSkillSymlinks = /* bash */ ''
+          set -euo pipefail
+          mkdir -p "$HOME/.claude/skills"
+          ln -sfn "$HOME/.agents/skills/skills-faq" "$HOME/.claude/skills/skills-faq"
         '';
 
         # auto_index не имеет ни env, ни JSON-ключа (только SQLite _config.db),
