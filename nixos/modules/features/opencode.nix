@@ -54,6 +54,8 @@
 
         home.packages = [ op.opencode-desktop ];
 
+        programs.opencode.context = config.programs.harness.appendShared;
+
         home.sessionVariables.ORT_DYLIB_PATH = "${pkgs.onnxruntime}/lib/libonnxruntime.so";
 
         programs.harness.configFiles.opencode = config.xdg.configFile."opencode/opencode.json".source;
@@ -153,7 +155,7 @@
                 package = "aisdk:@ai-sdk/openai-compatible";
                 settings = {
                   apiKey = "local";
-                  baseURL = "http://localhost:8085/v1";
+                  baseURL = "${config.programs.harness.localModelUrl}/v1";
                 };
                 models."ornith-ai/Ornith-1.5-35B-A3B" = {
                   name = "Ornith 1.5 35B A3B";
@@ -201,7 +203,7 @@
                   command = [
                     "uvx"
                     "--from"
-                    "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/lightrag-mcp.git"
+                    "git+ssh://git@${config.programs.harness.internalGitHost}/qa-stuff/llm/mcp/lightrag-mcp.git"
                     "lightrag-mcp"
                   ];
                   environment = {
@@ -215,11 +217,11 @@
                   command = [
                     "uvx"
                     "--from"
-                    "git+ssh://git@git.protei.ru/qa-stuff/llm/mcp/gitlab.git"
+                    "git+ssh://git@${config.programs.harness.internalGitHost}/qa-stuff/llm/mcp/gitlab.git"
                     "gitlab-mcp-server"
                   ];
                   environment = {
-                    GITLAB_URL = "https://git.protei.ru";
+                    GITLAB_URL = "https://${config.programs.harness.internalGitHost}";
                     GITLAB_TOKEN = "{file:${config.sops.secrets."git/gitlab_mcp_token".path}}";
                   };
                 };

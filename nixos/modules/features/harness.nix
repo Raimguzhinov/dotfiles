@@ -1,6 +1,7 @@
 # Общий харнесс агентов (pi, claude-code, opencode): единый store скиллов
-# ~/.agents/skills и общий фрагмент system prompt. Агент-специфика остаётся
-# в своих модулях (pi.nix, claude.nix, opencode.nix).
+# ~/.agents/skills и общий system prompt.
+# Остальная агент-специфика остаётся в своих модулях (pi.nix, claude.nix,
+# opencode.nix).
 { inputs, ... }:
 {
   perSystem =
@@ -86,7 +87,7 @@
         "writing-for-agents"
       ];
 
-      sharedAppend = pkgs.writeText "agents-append-shared.md" /* markdown */ ''
+      sharedAppend = /* markdown */ ''
         The user is a senior developer. Communication is plain, concise and actionable. Every answer exists to solve the problem.
 
         ## Language
@@ -138,6 +139,29 @@
         ## Git
         - Switch branches with `git switch` (not `git checkout`); discard changes with `git restore`.
 
+        ## Code intelligence
+        Each tool has one job, do not use two tools for the same question.
+        - Structure of a file: aft_outline. Body of a symbol: aft_zoom. Find code by name or text: aft_search, or grep for exact strings, comments, logs and config keys.
+        - In Go, Nix, TypeScript, TSX, JavaScript, Rust and Python use LSP only for what aft cannot do: exact definition across files (lsp_definition), every usage of a symbol (lsp_references), its type or signature (lsp_hover), quick fixes and imports (lsp_code_actions).
+        - Rename a symbol only with lsp_rename, never with edit or text replacement: it updates every reference across files.
+        - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
+        - Find files with find, list directories with ls.
+
+        ## Workflow for code tasks
+        Work autonomously until the task is done or you are blocked.
+        1. Locate: find code with aft_search and files with find. Read only the line ranges you need with aft_outline, aft_zoom or read. Never guess file contents, APIs or paths.
+        2. Plan: if the change touches more than one file, first write a numbered plan of at most 5 steps.
+        3. Edit: make one small change at a time. Match the existing style. Do not add files, dependencies or refactors that were not asked for.
+        4. Verify: run lsp_diagnostics on the changed files and fix the errors, then run the narrowest build, test or lint command. On failure, read the error, fix it and re-run. After 3 failed attempts, stop and report.
+        5. Report in at most 5 lines: what changed (path:line), how it was verified, what is left.
+
+        Rules:
+        - Make independent read-only tool calls in the same turn.
+        - If the request is ambiguous, ask one question before editing anything.
+        - If nothing can be run to verify, say so.
+        - Do not repeat file contents or tool output back to the user.
+        - If the same error appears twice in a row, stop and explain what you tried.
+
         ## Examples
         User: Файл legacy-config.json ещё где-то используется?
         Good: Нет. Нашёлся только сам файл.
@@ -147,12 +171,25 @@
         Good: Не надо. Писатель один, состояние восстанавливается из SQLite, координации между хостами нет. Redis добавит точку отказа и не решит ни одной текущей проблемы.
         Bad: Вы абсолютно правы, Redis может помочь! Но вопрос глубже: речь не о кэше, а об архитектуре.
       '';
+
     in
     {
       options.programs.harness.appendShared = lib.mkOption {
-        type = lib.types.path;
+        type = lib.types.str;
         default = sharedAppend;
-        description = "Common system-prompt fragment shared by all agents";
+        description = "System prompt shared by all agents";
+      };
+
+      options.programs.harness.localModelUrl = lib.mkOption {
+        type = lib.types.str;
+        default = "http://127.0.0.1:8085";
+        description = "llama.cpp server base URL for agents";
+      };
+
+      options.programs.harness.internalGitHost = lib.mkOption {
+        type = lib.types.str;
+        default = "git.protei.ru";
+        description = "Internal git host used by agent MCP servers";
       };
 
       options.programs.harness.aftVersion = lib.mkOption {
