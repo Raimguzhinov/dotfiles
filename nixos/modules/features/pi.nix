@@ -975,6 +975,14 @@ in
                 value = "allow";
               }) patterns
             );
+          asks =
+            patterns:
+            lib.listToAttrs (
+              map (p: {
+                name = p;
+                value = "ask";
+              }) patterns
+            );
         in
         {
           "$schema" =
@@ -1001,22 +1009,12 @@ in
             }
             // rules "deny" perms.protectedWritePatterns perms.protectedWriteReason
             // allows perms.protectedWriteExceptions
-            // rules "ask" perms.metaFilePatterns perms.metaFileReason;
+            // asks perms.metaFilePatterns;
             bash = {
               "*" = "ask";
             }
-            // lib.listToAttrs (
-              map (p: {
-                name = p;
-                value = "allow";
-              }) perms.bashAllowPatterns
-            )
-            // lib.listToAttrs (
-              map (p: {
-                name = p;
-                value = "ask";
-              }) perms.bashAskPatterns
-            )
+            // allows perms.bashAllowPatterns
+            // asks perms.bashAskPatterns
             // lib.listToAttrs (
               map (d: {
                 name = d.pattern;

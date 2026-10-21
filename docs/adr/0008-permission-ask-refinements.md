@@ -17,6 +17,6 @@ Considered:
 
 Consequences:
 
-- The meta-file reason text stays, and is now literally true: deletion/overwrite happens "по явной просьбе через пользователя" — the ask prompt is the request.
+- The meta-file reason text renders on opencode only: pi's permissions schema has no ask-with-reason (a map value is a plain state string or a `deny` object carrying the reason), so pi renders a bare `ask` whose prompt is generic.
 - `pi.nix` and `opencode.nix` render the same shared option, so both harnesses move together; the opencode array keeps its last-match-wins order (specific entries appended after the broad denies).
 - Adding a new non-secret file shape (e.g. `.env.sample`) is a one-line edit to `secretsExceptions`, not a pattern surgery on `*.env.*`.
