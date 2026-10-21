@@ -602,11 +602,42 @@ let
 in
 {
   perSystem =
-    { pkgs, pkgs-unstable, ... }:
+    {
+      config,
+      pkgs,
+      pkgs-unstable,
+      ...
+    }:
     {
       packages.pi = pkgs-unstable.pi-coding-agent;
       packages.pi-acp = pkgs.callPackage mkPiAcp { };
       checks.pi-extensions = pkgs.callPackage mkPiExtensions { };
+      # the extension silently drops the whole config on schema failure, so a
+      # syntactically valid but schema-invalid file is indistinguishable at
+      # runtime from an absent one
+      checks."pi-permission-schema" =
+        let
+          ext = pkgs.callPackage mkPiExtensions { };
+          extNodeModules = "${ext}/node_modules";
+          pkg = "${extNodeModules}/@gotgenes/pi-permission-system";
+          cfg =
+            config.home-manager.users.dias.home.file.".pi/agent/extensions/pi-permission-system/config.json".source;
+          checkScript = pkgs.writeText "check-permission-schema.mts" permissionSchemaCheckSource;
+        in
+        pkgs.runCommand "pi-permission-config-schema"
+          {
+            nativeBuildInputs = [ pkgs.nodejs ];
+          }
+          ''
+            # node не снимает типы для файлов под node_modules, поэтому
+            # config-schema.ts копируется наружу вместе со ссылкой на zod расширения
+            mkdir -p $tmp/validate/node_modules
+            cp ${pkg}/src/config/config-schema.ts $tmp/validate/
+            cp ${checkScript} $tmp/validate/check.mts
+            ln -s ${extNodeModules}/zod $tmp/validate/node_modules/zod
+            node $tmp/validate/check.mts ${lib.escapeShellArg cfg}
+            touch $out
+          '';
       checks."bash-guard" =
         let
           guard = pkgs.writeText "bash-guard.ts" bashGuardSource;
