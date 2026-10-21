@@ -26,4 +26,7 @@
       inputs.niri.nixosModules.niri
     ];
   };
+
+  flake.checks.x86_64-linux."pi-permission-schema" =
+    config.flake.nixosConfigurations.raimguzhinov.config.system.build."pi-permission-schema-check";
 }

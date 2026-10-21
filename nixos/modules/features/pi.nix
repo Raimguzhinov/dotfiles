@@ -62,7 +62,7 @@
 #   home.file            конфиги в ~/.pi и ~/.config/cortexkit
 #   home.activation      merge settings.json (setupPi)
 #
-{ lib, ... }:
+{ config, lib, ... }:
 let
   mkPiAcp =
     {
@@ -599,45 +599,29 @@ let
     }
   '';
 
+  permissionSchemaCheckSource = /* typescript */ ''
+    import { unifiedConfigSchema } from "./config-schema.ts";
+    import { readFileSync } from "node:fs";
+
+    const doc = JSON.parse(readFileSync(process.argv[2], "utf8"));
+    const result = unifiedConfigSchema.safeParse(doc);
+    if (!result.success) {
+      for (const issue of result.error.issues) {
+        console.error((issue.path.join("/") || "/") + ": " + issue.message);
+      }
+      process.exit(1);
+    }
+    console.log("pi-permission-config.json is valid against the extension's zod schema");
+  '';
+
 in
 {
   perSystem =
-    {
-      config,
-      pkgs,
-      pkgs-unstable,
-      ...
-    }:
+    { pkgs, pkgs-unstable, ... }:
     {
       packages.pi = pkgs-unstable.pi-coding-agent;
       packages.pi-acp = pkgs.callPackage mkPiAcp { };
       checks.pi-extensions = pkgs.callPackage mkPiExtensions { };
-      # the extension silently drops the whole config on schema failure, so a
-      # syntactically valid but schema-invalid file is indistinguishable at
-      # runtime from an absent one
-      checks."pi-permission-schema" =
-        let
-          ext = pkgs.callPackage mkPiExtensions { };
-          extNodeModules = "${ext}/node_modules";
-          pkg = "${extNodeModules}/@gotgenes/pi-permission-system";
-          cfg =
-            config.home-manager.users.dias.home.file.".pi/agent/extensions/pi-permission-system/config.json".source;
-          checkScript = pkgs.writeText "check-permission-schema.mts" permissionSchemaCheckSource;
-        in
-        pkgs.runCommand "pi-permission-config-schema"
-          {
-            nativeBuildInputs = [ pkgs.nodejs ];
-          }
-          ''
-            # node не снимает типы для файлов под node_modules, поэтому
-            # config-schema.ts копируется наружу вместе со ссылкой на zod расширения
-            mkdir -p $tmp/validate/node_modules
-            cp ${pkg}/src/config/config-schema.ts $tmp/validate/
-            cp ${checkScript} $tmp/validate/check.mts
-            ln -s ${extNodeModules}/zod $tmp/validate/node_modules/zod
-            node $tmp/validate/check.mts ${lib.escapeShellArg cfg}
-            touch $out
-          '';
       checks."bash-guard" =
         let
           guard = pkgs.writeText "bash-guard.ts" bashGuardSource;
@@ -715,10 +699,37 @@ in
     };
 
   flake.nixosModules.pi =
-    { ... }:
+    { config, pkgs, ... }:
     {
       config = {
         programs.nix-ld.enable = true;
+
+        # the extension silently drops the whole config on schema failure, so a
+        # syntactically valid but schema-invalid file is indistinguishable at
+        # runtime from an absent one; the check runs the extension's own zod
+        # schema against the rendered file
+        system.build."pi-permission-schema-check" =
+          let
+            ext = pkgs.callPackage mkPiExtensions { };
+            extNodeModules = "${ext}/node_modules";
+            pkg = "${extNodeModules}/@gotgenes/pi-permission-system";
+            cfg =
+              config.home-manager.users.dias.home.file.".pi/agent/extensions/pi-permission-system/config.json".source;
+            checkScript = pkgs.writeText "check-permission-schema.mts" permissionSchemaCheckSource;
+          in
+          pkgs.runCommand "pi-permission-config-schema"
+            {
+              nativeBuildInputs = [ pkgs.nodejs ];
+            }
+            ''
+              # node не снимает типы для файлов под node_modules, поэтому
+              # config-schema.ts копируется наружу вместе со ссылкой на zod расширения
+              mkdir -p $out/validate/node_modules
+              cp ${pkg}/src/config/config-schema.ts $out/validate/
+              cp ${checkScript} $out/validate/check.mts
+              ln -s ${extNodeModules}/zod $out/validate/node_modules/zod
+              node $out/validate/check.mts ${lib.escapeShellArg cfg}
+            '';
       };
     };
 
