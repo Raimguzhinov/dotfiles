@@ -76,6 +76,14 @@ _Avoid_: Protei (as the name of a model class), remote model
 A model served on the machine itself.
 _Avoid_: llama.cpp (as the name of a model class), local LLM
 
+**handoff skill**:
+Matt Pocock's skill (`~/.agents/skills/handoff`) that defines the handoff document: where to save it, what to include, what to reference by path instead of copy. The user invokes it as `/skill:handoff`; the agent never invokes it, but writes the document following it when the work is about to travel.
+_Avoid_: handoff command, handoff tool
+
+**handoff document**:
+A document written per the handoff skill that carries in-flight work or a question to a session the current context cannot reach. Written for a stated purpose, stored in the temp directory, other artifacts referenced by path and never copied.
+_Avoid_: context dump, session export, compaction backup
+
 ### System prompt
 
 **shared fragment**:

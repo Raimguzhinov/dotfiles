@@ -139,6 +139,13 @@
         ## Git
         - Switch branches with `git switch` (not `git checkout`); discard changes with `git restore`.
 
+        ## Handoff
+        A handoff document is defined by Matt Pocock's handoff skill at `~/.agents/skills/handoff/SKILL.md`: where to save it, what to include, what to reference by path instead of copy. It carries in-flight work to a session the current context cannot reach. The user invokes the skill as `/skill:handoff <what the next session is for>`; you never invoke it.
+        - Write the document yourself, after reading the skill and following it, in exactly two cases:
+          1. Work is moving to another agent harness (pi, claude, opencode). Before the user switches, write the document for the target agent, tailored to what that session will do, and tell the user the path.
+          2. The user asks you to ask another live agent session something that needs your context. Write the document with the question and the context that session lacks, then send that session only the file path plus a one-line instruction. Never paste the context into the prompt text: the shell breaks backticks and `$(...)` and truncates silently.
+        - Save the document to `$TMPDIR` as `handoff-<UTC YYYYMMDD-HHMMSS>.md`.
+
         ## Code intelligence
         Each tool has one job, do not use two tools for the same question.
         - Structure of a file: aft_outline. Body of a symbol: aft_zoom. Find code by name or text: aft_search, or grep for exact strings, comments, logs and config keys.
