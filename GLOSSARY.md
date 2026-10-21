@@ -12,6 +12,16 @@ _Avoid_: host config, system, machine (as a module name)
 A module that publishes one tool as a home-manager module and, where a standalone build makes sense, also as a package with its config baked in.
 _Avoid_: tool module, package module
 
+## Releases
+
+**release**:
+A tagged point in the repo's history published for a human reader: what changed since the previous release, across every host, told with text, tables, diagrams and images. Cut by hand when the user decides enough has accumulated. Tagged `v<NixOS branch>.<n>` (`v26.05.1`).
+_Avoid_: version, snapshot, changelog entry
+
+**release notes**:
+The human-readable body of a release. Written for a person, never for an agent: terse, scannable in about a minute, details folded away. Keeps the same design from release to release.
+_Avoid_: changelog, commit log
+
 ## Harness
 
 ### Agents
