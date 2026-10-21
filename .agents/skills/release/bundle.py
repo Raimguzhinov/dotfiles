@@ -5,15 +5,29 @@ import os
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 AREAS = ["Desktop", "Harness", "Editors", "Dev", "System", "Hosts", "Docs", "Other"]
 NIXOS_BASE = re.compile(r'nixpkgs\.url\s*=\s*"github:NixOS/nixpkgs/nixos-(\d\d\.\d\d)"')
+FEATURE_EXPORT = re.compile(r"flake\.(?:home|nixos)Modules\.([\w-]+)")
+HOST_CONFIG = re.compile(r"flake\.(?:nixos|darwin)Configurations\.([\w-]+)")
+MODULE_REF = re.compile(r"(?:home|nixos)Modules\.([\w-]+)")
+FEATURES_DIR = "nixos/modules/features/"
+HOSTS_DIR = "nixos/modules/hosts/"
 
 
 def git(*args):
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
+
+
+def tree(ref, path):
+    return git("ls-tree", "-r", "--name-only", ref, "--", path).splitlines()
+
+
+def source(ref, path):
+    return re.sub(r"#.*", "", git("show", f"{ref}:{path}"))
 
 
 def glob_regex(pattern):
@@ -81,7 +95,71 @@ def group(prev, target):
     return total, by_area, sorted(unclassified)
 
 
-def render_card(data, out):
+def inventory(ref, rules):
+    features = {}
+    for path in tree(ref, FEATURES_DIR):
+        for name in FEATURE_EXPORT.findall(source(ref, path)):
+            features[name] = area_of(path, rules)
+    host_files = {}
+    for path in tree(ref, HOSTS_DIR):
+        host_files.setdefault(path[len(HOSTS_DIR):].split("/")[0], []).append(path)
+    hosts = {}
+    for paths in host_files.values():
+        text = "\n".join(source(ref, path) for path in paths)
+        config = HOST_CONFIG.search(text)
+        if config:
+            hosts[config.group(1)] = {name for name in MODULE_REF.findall(text) if name in features}
+    return features, hosts
+
+
+def matrix(prev, target, rules):
+    features, hosts = inventory(target, rules)
+    old_features, old_hosts = inventory(prev, rules) if prev else ({}, {})
+    areas = {**old_features, **features}
+    names = sorted(set().union(*hosts.values(), *old_hosts.values()), key=lambda n: (AREAS.index(areas[n]), n))
+    host_names = sorted(set(hosts) | set(old_hosts))
+
+    def state(host, name):
+        now = name in hosts.get(host, set())
+        if not prev or now == (name in old_hosts.get(host, set())):
+            return "on" if now else "off"
+        return "added" if now else "removed"
+
+    return {
+        "hosts": host_names,
+        "rows": [{"module": n, "area": areas[n], "cells": [state(h, n) for h in host_names]} for n in names],
+        "diff": bool(prev),
+    }
+
+
+def locked_inputs(ref):
+    try:
+        lock = json.loads(git("show", f"{ref}:nixos/flake.lock"))
+    except subprocess.CalledProcessError:
+        return {}
+    inputs = {}
+    for name, node in lock["nodes"][lock["root"]].get("inputs", {}).items():
+        locked = lock["nodes"][node]["locked"] if isinstance(node, str) else {}
+        modified = locked.get("lastModified")
+        date = datetime.fromtimestamp(modified, timezone.utc).date().isoformat() if modified else ""
+        inputs[name] = (date, locked.get("narHash", locked.get("rev")))
+    return inputs
+
+
+def inputs_table(prev, target):
+    new = locked_inputs(target)
+    if not prev:
+        return ["| Input | Date |", "| --- | --- |"] + [f"| {name} | {new[name][0]} |" for name in sorted(new)]
+    old = locked_inputs(prev)
+    lines = ["| Input | Old | New |", "| --- | --- | --- |"]
+    for name in sorted(set(old) | set(new)):
+        before, after = old.get(name, ("", None)), new.get(name, ("", None))
+        label = name if before[1] == after[1] else f"**{name}**"
+        lines.append(f"| {label} | {before[0]} | {after[0]} |")
+    return lines
+
+
+def render(template, data, png):
     subprocess.run(
         [
             "typst", "compile",
@@ -89,29 +167,35 @@ def render_card(data, out):
             "--format", "png",
             "--ppi", "144",
             "--input", "data=" + json.dumps(data, sort_keys=True),
-            str(HERE / "card.typ"),
-            str(out / "card.png"),
+            str(HERE / template),
+            str(png),
         ],
         check=True,
     )
 
 
-def notes(version, prev, by_area, unclassified):
+def details(summary, body):
+    return ["<details>", f"<summary>{summary}</summary>", "", *body, "", "</details>", ""]
+
+
+def notes(version, prev, has_matrix, inputs, by_area, unclassified):
     lines = [f"![{version}](card.png)", ""]
-    if not prev:
-        return "\n".join(lines)
-    lines += ["<details>", "<summary>Commits by area</summary>", ""]
-    for area in AREAS:
-        if by_area[area]:
-            lines += [f"### {area}", ""] + [f"- `{sha}` {subject}" for sha, subject in by_area[area]] + [""]
-    if unclassified:
-        lines += ["#### Files without an area", ""] + [f"- `{f}`" for f in unclassified] + [""]
-    lines += ["</details>", ""]
+    if has_matrix:
+        lines += details("Hosts × modules", ["![Hosts × modules](matrix.png)"])
+    lines += details("Flake inputs", inputs)
+    if prev:
+        log = []
+        for area in AREAS:
+            if by_area[area]:
+                log += [f"### {area}", ""] + [f"- `{sha}` {subject}" for sha, subject in by_area[area]] + [""]
+        if unclassified:
+            log += ["#### Files without an area", ""] + [f"- `{f}`" for f in unclassified]
+        lines += details("Commits by area", log)
     return "\n".join(lines)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Build a release bundle: notes.md and card.png")
+    parser = argparse.ArgumentParser(description="Build a release bundle: notes.md and its PNG images")
     parser.add_argument("--version")
     parser.add_argument("prev", help="previous release ref, empty for the first release")
     parser.add_argument("target")
@@ -124,7 +208,8 @@ def main():
     version = args.version or next_version(base)
     total, by_area, unclassified = group(args.prev, args.target)
     args.out.mkdir(parents=True, exist_ok=True)
-    render_card(
+    render(
+        "card.typ",
         {
             "version": version,
             "date": git("log", "-1", "--format=%cs", args.target).strip(),
@@ -133,9 +218,13 @@ def main():
             "commits": total,
             "areas": [[area, len(by_area[area])] for area in AREAS],
         },
-        args.out,
+        args.out / "card.png",
     )
-    (args.out / "notes.md").write_text(notes(version, args.prev, by_area, unclassified))
+    host_matrix = matrix(args.prev, args.target, load_areas())
+    if host_matrix["rows"]:
+        render("matrix.typ", host_matrix, args.out / "matrix.png")
+    inputs = inputs_table(args.prev, args.target)
+    (args.out / "notes.md").write_text(notes(version, args.prev, bool(host_matrix["rows"]), inputs, by_area, unclassified))
     for f in unclassified if args.prev else []:
         print(f"unclassified: {f}")
 

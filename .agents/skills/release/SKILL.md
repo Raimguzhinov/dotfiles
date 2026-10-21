@@ -18,14 +18,22 @@ nix develop ~/dotfiles/nixos#release -c \
 ```
 
 - `PREV`: the previous release tag. Pass `""` for the first release: the
-  bundle then holds only the card, with no commit log.
+  bundle then has no commit log and no highlighted changes.
 - `TARGET`: the commit to release, usually `HEAD`.
 - `--version`: omit it to take the next number after the last
   `v<NixOS branch>.*` tag. The NixOS branch is read from the `nixpkgs` input
   of `nixos/flake.nix` at `TARGET`.
 
-`OUT` receives `notes.md` and `card.png`. The builder reads git only and never
-calls GitHub.
+`OUT` receives `notes.md`, `card.png` and `matrix.png`. `notes.md` holds, in
+this order: the card, then folded blocks for the hosts × feature-modules
+matrix, the flake inputs table and the commit log by area. The builder reads
+git only and never calls GitHub.
+
+The matrix comes from the host sources at each ref: a host is a directory under
+`nixos/modules/hosts/` that defines `flake.nixosConfigurations.<name>` or
+`flake.darwinConfigurations.<name>`. Its modules are the uncommented
+`nixosModules.<name>` and `homeModules.<name>` references that a file in
+`nixos/modules/features/` exports. A module enabled on no host is left out.
 
 ## Classify unknown files
 
@@ -39,3 +47,6 @@ user and ask which area each file belongs to. Add the answers to `areas.tsv`
 ```bash
 nix develop ~/dotfiles/nixos#release -c .agents/skills/release/test.sh
 ```
+
+The matrix tests compare against `testdata/*.png`. After an intended design
+change, rerun with `UPDATE_GOLDEN=1`, look at both images, and commit them.
