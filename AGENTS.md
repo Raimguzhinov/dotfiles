@@ -59,6 +59,8 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
   reader.
 - Before reporting, review `git diff`: no duplicates, correct indentation and
   syntax, only the requested change.
+- Code embedded in a nix string: verify the rendered store file or the check
+  output, not the source: nix eats lone `\x` escapes and `$${}`.
 - An interrupted command may have partly run: read `git diff` before retrying.
 - Visual changes (colors, layout): after the second failed iteration, render
   the output (ANSI) to a file and compare against the render.

@@ -19,3 +19,8 @@ Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
 - aft: version pin `programs.harness.aftVersion`. The binary comes from npm,
   not Nix (cache `~/.cache/aft/bin/`). The "update" at startup is an index
   rebuild, not a software upgrade.
+- pi internals: source at the store path from `readlink -f $(which pi)`, in
+  `lib/node_modules/pi-monorepo` (`dist/`, `docs/`, `examples/`); upstream
+  github.com/earendil-works/pi. A `tool_call` block (docs/extensions.md) never
+  runs the tool and its `reason` reaches the model as the error tool result
+  (`packages/agent/src/agent-loop.ts`); the first blocking handler wins.
