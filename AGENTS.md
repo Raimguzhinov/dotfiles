@@ -51,6 +51,9 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
 
 - After editing `nixos/` for the current host, run
   `nixos-rebuild build --flake ~/dotfiles/nixos#raimguzhinov` (no sudo).
+- New files referenced from Nix must be at least staged in Git before
+  building: the flake source contains only indexed files (build error:
+  `Path ... does not exist in Git repository`).
 - Format edited Nix with `nixfmt <file>`: pre-commit runs `nixfmt --check` and,
   for `pi.nix`, `scripts/check_pi_theme_tokens.py`. All hooks:
   `pre-commit run --all-files`.
