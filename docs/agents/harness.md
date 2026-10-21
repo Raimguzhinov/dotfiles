@@ -24,3 +24,9 @@ Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
   github.com/earendil-works/pi. A `tool_call` block (docs/extensions.md) never
   runs the tool and its `reason` reaches the model as the error tool result
   (`packages/agent/src/agent-loop.ts`); the first blocking handler wins.
+- Flake checks (perSystem, exposed as `<system>-<name>`): `pi-extensions`
+  builds the patched extension bundle, `bash-guard` runs the inline block/pass
+  suite, `harness-configs` parses the rendered config files with jq,
+  `herdr-config` validates the rendered herdr config,
+  `pi-permission-schema` validates the rendered permission config against the
+  schema. Run with `nix flake check`.

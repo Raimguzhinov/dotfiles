@@ -46,6 +46,8 @@ coding-agent harness. Flake entry point: `nixos/flake.nix`.
 - When a build fails inside an external flake input, report options to the
   user (update the input, wait for an upstream fix, drop the dependency).
   Local overrides, patches and re-pinned hashes rot on the next update.
+- When a change contradicts an ADR in `docs/adr/`, update or mark that ADR
+  superseded in the same commit.
 
 ## Verifying
 
