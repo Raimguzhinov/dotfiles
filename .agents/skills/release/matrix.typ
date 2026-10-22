@@ -25,7 +25,7 @@
 }
 
 #table(
-  columns: (80pt, auto, ..data.hosts.map(_ => auto)),
+  columns: (auto, auto, ..data.hosts.map(_ => auto)),
   align: (left + horizon, left + horizon, ..data.hosts.map(_ => center + horizon)),
   stroke: none,
   inset: (x: 14pt, y: 5pt),
@@ -47,7 +47,7 @@
   stack(
     dir: ltr,
     spacing: 20pt,
-    ..(("added", "enabled since the last release"), ("removed", "disabled since the last release")).map(((state, label)) => stack(
+    ..(("added", "включён с прошлого релиза"), ("removed", "выключен с прошлого релиза")).map(((state, label)) => stack(
       dir: ltr,
       spacing: 6pt,
       box(baseline: 20%, mark(state)),

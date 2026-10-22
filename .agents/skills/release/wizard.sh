@@ -200,16 +200,16 @@ finish() {
 
 run_wizard() {
 
-if (($# != 2)); then
-  echo "usage: wizard.sh VERSION TARGET" >&2
+if (($# != 3)); then
+  echo "usage: wizard.sh VERSION TARGET OUT" >&2
   exit 2
 fi
-local version=$1 target url
+local version=$1 out=$3 target repo url
 target=$(git rev-parse "$2^{commit}")
 notes=$(mktemp)
 trap 'rm -f "$notes"' EXIT
 
-TOTAL_STAGES=4
+TOTAL_STAGES=3
 
 banner "Release $version"
 
@@ -229,21 +229,15 @@ stage "Push the tag"
 confirm "Push $version to origin?" || exit 1
 git push origin "refs/tags/$version"
 
-stage "Review the draft"
-url=$(gh release view "$version" --json url --jq .url)
-open_url "$url"
-step "Check the card, the theses and the app grids: they fit one screen."
-step "Unfold every <details> block and check the tables and the matrix."
-pause "Press Enter when the draft reads right"
-
-stage "Publish"
+stage "Publish the release"
+say "The release goes public at once, with every PNG of $out as an asset."
 confirm "Publish $version?" || exit 1
-gh release view "$version" --json body --jq .body |
-  sed -E "s#/releases/download/[^/]+/#/releases/download/$version/#g" >"$notes"
-gh release edit "$version" --draft=false --verify-tag --notes-file "$notes"
+repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+sed -E "s#\]\(([A-Za-z0-9._-]+\.png)\)#](https://github.com/$repo/releases/download/$version/\1)#g" "$out/notes.md" >"$notes"
+gh release create "$version" "$out"/*.png --verify-tag --title "$version" --notes-file "$notes"
 url=$(gh release view "$version" --json url --jq .url)
 open_url "$url"
-step "Check that every image shows on the published page."
+step "Check that every image shows and the text above the folds fits one screen."
 pause "Press Enter when the release looks right"
 
 finish

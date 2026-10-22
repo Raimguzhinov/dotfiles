@@ -10,6 +10,16 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 AREAS = ["Desktop", "Harness", "Editors", "Dev", "System", "Hosts", "Docs", "Other"]
+AREA_TITLES = {
+    "Desktop": "Рабочий стол",
+    "Harness": "Агенты",
+    "Editors": "Редакторы",
+    "Dev": "Разработка",
+    "System": "Система",
+    "Hosts": "Хосты",
+    "Docs": "Документация",
+    "Other": "Прочее",
+}
 NIXOS_BASE = re.compile(r'nixpkgs\.url\s*=\s*"github:NixOS/nixpkgs/nixos-(\d\d\.\d\d)"')
 FEATURE_EXPORT = re.compile(r"flake\.(?:home|nixos)Modules\.([\w-]+)")
 HOST_CONFIG = re.compile(r"flake\.(?:nixos|darwin)Configurations\.([\w-]+)")
@@ -17,7 +27,8 @@ MODULE_REF = re.compile(r"(?:home|nixos)Modules\.([\w-]+)")
 FEATURES_DIR = "nixos/modules/features/"
 HOSTS_DIR = "nixos/modules/hosts/"
 ICON_TYPES = (".svg", ".png")
-MAX_THESES = 7
+MAX_STORY_PARAGRAPHS = 4
+MAX_STORY_CHARS = 1500
 PACKAGES_EXPR = """
 url:
 let
@@ -27,6 +38,14 @@ let
 in
 builtins.mapAttrs (_: host) (flake.nixosConfigurations or { } // flake.darwinConfigurations or { })
 """
+
+
+def plural(n, one, few, many):
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
 
 
 def git(*args):
@@ -138,7 +157,7 @@ def matrix(prev, target, rules):
 
     return {
         "hosts": host_names,
-        "rows": [{"module": n, "area": areas[n], "cells": [state(h, n) for h in host_names]} for n in names],
+        "rows": [{"module": n, "area": AREA_TITLES[areas[n]], "cells": [state(h, n) for h in host_names]} for n in names],
         "diff": bool(prev),
     }
 
@@ -160,9 +179,9 @@ def locked_inputs(ref):
 def inputs_table(prev, target):
     new = locked_inputs(target)
     if not prev:
-        return ["| Input | Date |", "| --- | --- |"] + [f"| {name} | {new[name][0]} |" for name in sorted(new)]
+        return ["| Вход | Дата |", "| --- | --- |"] + [f"| {name} | {new[name][0]} |" for name in sorted(new)]
     old = locked_inputs(prev)
-    lines = ["| Input | Old | New |", "| --- | --- | --- |"]
+    lines = ["| Вход | Было | Стало |", "| --- | --- | --- |"]
     for name in sorted(set(old) | set(new)):
         before, after = old.get(name, ("", None)), new.get(name, ("", None))
         label = name if before[1] == after[1] else f"**{name}**"
@@ -195,11 +214,11 @@ def versions_by_host(hosts):
 def packages_table(old_hosts, new_hosts):
     new = versions_by_host(new_hosts)
     if old_hosts is None:
-        lines = ["| Package | Host | Version |", "| --- | --- | --- |"]
+        lines = ["| Пакет | Хост | Версия |", "| --- | --- | --- |"]
         return {"total": len(new)}, lines + [f"| {name} | {host} | {new[name, host]} |" for name, host in sorted(new)]
     old = versions_by_host(old_hosts)
     counts = {"added": 0, "removed": 0, "updated": 0}
-    lines = ["| Package | Host | Old | New |", "| --- | --- | --- | --- |"]
+    lines = ["| Пакет | Хост | Было | Стало |", "| --- | --- | --- | --- |"]
     for name, host in sorted(set(old) | set(new)):
         before, after = old.get((name, host)), new.get((name, host))
         if before == after:
@@ -277,23 +296,24 @@ def app_grids(old_hosts, new_hosts):
         for app in desktop_apps(pkg["path"]):
             grids.setdefault(host, {}).setdefault(app["id"], {**app, "state": state})
     return {
-        host: {"host": host, "diff": old_hosts is not None, "apps": sorted(apps.values(), key=lambda a: (a["name"].casefold(), a["id"]))}
+        host: {
+            "host": host,
+            "diff": old_hosts is not None,
+            "count": f"{len(apps)} {plural(len(apps), 'приложение', 'приложения', 'приложений')}",
+            "apps": sorted(apps.values(), key=lambda a: (a["name"].casefold(), a["id"])),
+        }
         for host, apps in sorted(grids.items())
     }
 
 
-def load_theses(path):
-    theses = []
-    for line in path.read_text().splitlines():
-        if not line.strip():
-            continue
-        area, _, text = line.partition(":")
-        if area.strip() not in AREAS or not text.strip():
-            sys.exit(f"{path}: {line!r} is not '<area>: <thesis>' with an area from {', '.join(AREAS)}")
-        theses.append((area.strip(), text.strip()))
-    if len(theses) > MAX_THESES:
-        sys.exit(f"{path}: {len(theses)} theses, at most {MAX_THESES} allowed")
-    return theses
+def load_story(path):
+    paragraphs = [" ".join(p.split()) for p in re.split(r"\n\s*\n", path.read_text()) if p.strip()]
+    if len(paragraphs) > MAX_STORY_PARAGRAPHS:
+        sys.exit(f"{path}: {len(paragraphs)} paragraphs, at most {MAX_STORY_PARAGRAPHS} allowed")
+    chars = sum(len(p) for p in paragraphs)
+    if chars > MAX_STORY_CHARS:
+        sys.exit(f"{path}: {chars} characters, at most {MAX_STORY_CHARS} allowed")
+    return paragraphs
 
 
 def render(template, data, png):
@@ -316,30 +336,29 @@ def details(summary, body):
     return ["<details>", f"<summary>{summary}</summary>", "", *body, "", "</details>", ""]
 
 
-def notes(version, prev, theses, hosts_with_apps, package_lines, has_matrix, inputs, by_area, unclassified):
+def notes(version, prev, story, hosts_with_apps, package_lines, has_matrix, inputs, by_area, unclassified):
     lines = [f"![{version}](card.png)", ""]
-    if theses:
-        lines += [f"- **{area}** {text}" for area, text in theses] + [""]
+    lines += [f"{paragraph}\n" for paragraph in story]
     lines += [f"![{host}](apps-{host}.png)\n" for host in hosts_with_apps]
-    lines += details("Packages", package_lines)
+    lines += details("Пакеты", package_lines)
     if has_matrix:
-        lines += details("Hosts × modules", ["![Hosts × modules](matrix.png)"])
-    lines += details("Flake inputs", inputs)
+        lines += details("Хосты и модули", ["![Хосты и модули](matrix.png)"])
+    lines += details("Входы flake", inputs)
     if prev:
         log = []
         for area in AREAS:
             if by_area[area]:
-                log += [f"### {area}", ""] + [f"- `{sha}` {subject}" for sha, subject in by_area[area]] + [""]
+                log += [f"### {AREA_TITLES[area]}", ""] + [f"- `{sha}` {subject}" for sha, subject in by_area[area]] + [""]
         if unclassified:
-            log += ["#### Files without an area", ""] + [f"- `{f}`" for f in unclassified]
-        lines += details("Commits by area", log)
+            log += ["#### Файлы без области", ""] + [f"- `{f}`" for f in unclassified]
+        lines += details("Коммиты по областям", log)
     return "\n".join(lines)
 
 
 def main():
     parser = argparse.ArgumentParser(description="Build a release bundle: notes.md and its PNG images")
     parser.add_argument("--version")
-    parser.add_argument("--theses", type=Path, help="file with up to 7 lines '<area>: <thesis>'")
+    parser.add_argument("--story", type=Path, help="the release story in Russian: up to 4 paragraphs, 1500 characters")
     parser.add_argument("prev", help="previous release ref, empty for the first release")
     parser.add_argument("target")
     parser.add_argument("out", type=Path)
@@ -349,7 +368,7 @@ def main():
 
     base = nixos_base(args.target)
     version = args.version or next_version(base)
-    theses = load_theses(args.theses) if args.theses else []
+    story = load_story(args.story) if args.story else []
     total, by_area, unclassified = group(args.prev, args.target)
     new_hosts = host_packages(args.target)
     old_hosts = host_packages(args.prev) if args.prev else None
@@ -362,10 +381,12 @@ def main():
             "version": version,
             "date": git("log", "-1", "--format=%cs", args.target).strip(),
             "base": f"NixOS {base}",
-            "range": f"{git('rev-parse', '--short', args.prev).strip()}..{git('rev-parse', '--short', args.target).strip()}" if args.prev else "first release",
+            "range": f"{git('rev-parse', '--short', args.prev).strip()}..{git('rev-parse', '--short', args.target).strip()}" if args.prev else "первый релиз",
             "commits": total,
+            "commits_label": plural(total, "коммит", "коммита", "коммитов"),
             "packages": package_counts,
-            "areas": [[area, len(by_area[area])] for area in AREAS],
+            "packages_label": plural(package_counts.get("total", 0), "пакет", "пакета", "пакетов") if "total" in package_counts else "пакеты",
+            "areas": [[AREA_TITLES[area], len(by_area[area])] for area in AREAS],
         },
         args.out / "card.png",
     )
@@ -375,7 +396,7 @@ def main():
     if host_matrix["rows"]:
         render("matrix.typ", host_matrix, args.out / "matrix.png")
     inputs = inputs_table(args.prev, args.target)
-    (args.out / "notes.md").write_text(notes(version, args.prev, theses, list(grids), package_lines, bool(host_matrix["rows"]), inputs, by_area, unclassified))
+    (args.out / "notes.md").write_text(notes(version, args.prev, story, list(grids), package_lines, bool(host_matrix["rows"]), inputs, by_area, unclassified))
     print(f"version: {version}")
     for f in unclassified if args.prev else []:
         print(f"unclassified: {f}")

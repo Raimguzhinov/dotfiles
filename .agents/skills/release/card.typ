@@ -21,21 +21,21 @@
 #text(font: "JetBrains Mono", size: 11pt, fill: muted)[#data.range]
 #v(20pt)
 #let number(value, fill: fg) = text(size: 22pt, weight: "bold", fill: fill)[#value]
-#number(data.commits) #text(fill: muted)[commits]
+#number(data.commits) #text(fill: muted)[#data.commits_label]
 #h(32pt)
 #if "total" in data.packages [
-  #number(data.packages.total) #text(fill: muted)[packages]
+  #number(data.packages.total) #text(fill: muted)[#data.packages_label]
 ] else [
   #number("+" + str(data.packages.added), fill: added)
   #number("−" + str(data.packages.removed), fill: removed)
   #number("↑" + str(data.packages.updated), fill: accent)
-  #text(fill: muted)[packages]
+  #text(fill: muted)[#data.packages_label]
 ]
 #v(12pt)
 
 #let top = calc.max(1, ..data.areas.map(a => a.at(1)))
 #grid(
-  columns: (80pt, 1fr, 40pt),
+  columns: (110pt, 1fr, 40pt),
   row-gutter: 8pt,
   column-gutter: 12pt,
   align: (left + horizon, left + horizon, right + horizon),

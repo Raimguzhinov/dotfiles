@@ -55,7 +55,7 @@
   columns: (1fr, auto),
   align: (left + bottom, right + bottom),
   text(size: 22pt, weight: "bold")[#data.host],
-  text(fill: muted)[#count #if count == 1 [app] else [apps]],
+  text(fill: muted)[#data.count],
 )
 #v(16pt)
 #box(width: area-width, height: area-height, align(center + horizon, grid(
@@ -72,8 +72,8 @@
     dir: ltr,
     spacing: 20pt,
     ..(
-      (added.transparentize(85%), 1.5pt + added, "added since the last release"),
-      (none, (paint: removed, thickness: 1.5pt, dash: "dashed"), "removed since the last release"),
+      (added.transparentize(85%), 1.5pt + added, "добавлено с прошлого релиза"),
+      (none, (paint: removed, thickness: 1.5pt, dash: "dashed"), "удалено с прошлого релиза"),
     ).map(((fill, stroke, label)) => stack(
       dir: ltr,
       spacing: 6pt,

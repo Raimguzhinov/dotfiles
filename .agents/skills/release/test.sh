@@ -118,9 +118,9 @@ put nixos/inventory/nixos/beta/default.nix <<<'{ environment.systemPackages = [ 
 packages nixos/inventory/darwin/gamma/default.nix '' '(p "htop" "3.4") (a "iterm2" "3.5")'
 commit nixos/modules/hosts/beta/notes "nixos: hosts: enable kitty on alpha, add beta" 5
 
-printf '%s\n' 'Hosts: new host beta with fd' '' 'Desktop: kitty enabled on alpha' >"$work/theses"
-"$bundle" --version v25.11.2 --theses "$work/theses" start HEAD "$work/a" >/dev/null
-"$bundle" --version v25.11.2 --theses "$work/theses" start HEAD "$work/b" >/dev/null
+printf '%s\n' 'Релиз переводит рабочий стол' 'на kitty.' '' '' 'Появился второй хост beta.' >"$work/story"
+"$bundle" --version v25.11.2 --story "$work/story" start HEAD "$work/a" >/dev/null
+"$bundle" --version v25.11.2 --story "$work/story" start HEAD "$work/b" >/dev/null
 
 [[ -s $work/a/notes.md ]] || fail "notes.md is missing"
 [[ $(head -c 8 "$work/a/card.png" | od -An -tx1 | tr -d ' ') == 89504e470d0a1a0a ]] || fail "card.png is not a PNG"
@@ -137,28 +137,28 @@ blocks_in_order() {
 }
 blocks_in_order "$work/a/notes.md" \
   '![v25.11.2](card.png)' \
-  '- **Hosts** new host beta with fd' '- **Desktop** kitty enabled on alpha' \
+  'Релиз переводит рабочий стол на kitty.' 'Появился второй хост beta.' \
   '![alpha](apps-alpha.png)' '![gamma](apps-gamma.png)' \
-  '<summary>Packages</summary>' '</details>' \
-  '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
-  '<summary>Flake inputs</summary>' '</details>' \
-  '<summary>Commits by area</summary>' '### Desktop' '### Harness' '### Hosts' '### Docs' '### Other' '#### Files without an area' '</details>'
+  '<summary>Пакеты</summary>' '</details>' \
+  '<summary>Хосты и модули</summary>' '![Хосты и модули](matrix.png)' '</details>' \
+  '<summary>Входы flake</summary>' '</details>' \
+  '<summary>Коммиты по областям</summary>' '### Рабочий стол' '### Агенты' '### Хосты' '### Документация' '### Прочее' '#### Файлы без области' '</details>'
 [[ $(head -1 "$work/a/notes.md") == '![v25.11.2](card.png)' ]] || fail "card is not the first block"
 (($(grep -cxF '<details>' "$work/a/notes.md") == 4)) || fail "secondary blocks are not each folded in <details>"
 [[ -e $work/a/apps-beta.png ]] && fail "host without apps has a grid"
 grep -qF 'apps-beta.png' "$work/a/notes.md" && fail "notes link a grid for a host without apps"
 
-other=$(sed -n '/^### Other$/,/^#### /p' "$work/a/notes.md")
+other=$(sed -n '/^### Прочее$/,/^#### /p' "$work/a/notes.md")
 grep -qF 'nixos: unknown.txt: add file' <<<"$other" || fail "commit touching an unclassified file is not under Other"
 grep -qF 'nixos: pi.nix: add pi' <<<"$other" && fail "classified commit leaked into Other"
-files=$(sed -n '/^#### Files without an area$/,/^<\/details>$/p' "$work/a/notes.md")
+files=$(sed -n '/^#### Файлы без области$/,/^<\/details>$/p' "$work/a/notes.md")
 grep -qxF -- '- `misc/unknown.txt`' <<<"$files" || fail "unclassified file is not listed"
 grep -qF 'pi.nix' <<<"$files" && fail "classified file is listed as unclassified"
 
-inputs=$(sed -n '/^<summary>Flake inputs<\/summary>$/,/^<\/details>$/p' "$work/a/notes.md")
-[[ $inputs == "<summary>Flake inputs</summary>
+inputs=$(sed -n '/^<summary>Входы flake<\/summary>$/,/^<\/details>$/p' "$work/a/notes.md")
+[[ $inputs == "<summary>Входы flake</summary>
 
-| Input | Old | New |
+| Вход | Было | Стало |
 | --- | --- | --- |
 | **nixpkgs** | 2026-01-01 | 2026-02-01 |
 | noctalia | 2026-01-05 | 2026-01-05 |
@@ -167,10 +167,10 @@ inputs=$(sed -n '/^<summary>Flake inputs<\/summary>$/,/^<\/details>$/p' "$work/a
 
 </details>" ]] || fail "flake inputs table is wrong: $inputs"
 
-packages_table=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$work/a/notes.md")
-[[ $packages_table == "<summary>Packages</summary>
+packages_table=$(sed -n '/^<summary>Пакеты<\/summary>$/,/^<\/details>$/p' "$work/a/notes.md")
+[[ $packages_table == "<summary>Пакеты</summary>
 
-| Package | Host | Old | New |
+| Пакет | Хост | Было | Стало |
 | --- | --- | --- | --- |
 | curl | alpha | 8.0 |  |
 | fd | beta |  | 10.2 |
@@ -186,28 +186,28 @@ packages_table=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$wo
 </details>" ]] || fail "packages table is wrong: $packages_table"
 
 "$bundle" --version v25.11.1 "" start "$work/first" >/dev/null
-grep -q '^- \*\*' "$work/first/notes.md" && fail "notes without --theses have a theses block"
+[[ $(grep -v '^$' "$work/first/notes.md" | sed -n 2p) == '![alpha](apps-alpha.png)' ]] || fail "notes without --story have text between the card and the grids"
 
-for n in 1 2 3 4 5 6 7 8; do echo "Dev: thesis $n"; done >"$work/eight"
-"$bundle" --version v25.11.2 --theses "$work/eight" start HEAD "$work/eight-out" >/dev/null 2>"$work/eight-err" && fail "8 theses are accepted"
-grep -qF 'at most 7' "$work/eight-err" || fail "rejecting 8 theses does not say the limit: $(cat "$work/eight-err")"
-head -7 "$work/eight" >"$work/seven"
-"$bundle" --version v25.11.2 --theses "$work/seven" start HEAD "$work/seven-out" >/dev/null || fail "7 theses are rejected"
-echo 'Kernel: new kernel' >"$work/bad-area"
-"$bundle" --version v25.11.2 --theses "$work/bad-area" start HEAD "$work/bad-out" >/dev/null 2>"$work/bad-err" && fail "thesis with an unknown area is accepted"
-grep -qF "Kernel" "$work/bad-err" || fail "rejecting an unknown area does not name it: $(cat "$work/bad-err")"
+for n in 1 2 3 4 5; do printf 'Абзац %s.\n\n' "$n"; done >"$work/five"
+"$bundle" --version v25.11.2 --story "$work/five" start HEAD "$work/five-out" >/dev/null 2>"$work/five-err" && fail "a story of 5 paragraphs is accepted"
+grep -qF 'at most 4' "$work/five-err" || fail "rejecting 5 paragraphs does not say the limit: $(cat "$work/five-err")"
+head -8 "$work/five" >"$work/four"
+"$bundle" --version v25.11.2 --story "$work/four" start HEAD "$work/four-out" >/dev/null || fail "a story of 4 paragraphs is rejected"
+printf 'Слово %.0s' {1..300} >"$work/long"
+"$bundle" --version v25.11.2 --story "$work/long" start HEAD "$work/long-out" >/dev/null 2>"$work/long-err" && fail "a story over 1500 characters is accepted"
+grep -qF 'at most 1500' "$work/long-err" || fail "rejecting a long story does not say the limit: $(cat "$work/long-err")"
 [[ -s $work/first/card.png ]] || fail "first release has no card"
 blocks_in_order "$work/first/notes.md" \
   '![v25.11.1](card.png)' \
   '![alpha](apps-alpha.png)' \
-  '<summary>Packages</summary>' '</details>' \
-  '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
-  '<summary>Flake inputs</summary>' '</details>'
+  '<summary>Пакеты</summary>' '</details>' \
+  '<summary>Хосты и модули</summary>' '![Хосты и модули](matrix.png)' '</details>' \
+  '<summary>Входы flake</summary>' '</details>'
 grep -qF 'Commits by area' "$work/first/notes.md" && fail "first release renders the commit log"
-first_inputs=$(sed -n '/^<summary>Flake inputs<\/summary>$/,/^<\/details>$/p' "$work/first/notes.md")
-[[ $first_inputs == "<summary>Flake inputs</summary>
+first_inputs=$(sed -n '/^<summary>Входы flake<\/summary>$/,/^<\/details>$/p' "$work/first/notes.md")
+[[ $first_inputs == "<summary>Входы flake</summary>
 
-| Input | Date |
+| Вход | Дата |
 | --- | --- |
 | nixpkgs | 2026-01-01 |
 | noctalia | 2026-01-05 |
@@ -215,10 +215,10 @@ first_inputs=$(sed -n '/^<summary>Flake inputs<\/summary>$/,/^<\/details>$/p' "$
 
 </details>" ]] || fail "first release inputs table is wrong: $first_inputs"
 
-first_packages=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$work/first/notes.md")
-[[ $first_packages == "<summary>Packages</summary>
+first_packages=$(sed -n '/^<summary>Пакеты<\/summary>$/,/^<\/details>$/p' "$work/first/notes.md")
+[[ $first_packages == "<summary>Пакеты</summary>
 
-| Package | Host | Version |
+| Пакет | Хост | Версия |
 | --- | --- | --- |
 | curl | alpha | 8.0 |
 | firefox | alpha | 130 |

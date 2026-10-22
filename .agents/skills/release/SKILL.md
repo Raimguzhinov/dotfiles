@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of this dotfiles repo: build the release notes bundle from git history and host evals, create a draft GitHub release, and hand the signed tag and publishing to the user through a wizard. Use when the user wants to cut a release, tag a version, or see what changed between two releases.
+description: Cut a release of this dotfiles repo: build the release notes bundle from git history and host evals, write the release story in Russian, and hand the signed tag and publishing to the user through a wizard. Use when the user wants to cut a release, tag a version, or see what changed between two releases.
 ---
 
 # Release
@@ -21,27 +21,27 @@ and eyes, and the wizard walks them through.
 2. Build the bundle into a scratch directory (see below). The builder prints
    `version: v<NixOS branch>.<n>`, the next number after the last tag of the
    NixOS branch at `TARGET`. Classify any `unclassified:` files first.
-3. Read the commit log, the packages table and the grids, then write at most 7
-   theses to a file outside `OUT`, one per line: `<area>: <thesis>`, where
-   `<area>` is one of Desktop, Harness, Editors, Dev, System, Hosts, Docs,
-   Other. A thesis is one plain sentence a person reads in seconds about what
-   changed for them, not a commit subject. Even a release spanning hundreds of
-   commits gets at most 7. Show them to the user and rebuild with
-   `--theses FILE`.
-4. Show the user `card.png` and the grids, then create the draft:
-   `.agents/skills/release/draft.sh VERSION OUT TARGET`, with the same `TARGET`
-   as the bundle and the wizard. It uploads every PNG as an asset and points
-   the notes' images at them. `gh` needs write access to the repo's contents.
+3. Read the commit log, the packages table, the matrix and the grids, then
+   write the story to a file outside `OUT`: Russian, natural language, at most
+   4 short paragraphs and 1500 characters, about a minute to read. It tells
+   what this release is about as a whole: the idea behind the changes, what
+   the user's machines now do differently, and why. It never repeats what the
+   card, the grids or the folded blocks already show: no package or module
+   lists, versions, counts or commit subjects. Even a release spanning hundreds
+   of commits gets the same length. Show it to the user and rebuild with
+   `--story FILE`.
+4. Show the user `card.png`, the grids and the story, and fix what they ask.
 5. Tell the user to run the wizard in their own terminal:
-   `.agents/skills/release/wizard.sh VERSION TARGET`. It creates the signed
-   annotated tag, pushes it, opens the draft for review and publishes it,
-   rewriting image links to the tag's download URLs.
+   `.agents/skills/release/wizard.sh VERSION TARGET OUT`. It creates the signed
+   annotated tag, pushes it, and publishes the release at once with every PNG
+   as an asset and the notes' images pointing at the tag's download URLs. `gh`
+   needs write access to the repo's contents.
 
 ## Build the bundle
 
 ```bash
 nix develop ~/dotfiles/nixos#release -c \
-  .agents/skills/release/bundle.py [--version vYY.MM.N] [--theses FILE] PREV TARGET OUT
+  .agents/skills/release/bundle.py [--version vYY.MM.N] [--story FILE] PREV TARGET OUT
 ```
 
 - `PREV`: the previous release tag. Pass `""` for the first release: the
@@ -50,12 +50,12 @@ nix develop ~/dotfiles/nixos#release -c \
 - `--version`: omit it to take the next number after the last
   `v<NixOS branch>.*` tag. The NixOS branch is read from the `nixpkgs` input
   of `nixos/flake.nix` at `TARGET`.
-- `--theses`: the theses file from step 3. More than 7 theses or an unknown
-  area fails the build.
+- `--story`: the story file from step 3, paragraphs separated by blank lines.
+  More than 4 paragraphs or 1500 characters fails the build.
 
 `OUT` receives `notes.md`, `card.png`, `apps-<host>.png` per host with apps
-and `matrix.png`. `notes.md` holds, in this order: the card, the theses, the
-app grids, then folded blocks for the changed packages, the hosts ×
+and `matrix.png`. `notes.md` is in Russian and holds, in this order: the card,
+the story, the app grids, then folded blocks for the changed packages, the hosts ×
 feature-modules matrix, the flake inputs table and the commit log by area. The
 builder reads git, `nix eval` and binary caches only and never calls GitHub.
 
