@@ -332,17 +332,21 @@ def render(template, data, png):
     )
 
 
+def image(src, alt):
+    return f'<img src="{src}" alt="{alt}" width="70%">'
+
+
 def details(summary, body):
     return ["<details>", f"<summary>{summary}</summary>", "", *body, "", "</details>", ""]
 
 
 def notes(version, prev, story, hosts_with_apps, package_lines, has_matrix, inputs, by_area, unclassified):
-    lines = [f"![{version}](card.png)", ""]
+    lines = [image("card.png", version), ""]
     lines += [f"{paragraph}\n" for paragraph in story]
-    lines += [f"![{host}](apps-{host}.png)\n" for host in hosts_with_apps]
+    lines += [image(f"apps-{host}.png", host) + "\n" for host in hosts_with_apps]
     lines += details("Пакеты", package_lines)
     if has_matrix:
-        lines += details("Хосты и модули", ["![Хосты и модули](matrix.png)"])
+        lines += details("Хосты и модули", [image("matrix.png", "Хосты и модули")])
     lines += details("Входы flake", inputs)
     if prev:
         log = []

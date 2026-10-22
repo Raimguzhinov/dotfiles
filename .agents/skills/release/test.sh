@@ -136,14 +136,14 @@ blocks_in_order() {
   done
 }
 blocks_in_order "$work/a/notes.md" \
-  '![v25.11.2](card.png)' \
+  '<img src="card.png" alt="v25.11.2" width="70%">' \
   'Релиз переводит рабочий стол на kitty.' 'Появился второй хост beta.' \
-  '![alpha](apps-alpha.png)' '![gamma](apps-gamma.png)' \
+  '<img src="apps-alpha.png" alt="alpha" width="70%">' '<img src="apps-gamma.png" alt="gamma" width="70%">' \
   '<summary>Пакеты</summary>' '</details>' \
-  '<summary>Хосты и модули</summary>' '![Хосты и модули](matrix.png)' '</details>' \
+  '<summary>Хосты и модули</summary>' '<img src="matrix.png" alt="Хосты и модули" width="70%">' '</details>' \
   '<summary>Входы flake</summary>' '</details>' \
   '<summary>Коммиты по областям</summary>' '### Рабочий стол' '### Агенты' '### Хосты' '### Документация' '### Прочее' '#### Файлы без области' '</details>'
-[[ $(head -1 "$work/a/notes.md") == '![v25.11.2](card.png)' ]] || fail "card is not the first block"
+[[ $(head -1 "$work/a/notes.md") == '<img src="card.png" alt="v25.11.2" width="70%">' ]] || fail "card is not the first block"
 (($(grep -cxF '<details>' "$work/a/notes.md") == 4)) || fail "secondary blocks are not each folded in <details>"
 [[ -e $work/a/apps-beta.png ]] && fail "host without apps has a grid"
 grep -qF 'apps-beta.png' "$work/a/notes.md" && fail "notes link a grid for a host without apps"
@@ -186,7 +186,7 @@ packages_table=$(sed -n '/^<summary>Пакеты<\/summary>$/,/^<\/details>$/p' 
 </details>" ]] || fail "packages table is wrong: $packages_table"
 
 "$bundle" --version v25.11.1 "" start "$work/first" >/dev/null
-[[ $(grep -v '^$' "$work/first/notes.md" | sed -n 2p) == '![alpha](apps-alpha.png)' ]] || fail "notes without --story have text between the card and the grids"
+[[ $(grep -v '^$' "$work/first/notes.md" | sed -n 2p) == '<img src="apps-alpha.png" alt="alpha" width="70%">' ]] || fail "notes without --story have text between the card and the grids"
 
 for n in 1 2 3 4 5; do printf 'Абзац %s.\n\n' "$n"; done >"$work/five"
 "$bundle" --version v25.11.2 --story "$work/five" start HEAD "$work/five-out" >/dev/null 2>"$work/five-err" && fail "a story of 5 paragraphs is accepted"
@@ -198,10 +198,10 @@ printf 'Слово %.0s' {1..300} >"$work/long"
 grep -qF 'at most 1500' "$work/long-err" || fail "rejecting a long story does not say the limit: $(cat "$work/long-err")"
 [[ -s $work/first/card.png ]] || fail "first release has no card"
 blocks_in_order "$work/first/notes.md" \
-  '![v25.11.1](card.png)' \
-  '![alpha](apps-alpha.png)' \
+  '<img src="card.png" alt="v25.11.1" width="70%">' \
+  '<img src="apps-alpha.png" alt="alpha" width="70%">' \
   '<summary>Пакеты</summary>' '</details>' \
-  '<summary>Хосты и модули</summary>' '![Хосты и модули](matrix.png)' '</details>' \
+  '<summary>Хосты и модули</summary>' '<img src="matrix.png" alt="Хосты и модули" width="70%">' '</details>' \
   '<summary>Входы flake</summary>' '</details>'
 grep -qF 'Commits by area' "$work/first/notes.md" && fail "first release renders the commit log"
 first_inputs=$(sed -n '/^<summary>Входы flake<\/summary>$/,/^<\/details>$/p' "$work/first/notes.md")
@@ -250,8 +250,8 @@ cmp -s "$work/first/matrix.png" "$golden/matrix-first.png" || fail "first releas
 git tag v25.11.1 start
 "$bundle" start HEAD "$work/auto2" >"$work/auto2-out"
 grep -qxF 'version: v25.11.2' "$work/auto2-out" || fail "builder does not print the computed version: $(cat "$work/auto2-out")"
-[[ $(head -1 "$work/auto/notes.md") == '![v25.11.1](card.png)' ]] || fail "first version in a branch is not .1"
-[[ $(head -1 "$work/auto2/notes.md") == '![v25.11.2](card.png)' ]] || fail "version does not follow the last tag of the branch"
+[[ $(head -1 "$work/auto/notes.md") == '<img src="card.png" alt="v25.11.1" width="70%">' ]] || fail "first version in a branch is not .1"
+[[ $(head -1 "$work/auto2/notes.md") == '<img src="card.png" alt="v25.11.2" width="70%">' ]] || fail "version does not follow the last tag of the branch"
 
 ((failed == 0)) && echo "all tests passed"
 exit "$failed"

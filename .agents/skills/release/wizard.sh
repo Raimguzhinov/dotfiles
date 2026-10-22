@@ -233,7 +233,7 @@ stage "Publish the release"
 say "The release goes public at once, with every PNG of $out as an asset."
 confirm "Publish $version?" || exit 1
 repo=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
-sed -E "s#\]\(([A-Za-z0-9._-]+\.png)\)#](https://github.com/$repo/releases/download/$version/\1)#g" "$out/notes.md" >"$notes"
+sed -E "s#src=\"([A-Za-z0-9._-]+\.png)\"#src=\"https://github.com/$repo/releases/download/$version/\1\"#g" "$out/notes.md" >"$notes"
 gh release create "$version" "$out"/*.png --verify-tag --title "$version" --notes-file "$notes"
 url=$(gh release view "$version" --json url --jq .url)
 open_url "$url"
