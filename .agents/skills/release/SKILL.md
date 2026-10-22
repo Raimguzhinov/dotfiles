@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of this dotfiles repo: build the release notes bundle from git history and host evals, write the release story in Russian, and once the user approves the preview, sign the tag and publish the release. Use when the user wants to cut a release, tag a version, or see what changed between two releases.
+description: Cut a release of this dotfiles repo. Build the release notes bundle from git history and host evals, write the release story in Russian, and once the user approves the preview, sign the tag and publish the release. Use when the user wants to cut a release, tag a version, or see what changed between two releases.
 ---
 
 # Release
