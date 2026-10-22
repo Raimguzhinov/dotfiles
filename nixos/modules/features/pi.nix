@@ -765,7 +765,7 @@ in
               "image"
             ];
             contextWindow = 131072;
-            maxTokens = 8192;
+            maxTokens = 32768;
             samplingParams = {
               temperature = 1.0;
               top_p = 0.95;
@@ -822,7 +822,7 @@ in
               removeAttrs (proteiModel "agent_proteya" "Protei Strict") [ "samplingParamsByThinkingLevel" ]
               // {
                 contextWindow = 131072;
-                maxTokens = 16000;
+                maxTokens = 32768;
                 samplingParams = {
                   temperature = 0.7;
                   top_p = 0.8;
@@ -1433,7 +1433,7 @@ in
             name: "Protei auto",
             thinkingLevels: [...LEVELS],
             contextWindow: 131072,
-            maxTokens: 8192,
+            maxTokens: 32768,
             route(request, ctx) {
               const now = Date.now();
               const find = (t: Target) => {
