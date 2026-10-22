@@ -1304,7 +1304,9 @@ in
             const speed = v === undefined ? "" : "⚡ " + Math.round(v) + " tok/s";
             const l1c = "🪟 ctx " + theme.fg(barColor, barText);
             const l1l = "🤖 " + theme.fg("accent", name) + " " + dim("⟨" + mmode + "⟩") + " · " + theme.fg("success", think) + (tmode ? " " + dim("⟨" + tmode + "⟩") : "") + "  " + l1c;
-            const l1r = [lsp ? "🧰 " + theme.fg("mdLink", lsp) : "", speed ? theme.fg("warning", speed) : ""].filter(Boolean).join("  ");
+            const speedText = speed ? theme.fg("warning", speed) : "";
+            const full = [lsp ? "🧰 " + theme.fg("mdLink", lsp) : "", speedText].filter(Boolean).join("  ");
+            const l1r = visibleWidth(l1l) + visibleWidth(full) + 2 <= width ? full : speedText;
             const l2l = tools ? dim("🔧 ") + tools : "";
             return [row(width, l1l, "", l1r), row(width, l2l, "", modes)];
           };
