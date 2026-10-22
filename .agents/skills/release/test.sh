@@ -62,11 +62,29 @@ put nixos/flake.nix <<'EOF'
 EOF
 packages() {
   put "$1" <<EOF
-let p = name: version: { pname = name; inherit version; name = "\${name}-\${version}"; }; in
+let
+  p = name: version: { pname = name; inherit version; name = "\${name}-\${version}"; };
+  a = name: version: p name version // { outPath = builtins.path { path = ../../../apps + "/\${name}"; name = "\${name}-\${version}"; }; };
+in
 { environment.systemPackages = [ $2 ]; home-manager.users.dias.home.packages = [ $3 ]; }
 EOF
 }
-packages nixos/inventory/nixos/alpha/default.nix '(p "git" "2.50") (p "curl" "8.0")' '(p "kitty" "0.40")'
+icon() {
+  put "$1" <<<"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><rect width=\"64\" height=\"64\" rx=\"14\" fill=\"$2\"/></svg>"
+}
+desktop() {
+  put "$1" <<<"$(printf '[Desktop Entry]\nType=Application\nName=%s\nName[ru]=Localized\nIcon=%s\n%s' "$2" "$3" "${4:-}")"
+}
+desktop nixos/apps/kitty/share/applications/kitty.desktop kitty kitty
+desktop nixos/apps/kitty/share/applications/kitty-open.desktop "kitty URL Launcher" kitty NoDisplay=true
+icon nixos/apps/kitty/share/icons/hicolor/scalable/apps/kitty.svg '#f9e2af'
+desktop nixos/apps/firefox/share/applications/firefox.desktop Firefox firefox
+desktop nixos/apps/xterm/share/applications/xterm.desktop XTerm xterm
+icon nixos/apps/xterm/share/icons/hicolor/scalable/apps/xterm.svg '#94e2d5'
+desktop nixos/apps/zed/share/applications/dev.zed.Zed.desktop Zed zed
+icon nixos/apps/zed/share/pixmaps/zed.svg '#cba6f7'
+put nixos/apps/iterm2/Applications/iTerm.app/Contents/Info.plist <<<'<plist/>'
+packages nixos/inventory/nixos/alpha/default.nix '(p "git" "2.50") (p "curl" "8.0")' '(a "kitty" "0.40") (a "firefox" "130") (a "xterm" "390")'
 lock nixpkgs 1767225600 noctalia 1767571200 old-input 1764547200
 put nixos/modules/features/pi.nix <<<'{ flake.nixosModules.pi = { }; flake.homeModules.pi = { }; }'
 put nixos/modules/hosts/alpha/default.nix <<<'{ flake.nixosConfigurations.alpha = mk { modules = [ config.flake.nixosModules.pi ]; }; }'
@@ -95,9 +113,9 @@ put nixos/modules/hosts/alpha/configuration.nix <<'EOF'
 EOF
 put nixos/modules/hosts/beta/default.nix <<<'{ flake.nixosConfigurations.beta = mk { home.imports = [ homeModules.niri ]; }; }'
 lock nixpkgs 1769904000 noctalia 1767571200 sops-nix 1769990400
-packages nixos/inventory/nixos/alpha/default.nix '(p "git" "2.51")' '(p "kitty" "0.40") (p "ripgrep" "14.1")'
+packages nixos/inventory/nixos/alpha/default.nix '(p "git" "2.51") (p "ghost" "1.0" // { outPath = "/nix/store/00000000000000000000000000000000-ghost-1.0"; })' '(a "kitty" "0.40") (a "firefox" "130") (p "ripgrep" "14.1") (a "zed" "0.200")'
 put nixos/inventory/nixos/beta/default.nix <<<'{ environment.systemPackages = [ { pname = "fd"; version = "10.2"; name = "fd-10.2"; } { name = "hello-2.12"; } ]; }'
-put nixos/inventory/darwin/gamma/default.nix <<<'{ home-manager.users.dias.home.packages = [ { pname = "htop"; version = "3.4"; name = "htop-3.4"; } ]; }'
+packages nixos/inventory/darwin/gamma/default.nix '' '(p "htop" "3.4") (a "iterm2" "3.5")'
 commit nixos/modules/hosts/beta/notes "nixos: hosts: enable kitty on alpha, add beta" 5
 
 "$bundle" --version v25.11.2 start HEAD "$work/a" >/dev/null
@@ -118,12 +136,15 @@ blocks_in_order() {
 }
 blocks_in_order "$work/a/notes.md" \
   '![v25.11.2](card.png)' \
+  '![alpha](apps-alpha.png)' '![gamma](apps-gamma.png)' \
   '<summary>Packages</summary>' '</details>' \
   '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
   '<summary>Flake inputs</summary>' '</details>' \
   '<summary>Commits by area</summary>' '### Desktop' '### Harness' '### Hosts' '### Docs' '### Other' '#### Files without an area' '</details>'
 [[ $(head -1 "$work/a/notes.md") == '![v25.11.2](card.png)' ]] || fail "card is not the first block"
 (($(grep -cxF '<details>' "$work/a/notes.md") == 4)) || fail "secondary blocks are not each folded in <details>"
+[[ -e $work/a/apps-beta.png ]] && fail "host without apps has a grid"
+grep -qF 'apps-beta.png' "$work/a/notes.md" && fail "notes link a grid for a host without apps"
 
 other=$(sed -n '/^### Other$/,/^#### /p' "$work/a/notes.md")
 grep -qF 'nixos: unknown.txt: add file' <<<"$other" || fail "commit touching an unclassified file is not under Other"
@@ -151,10 +172,14 @@ packages_table=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$wo
 | --- | --- | --- | --- |
 | curl | alpha | 8.0 |  |
 | fd | beta |  | 10.2 |
+| ghost | alpha |  | 1.0 |
 | git | alpha | 2.50 | 2.51 |
 | hello | beta |  | 2.12 |
 | htop | gamma |  | 3.4 |
+| iterm2 | gamma |  | 3.5 |
 | ripgrep | alpha |  | 14.1 |
+| xterm | alpha | 390 |  |
+| zed | alpha |  | 0.200 |
 
 </details>" ]] || fail "packages table is wrong: $packages_table"
 
@@ -162,6 +187,7 @@ packages_table=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$wo
 [[ -s $work/first/card.png ]] || fail "first release has no card"
 blocks_in_order "$work/first/notes.md" \
   '![v25.11.1](card.png)' \
+  '![alpha](apps-alpha.png)' \
   '<summary>Packages</summary>' '</details>' \
   '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
   '<summary>Flake inputs</summary>' '</details>'
@@ -183,8 +209,10 @@ first_packages=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$wo
 | Package | Host | Version |
 | --- | --- | --- |
 | curl | alpha | 8.0 |
+| firefox | alpha | 130 |
 | git | alpha | 2.50 |
 | kitty | alpha | 0.40 |
+| xterm | alpha | 390 |
 
 </details>" ]] || fail "first release packages table is wrong: $first_packages"
 
@@ -192,11 +220,17 @@ if [[ ${UPDATE_GOLDEN:-} == 1 ]]; then
   mkdir -p "$golden"
   cp "$work/a/card.png" "$golden/card-diff.png"
   cp "$work/first/card.png" "$golden/card-first.png"
+  cp "$work/a/apps-alpha.png" "$golden/apps-alpha-diff.png"
+  cp "$work/a/apps-gamma.png" "$golden/apps-gamma-diff.png"
+  cp "$work/first/apps-alpha.png" "$golden/apps-alpha-first.png"
   cp "$work/a/matrix.png" "$golden/matrix-diff.png"
   cp "$work/first/matrix.png" "$golden/matrix-first.png"
 fi
 cmp -s "$work/a/card.png" "$golden/card-diff.png" || fail "card with changes differs from testdata/card-diff.png"
 cmp -s "$work/first/card.png" "$golden/card-first.png" || fail "first release card differs from testdata/card-first.png"
+cmp -s "$work/a/apps-alpha.png" "$golden/apps-alpha-diff.png" || fail "app grid with changes differs from testdata/apps-alpha-diff.png"
+cmp -s "$work/a/apps-gamma.png" "$golden/apps-gamma-diff.png" || fail "darwin app grid differs from testdata/apps-gamma-diff.png"
+cmp -s "$work/first/apps-alpha.png" "$golden/apps-alpha-first.png" || fail "first release app grid differs from testdata/apps-alpha-first.png"
 cmp -s "$work/a/matrix.png" "$golden/matrix-diff.png" || fail "matrix with changes differs from testdata/matrix-diff.png"
 cmp -s "$work/first/matrix.png" "$golden/matrix-first.png" || fail "first release matrix differs from testdata/matrix-first.png"
 

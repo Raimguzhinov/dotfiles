@@ -24,10 +24,11 @@ nix develop ~/dotfiles/nixos#release -c \
   `v<NixOS branch>.*` tag. The NixOS branch is read from the `nixpkgs` input
   of `nixos/flake.nix` at `TARGET`.
 
-`OUT` receives `notes.md`, `card.png` and `matrix.png`. `notes.md` holds, in
-this order: the card, then folded blocks for the changed packages, the hosts ×
-feature-modules matrix, the flake inputs table and the commit log by area. The
-builder reads git and `nix eval` only and never calls GitHub.
+`OUT` receives `notes.md`, `card.png`, `apps-<host>.png` per host with apps
+and `matrix.png`. `notes.md` holds, in this order: the card, the app grids, then
+folded blocks for the changed packages, the hosts × feature-modules matrix, the
+flake inputs table and the commit log by area. The builder reads git, `nix
+eval` and binary caches only and never calls GitHub.
 
 Packages come from `nix eval` of every `nixosConfigurations` and
 `darwinConfigurations` host of the flake at each ref, read straight from git
@@ -36,6 +37,15 @@ is built. A host's packages are `environment.systemPackages` plus the
 home-manager `home.packages` of user `dias`, keyed by name with their version.
 The card counts added, removed and updated (host, package) pairs. The first
 release lists every package instead. One eval of this flake takes about 15 s.
+
+App grids show the desktop entries (`share/applications/*.desktop` without
+`NoDisplay` or `Hidden`) and darwin `Applications/*.app` of the target ref's
+packages, plus those of packages removed since `PREV`. Package paths are
+fetched with `nix build --max-jobs 0`, so a path that is neither in the local
+store nor in a binary cache is skipped, never built. Its apps are absent from
+the grid. An app is added or removed when its package is. The icon comes from
+the package's hicolor theme or pixmaps (SVG or PNG), otherwise the tile shows
+the first letter of the name.
 
 The matrix comes from the host sources at each ref: a host is a directory under
 `nixos/modules/hosts/` that defines `flake.nixosConfigurations.<name>` or
