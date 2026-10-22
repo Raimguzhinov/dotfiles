@@ -213,6 +213,13 @@
       '';
     in
     {
+      programs.zsh.initContent = lib.mkOrder 2000 ''
+        if [[ -n $CLAUDECODE ]]; then
+          unalias cp mv mkdir cat ls 2>/dev/null
+          unfunction cd 2>/dev/null
+        fi
+      '';
+
       programs.claude-code = {
         enable = true;
         package = claudeCode;
