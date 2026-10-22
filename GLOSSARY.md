@@ -12,6 +12,10 @@ _Avoid_: host config, system, machine (as a module name)
 A module that publishes one tool as a home-manager module and, where a standalone build makes sense, also as a package with its config baked in.
 _Avoid_: tool module, package module
 
+**limbo**:
+A hung state of a host that looks like sleep: the screen is off, the keyboard backlight is on, and only a hard power-off ends it. It can start on the way into sleep or on resume.
+_Avoid_: freeze, black screen, "did not wake up"
+
 ## Releases
 
 **release**:
