@@ -118,8 +118,9 @@ put nixos/inventory/nixos/beta/default.nix <<<'{ environment.systemPackages = [ 
 packages nixos/inventory/darwin/gamma/default.nix '' '(p "htop" "3.4") (a "iterm2" "3.5")'
 commit nixos/modules/hosts/beta/notes "nixos: hosts: enable kitty on alpha, add beta" 5
 
-"$bundle" --version v25.11.2 start HEAD "$work/a" >/dev/null
-"$bundle" --version v25.11.2 start HEAD "$work/b" >/dev/null
+printf '%s\n' 'Hosts: new host beta with fd' '' 'Desktop: kitty enabled on alpha' >"$work/theses"
+"$bundle" --version v25.11.2 --theses "$work/theses" start HEAD "$work/a" >/dev/null
+"$bundle" --version v25.11.2 --theses "$work/theses" start HEAD "$work/b" >/dev/null
 
 [[ -s $work/a/notes.md ]] || fail "notes.md is missing"
 [[ $(head -c 8 "$work/a/card.png" | od -An -tx1 | tr -d ' ') == 89504e470d0a1a0a ]] || fail "card.png is not a PNG"
@@ -136,6 +137,7 @@ blocks_in_order() {
 }
 blocks_in_order "$work/a/notes.md" \
   '![v25.11.2](card.png)' \
+  '- **Hosts** new host beta with fd' '- **Desktop** kitty enabled on alpha' \
   '![alpha](apps-alpha.png)' '![gamma](apps-gamma.png)' \
   '<summary>Packages</summary>' '</details>' \
   '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
@@ -184,6 +186,16 @@ packages_table=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$wo
 </details>" ]] || fail "packages table is wrong: $packages_table"
 
 "$bundle" --version v25.11.1 "" start "$work/first" >/dev/null
+grep -q '^- \*\*' "$work/first/notes.md" && fail "notes without --theses have a theses block"
+
+for n in 1 2 3 4 5 6 7 8; do echo "Dev: thesis $n"; done >"$work/eight"
+"$bundle" --version v25.11.2 --theses "$work/eight" start HEAD "$work/eight-out" >/dev/null 2>"$work/eight-err" && fail "8 theses are accepted"
+grep -qF 'at most 7' "$work/eight-err" || fail "rejecting 8 theses does not say the limit: $(cat "$work/eight-err")"
+head -7 "$work/eight" >"$work/seven"
+"$bundle" --version v25.11.2 --theses "$work/seven" start HEAD "$work/seven-out" >/dev/null || fail "7 theses are rejected"
+echo 'Kernel: new kernel' >"$work/bad-area"
+"$bundle" --version v25.11.2 --theses "$work/bad-area" start HEAD "$work/bad-out" >/dev/null 2>"$work/bad-err" && fail "thesis with an unknown area is accepted"
+grep -qF "Kernel" "$work/bad-err" || fail "rejecting an unknown area does not name it: $(cat "$work/bad-err")"
 [[ -s $work/first/card.png ]] || fail "first release has no card"
 blocks_in_order "$work/first/notes.md" \
   '![v25.11.1](card.png)' \
@@ -236,7 +248,8 @@ cmp -s "$work/first/matrix.png" "$golden/matrix-first.png" || fail "first releas
 
 "$bundle" "" start "$work/auto" >/dev/null
 git tag v25.11.1 start
-"$bundle" start HEAD "$work/auto2" >/dev/null
+"$bundle" start HEAD "$work/auto2" >"$work/auto2-out"
+grep -qxF 'version: v25.11.2' "$work/auto2-out" || fail "builder does not print the computed version: $(cat "$work/auto2-out")"
 [[ $(head -1 "$work/auto/notes.md") == '![v25.11.1](card.png)' ]] || fail "first version in a branch is not .1"
 [[ $(head -1 "$work/auto2/notes.md") == '![v25.11.2](card.png)' ]] || fail "version does not follow the last tag of the branch"
 

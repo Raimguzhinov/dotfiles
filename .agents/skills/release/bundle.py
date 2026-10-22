@@ -17,6 +17,7 @@ MODULE_REF = re.compile(r"(?:home|nixos)Modules\.([\w-]+)")
 FEATURES_DIR = "nixos/modules/features/"
 HOSTS_DIR = "nixos/modules/hosts/"
 ICON_TYPES = (".svg", ".png")
+MAX_THESES = 7
 PACKAGES_EXPR = """
 url:
 let
@@ -281,6 +282,20 @@ def app_grids(old_hosts, new_hosts):
     }
 
 
+def load_theses(path):
+    theses = []
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        area, _, text = line.partition(":")
+        if area.strip() not in AREAS or not text.strip():
+            sys.exit(f"{path}: {line!r} is not '<area>: <thesis>' with an area from {', '.join(AREAS)}")
+        theses.append((area.strip(), text.strip()))
+    if len(theses) > MAX_THESES:
+        sys.exit(f"{path}: {len(theses)} theses, at most {MAX_THESES} allowed")
+    return theses
+
+
 def render(template, data, png):
     subprocess.run(
         [
@@ -301,8 +316,10 @@ def details(summary, body):
     return ["<details>", f"<summary>{summary}</summary>", "", *body, "", "</details>", ""]
 
 
-def notes(version, prev, hosts_with_apps, package_lines, has_matrix, inputs, by_area, unclassified):
+def notes(version, prev, theses, hosts_with_apps, package_lines, has_matrix, inputs, by_area, unclassified):
     lines = [f"![{version}](card.png)", ""]
+    if theses:
+        lines += [f"- **{area}** {text}" for area, text in theses] + [""]
     lines += [f"![{host}](apps-{host}.png)\n" for host in hosts_with_apps]
     lines += details("Packages", package_lines)
     if has_matrix:
@@ -322,6 +339,7 @@ def notes(version, prev, hosts_with_apps, package_lines, has_matrix, inputs, by_
 def main():
     parser = argparse.ArgumentParser(description="Build a release bundle: notes.md and its PNG images")
     parser.add_argument("--version")
+    parser.add_argument("--theses", type=Path, help="file with up to 7 lines '<area>: <thesis>'")
     parser.add_argument("prev", help="previous release ref, empty for the first release")
     parser.add_argument("target")
     parser.add_argument("out", type=Path)
@@ -331,6 +349,7 @@ def main():
 
     base = nixos_base(args.target)
     version = args.version or next_version(base)
+    theses = load_theses(args.theses) if args.theses else []
     total, by_area, unclassified = group(args.prev, args.target)
     new_hosts = host_packages(args.target)
     old_hosts = host_packages(args.prev) if args.prev else None
@@ -356,7 +375,8 @@ def main():
     if host_matrix["rows"]:
         render("matrix.typ", host_matrix, args.out / "matrix.png")
     inputs = inputs_table(args.prev, args.target)
-    (args.out / "notes.md").write_text(notes(version, args.prev, list(grids), package_lines, bool(host_matrix["rows"]), inputs, by_area, unclassified))
+    (args.out / "notes.md").write_text(notes(version, args.prev, theses, list(grids), package_lines, bool(host_matrix["rows"]), inputs, by_area, unclassified))
+    print(f"version: {version}")
     for f in unclassified if args.prev else []:
         print(f"unclassified: {f}")
 
