@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a release of this dotfiles repo: build the release notes bundle from git history and host evals, write the release story in Russian, and hand the signed tag and publishing to the user through a wizard. Use when the user wants to cut a release, tag a version, or see what changed between two releases.
+description: Cut a release of this dotfiles repo: build the release notes bundle from git history and host evals, write the release story in Russian, and once the user approves the preview, sign the tag and publish the release. Use when the user wants to cut a release, tag a version, or see what changed between two releases.
 ---
 
 # Release
@@ -12,8 +12,8 @@ same.
 
 ## Cut a release
 
-The skill never pushes, tags or publishes: those steps need the user's YubiKey
-and eyes, and the wizard walks them through.
+Nothing is tagged, pushed or published before the user approves the preview in
+step 4.
 
 1. Take `PREV` as the last release tag,
    `git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD`, and `TARGET` as
@@ -30,12 +30,15 @@ and eyes, and the wizard walks them through.
    lists, versions, counts or commit subjects. Even a release spanning hundreds
    of commits gets the same length. Show it to the user and rebuild with
    `--story FILE`.
-4. Show the user `card.png`, the grids and the story, and fix what they ask.
-5. Tell the user to run the wizard in their own terminal:
-   `.agents/skills/release/wizard.sh VERSION TARGET OUT`. It creates the signed
-   annotated tag, pushes it, and publishes the release at once with every PNG
-   as an asset and the notes' images pointing at the tag's download URLs. `gh`
-   needs write access to the repo's contents.
+4. Render `notes.md` to HTML (`nix run nixpkgs#pandoc -- notes.md -f gfm -t
+   html5 -s`) next to the PNGs, open it in the browser, and fix what the user
+   asks until they approve.
+5. Publish: `.agents/skills/release/publish.sh VERSION TARGET OUT`. It creates
+   the signed annotated tag, verifies it, pushes it, and publishes the release
+   at once with every PNG as an asset and the notes' images pointing at the
+   tag's download URLs. Signing needs the user's YubiKey: if it fails, stop and
+   ask the user to plug it in. `gh` needs write access to the repo's contents.
+   Give the user the release URL.
 
 ## Build the bundle
 
