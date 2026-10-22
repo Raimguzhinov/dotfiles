@@ -12,6 +12,14 @@
     {
       imports = [
         (modulesPath + "/installer/scan/not-detected.nix")
+        {
+          boot.kernelParams = [
+            "no_console_suspend"
+            "pm_debug_messages"
+          ];
+          boot.consoleLogLevel = 8;
+          systemd.tmpfiles.rules = [ "w /sys/power/pm_print_times - - - - 1" ];
+        }
       ];
 
       boot.initrd.availableKernelModules = [
