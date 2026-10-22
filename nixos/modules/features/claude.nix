@@ -214,7 +214,9 @@
     in
     {
       programs.zsh.initContent = lib.mkOrder 2000 ''
-        if [[ -n $CLAUDECODE ]]; then
+        export _ZO_DOCTOR=0
+        # снапшот шелла Claude Code снимается без CLAUDECODE, но и без терминала
+        if [[ -n $CLAUDECODE || ! -t 0 ]]; then
           unalias cp mv mkdir cat ls 2>/dev/null
           unfunction cd 2>/dev/null
         fi
