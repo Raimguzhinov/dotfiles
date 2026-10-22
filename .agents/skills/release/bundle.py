@@ -16,6 +16,15 @@ HOST_CONFIG = re.compile(r"flake\.(?:nixos|darwin)Configurations\.([\w-]+)")
 MODULE_REF = re.compile(r"(?:home|nixos)Modules\.([\w-]+)")
 FEATURES_DIR = "nixos/modules/features/"
 HOSTS_DIR = "nixos/modules/hosts/"
+PACKAGES_EXPR = """
+url:
+let
+  flake = builtins.getFlake url;
+  info = p: let drv = builtins.parseDrvName p.name; in { name = p.pname or drv.name; version = p.version or drv.version; };
+  host = c: map info (c.config.environment.systemPackages or [ ] ++ c.config.home-manager.users.dias.home.packages or [ ]);
+in
+builtins.mapAttrs (_: host) (flake.nixosConfigurations or { } // flake.darwinConfigurations or { })
+"""
 
 
 def git(*args):
@@ -159,6 +168,42 @@ def inputs_table(prev, target):
     return lines
 
 
+def packages(ref):
+    root = git("rev-parse", "--show-toplevel").strip()
+    rev = git("rev-parse", f"{ref}^{{commit}}").strip()
+    url = f"git+file://{root}?rev={rev}&dir=nixos"
+    hosts = json.loads(
+        subprocess.run(
+            ["nix", "eval", "--json", "--expr", f"({PACKAGES_EXPR}) {json.dumps(url)}"],
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        ).stdout
+    )
+    versions = {}
+    for host, pkgs in hosts.items():
+        for pkg in pkgs:
+            versions.setdefault((pkg["name"], host), set()).add(pkg["version"])
+    return {key: ", ".join(sorted(v)) for key, v in versions.items()}
+
+
+def packages_table(prev, target):
+    new = packages(target)
+    if not prev:
+        lines = ["| Package | Host | Version |", "| --- | --- | --- |"]
+        return {"total": len(new)}, lines + [f"| {name} | {host} | {new[name, host]} |" for name, host in sorted(new)]
+    old = packages(prev)
+    counts = {"added": 0, "removed": 0, "updated": 0}
+    lines = ["| Package | Host | Old | New |", "| --- | --- | --- | --- |"]
+    for name, host in sorted(set(old) | set(new)):
+        before, after = old.get((name, host)), new.get((name, host))
+        if before == after:
+            continue
+        counts["added" if before is None else "removed" if after is None else "updated"] += 1
+        lines.append(f"| {name} | {host} | {before or ''} | {after or ''} |")
+    return counts, lines
+
+
 def render(template, data, png):
     subprocess.run(
         [
@@ -178,8 +223,9 @@ def details(summary, body):
     return ["<details>", f"<summary>{summary}</summary>", "", *body, "", "</details>", ""]
 
 
-def notes(version, prev, has_matrix, inputs, by_area, unclassified):
+def notes(version, prev, package_lines, has_matrix, inputs, by_area, unclassified):
     lines = [f"![{version}](card.png)", ""]
+    lines += details("Packages", package_lines)
     if has_matrix:
         lines += details("Hosts × modules", ["![Hosts × modules](matrix.png)"])
     lines += details("Flake inputs", inputs)
@@ -207,6 +253,7 @@ def main():
     base = nixos_base(args.target)
     version = args.version or next_version(base)
     total, by_area, unclassified = group(args.prev, args.target)
+    package_counts, package_lines = packages_table(args.prev, args.target)
     args.out.mkdir(parents=True, exist_ok=True)
     render(
         "card.typ",
@@ -216,6 +263,7 @@ def main():
             "base": f"NixOS {base}",
             "range": f"{git('rev-parse', '--short', args.prev).strip()}..{git('rev-parse', '--short', args.target).strip()}" if args.prev else "first release",
             "commits": total,
+            "packages": package_counts,
             "areas": [[area, len(by_area[area])] for area in AREAS],
         },
         args.out / "card.png",
@@ -224,7 +272,7 @@ def main():
     if host_matrix["rows"]:
         render("matrix.typ", host_matrix, args.out / "matrix.png")
     inputs = inputs_table(args.prev, args.target)
-    (args.out / "notes.md").write_text(notes(version, args.prev, bool(host_matrix["rows"]), inputs, by_area, unclassified))
+    (args.out / "notes.md").write_text(notes(version, args.prev, package_lines, bool(host_matrix["rows"]), inputs, by_area, unclassified))
     for f in unclassified if args.prev else []:
         print(f"unclassified: {f}")
 

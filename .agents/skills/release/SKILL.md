@@ -25,9 +25,17 @@ nix develop ~/dotfiles/nixos#release -c \
   of `nixos/flake.nix` at `TARGET`.
 
 `OUT` receives `notes.md`, `card.png` and `matrix.png`. `notes.md` holds, in
-this order: the card, then folded blocks for the hosts × feature-modules
-matrix, the flake inputs table and the commit log by area. The builder reads
-git only and never calls GitHub.
+this order: the card, then folded blocks for the changed packages, the hosts ×
+feature-modules matrix, the flake inputs table and the commit log by area. The
+builder reads git and `nix eval` only and never calls GitHub.
+
+Packages come from `nix eval` of every `nixosConfigurations` and
+`darwinConfigurations` host of the flake at each ref, read straight from git
+(`git+file://...?rev=`), so the working tree is never checked out and nothing
+is built. A host's packages are `environment.systemPackages` plus the
+home-manager `home.packages` of user `dias`, keyed by name with their version.
+The card counts added, removed and updated (host, package) pairs. The first
+release lists every package instead. One eval of this flake takes about 15 s.
 
 The matrix comes from the host sources at each ref: a host is a directory under
 `nixos/modules/hosts/` that defines `flake.nixosConfigurations.<name>` or
@@ -48,5 +56,6 @@ user and ask which area each file belongs to. Add the answers to `areas.tsv`
 nix develop ~/dotfiles/nixos#release -c .agents/skills/release/test.sh
 ```
 
-The matrix tests compare against `testdata/*.png`. After an intended design
-change, rerun with `UPDATE_GOLDEN=1`, look at both images, and commit them.
+The card and matrix tests compare against `testdata/*.png`. After an intended
+design change, rerun with `UPDATE_GOLDEN=1`, look at the images, and commit
+them.

@@ -33,7 +33,7 @@ lock() {
   while (($#)); do
     name=$1 ts=$2
     shift 2
-    nodes+="\"$name\": {\"locked\": {\"lastModified\": $ts, \"narHash\": \"sha256-$name-$ts\", \"type\": \"github\"}}, "
+    nodes+="\"$name\": {\"locked\": {\"lastModified\": $ts, \"narHash\": \"sha256-$name-$ts\", \"owner\": \"o\", \"repo\": \"$name\", \"rev\": \"$(printf '%040d' "$ts")\", \"type\": \"github\"}, \"original\": {\"owner\": \"o\", \"repo\": \"$name\", \"type\": \"github\"}}, "
     root+="\"$name\": \"$name\", "
   done
   put nixos/flake.lock <<EOF
@@ -47,7 +47,26 @@ cd "$repo"
 git config user.name test
 git config user.email test@example.com
 git config commit.gpgsign false
-put nixos/flake.nix <<<'nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";'
+put nixos/flake.nix <<'EOF'
+{
+  # nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+  outputs = _: {
+    nixosConfigurations = builtins.mapAttrs (name: _: { config = import ./inventory/nixos/${name}; }) (builtins.readDir ./inventory/nixos);
+    darwinConfigurations =
+      if builtins.pathExists ./inventory/darwin then
+        builtins.mapAttrs (name: _: { config = import ./inventory/darwin/${name}; }) (builtins.readDir ./inventory/darwin)
+      else
+        { };
+  };
+}
+EOF
+packages() {
+  put "$1" <<EOF
+let p = name: version: { pname = name; inherit version; name = "\${name}-\${version}"; }; in
+{ environment.systemPackages = [ $2 ]; home-manager.users.dias.home.packages = [ $3 ]; }
+EOF
+}
+packages nixos/inventory/nixos/alpha/default.nix '(p "git" "2.50") (p "curl" "8.0")' '(p "kitty" "0.40")'
 lock nixpkgs 1767225600 noctalia 1767571200 old-input 1764547200
 put nixos/modules/features/pi.nix <<<'{ flake.nixosModules.pi = { }; flake.homeModules.pi = { }; }'
 put nixos/modules/hosts/alpha/default.nix <<<'{ flake.nixosConfigurations.alpha = mk { modules = [ config.flake.nixosModules.pi ]; }; }'
@@ -76,6 +95,9 @@ put nixos/modules/hosts/alpha/configuration.nix <<'EOF'
 EOF
 put nixos/modules/hosts/beta/default.nix <<<'{ flake.nixosConfigurations.beta = mk { home.imports = [ homeModules.niri ]; }; }'
 lock nixpkgs 1769904000 noctalia 1767571200 sops-nix 1769990400
+packages nixos/inventory/nixos/alpha/default.nix '(p "git" "2.51")' '(p "kitty" "0.40") (p "ripgrep" "14.1")'
+put nixos/inventory/nixos/beta/default.nix <<<'{ environment.systemPackages = [ { pname = "fd"; version = "10.2"; name = "fd-10.2"; } { name = "hello-2.12"; } ]; }'
+put nixos/inventory/darwin/gamma/default.nix <<<'{ home-manager.users.dias.home.packages = [ { pname = "htop"; version = "3.4"; name = "htop-3.4"; } ]; }'
 commit nixos/modules/hosts/beta/notes "nixos: hosts: enable kitty on alpha, add beta" 5
 
 "$bundle" --version v25.11.2 start HEAD "$work/a" >/dev/null
@@ -96,11 +118,12 @@ blocks_in_order() {
 }
 blocks_in_order "$work/a/notes.md" \
   '![v25.11.2](card.png)' \
+  '<summary>Packages</summary>' '</details>' \
   '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
   '<summary>Flake inputs</summary>' '</details>' \
   '<summary>Commits by area</summary>' '### Desktop' '### Harness' '### Hosts' '### Docs' '### Other' '#### Files without an area' '</details>'
 [[ $(head -1 "$work/a/notes.md") == '![v25.11.2](card.png)' ]] || fail "card is not the first block"
-(($(grep -cxF '<details>' "$work/a/notes.md") == 3)) || fail "secondary blocks are not each folded in <details>"
+(($(grep -cxF '<details>' "$work/a/notes.md") == 4)) || fail "secondary blocks are not each folded in <details>"
 
 other=$(sed -n '/^### Other$/,/^#### /p' "$work/a/notes.md")
 grep -qF 'nixos: unknown.txt: add file' <<<"$other" || fail "commit touching an unclassified file is not under Other"
@@ -121,10 +144,25 @@ inputs=$(sed -n '/^<summary>Flake inputs<\/summary>$/,/^<\/details>$/p' "$work/a
 
 </details>" ]] || fail "flake inputs table is wrong: $inputs"
 
+packages_table=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$work/a/notes.md")
+[[ $packages_table == "<summary>Packages</summary>
+
+| Package | Host | Old | New |
+| --- | --- | --- | --- |
+| curl | alpha | 8.0 |  |
+| fd | beta |  | 10.2 |
+| git | alpha | 2.50 | 2.51 |
+| hello | beta |  | 2.12 |
+| htop | gamma |  | 3.4 |
+| ripgrep | alpha |  | 14.1 |
+
+</details>" ]] || fail "packages table is wrong: $packages_table"
+
 "$bundle" --version v25.11.1 "" start "$work/first" >/dev/null
 [[ -s $work/first/card.png ]] || fail "first release has no card"
 blocks_in_order "$work/first/notes.md" \
   '![v25.11.1](card.png)' \
+  '<summary>Packages</summary>' '</details>' \
   '<summary>Hosts × modules</summary>' '![Hosts × modules](matrix.png)' '</details>' \
   '<summary>Flake inputs</summary>' '</details>'
 grep -qF 'Commits by area' "$work/first/notes.md" && fail "first release renders the commit log"
@@ -139,11 +177,26 @@ first_inputs=$(sed -n '/^<summary>Flake inputs<\/summary>$/,/^<\/details>$/p' "$
 
 </details>" ]] || fail "first release inputs table is wrong: $first_inputs"
 
+first_packages=$(sed -n '/^<summary>Packages<\/summary>$/,/^<\/details>$/p' "$work/first/notes.md")
+[[ $first_packages == "<summary>Packages</summary>
+
+| Package | Host | Version |
+| --- | --- | --- |
+| curl | alpha | 8.0 |
+| git | alpha | 2.50 |
+| kitty | alpha | 0.40 |
+
+</details>" ]] || fail "first release packages table is wrong: $first_packages"
+
 if [[ ${UPDATE_GOLDEN:-} == 1 ]]; then
   mkdir -p "$golden"
+  cp "$work/a/card.png" "$golden/card-diff.png"
+  cp "$work/first/card.png" "$golden/card-first.png"
   cp "$work/a/matrix.png" "$golden/matrix-diff.png"
   cp "$work/first/matrix.png" "$golden/matrix-first.png"
 fi
+cmp -s "$work/a/card.png" "$golden/card-diff.png" || fail "card with changes differs from testdata/card-diff.png"
+cmp -s "$work/first/card.png" "$golden/card-first.png" || fail "first release card differs from testdata/card-first.png"
 cmp -s "$work/a/matrix.png" "$golden/matrix-diff.png" || fail "matrix with changes differs from testdata/matrix-diff.png"
 cmp -s "$work/first/matrix.png" "$golden/matrix-first.png" || fail "first release matrix differs from testdata/matrix-first.png"
 
