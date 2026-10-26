@@ -294,7 +294,7 @@
 
       options.programs.harness.codebaseMemoryAutoIndex = lib.mkOption {
         type = lib.types.bool;
-        default = true;
+        default = false;
         description = "Index new repositories automatically when an MCP session starts";
       };
 
@@ -674,14 +674,16 @@
 
         # auto_index не имеет ни env, ни JSON-ключа (только SQLite _config.db),
         # ставится CLI. Конфликт с живым демоном другой версии не должен ронять activation
-        home.activation.codebaseMemoryConfig = lib.mkIf config.programs.harness.codebaseMemoryAutoIndex /* bash */ ''
+        home.activation.codebaseMemoryConfig = /* bash */ ''
           set -uo pipefail
           log() { printf '[harness] %s\n' "$*" >&2; }
-          if "${lib.getExe config.programs.harness.codebaseMemory}" config set auto_index true; then
-            log "codebase-memory-mcp: auto_index=true"
-          else
-            log "WARNING: could not set codebase-memory-mcp auto_index (conflicting daemon?), will retry next activation"
-          fi
+          for setting in auto_index=${lib.boolToString config.programs.harness.codebaseMemoryAutoIndex} auto_watch=false watcher_enabled=false; do
+            if "${lib.getExe config.programs.harness.codebaseMemory}" config set "''${setting%%=*}" "''${setting#*=}"; then
+              log "codebase-memory-mcp: $setting"
+            else
+              log "WARNING: could not set codebase-memory-mcp ''${setting%%=*} (conflicting daemon?), will retry next activation"
+            fi
+          done
         '';
       };
     };
