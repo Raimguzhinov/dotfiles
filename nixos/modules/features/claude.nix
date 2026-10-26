@@ -215,10 +215,15 @@
     {
       programs.zsh.initContent = lib.mkOrder 2000 ''
         export _ZO_DOCTOR=0
-        # снапшот шелла Claude Code снимается без CLAUDECODE, но и без терминала
-        if [[ -n $CLAUDECODE || ! -t 0 ]]; then
-          unalias cp mv mkdir cat ls 2>/dev/null
-          unfunction cd 2>/dev/null
+        # снапшот шелла Claude Code переносит алиасы и функции без условий их создания, поэтому терминал проверяется при каждом вызове
+        unalias ls cat cp mv 2>/dev/null
+        ls() { if [[ -t 0 && -t 1 ]]; then eza "$@"; else command ls "$@"; fi }
+        cat() { if [[ -t 1 ]]; then bat -p "$@"; else command cat "$@"; fi }
+        cp() { if [[ -t 0 ]]; then command cp -riv "$@"; else command cp -r "$@"; fi }
+        mv() { if [[ -t 0 ]]; then command mv -iv "$@"; else command mv "$@"; fi }
+        if (( $+functions[cd] )); then
+          functions[__zoxide_tty_cd]=$functions[cd]
+          cd() { if [[ -t 0 && -t 1 ]]; then __zoxide_tty_cd "$@"; else builtin cd "$@"; fi }
         fi
       '';
 
