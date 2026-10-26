@@ -550,7 +550,7 @@ let
               literal = true;
               continue;
             }
-            if (t.startsWith("-") && t !== "-") {
+            if (t.startsWith("-") && t !== "-" && !t.includes(" ") && !t.startsWith("---")) {
               if (/^(--version|--help)$/.test(t) || /^-(version|help|V)$/.test(t)) hasVersion = true;
               const chars = t.slice(1).replace(/=.+$/, "");
               if (t.startsWith("--") || /^\d+$/.test(chars)) continue;
@@ -645,6 +645,7 @@ in
             "grep 'pattern'"
             "rg -n 'phone' services/"
             "sed -i 's/old/new/g' services/x/main.go"
+            "grep -E \"--- FAIL\" services/x_test.go"
             "grep -h '^app:' services/*/config/logs-collector.yml 2>/dev/null | sort | uniq -c"
             "git status --short --branch | head -5"
             "git status --short --branch | head -5; git -C /home/dias/Work/core branch --show-current"
@@ -670,12 +671,13 @@ in
             "git diff | head -40"
             "go vet ./... && go test -run TestCompany ./... | head"
             "head -5 /proc/cpuinfo"
+            "grep -E \"^=== RUN|--- FAIL\" /tmp/alw_test2.log | grep -B1 -A1 \"FAIL\" | head; grep -E \"--- FAIL\" /tmp/alw_test2.log | head"
           ];
           driver = pkgs.writeText "bash-guard-test.mjs" ''
             import { bashGuardVerdict } from "${guard}";
             const cases = ${builtins.toJSON cases};
             const root = "/home/dias/Work/core";
-            const expect = [ "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass" ];
+            const expect = [ "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "block", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass" ];
             let failed = 0;
             for (let i = 0; i < cases.length; i++) {
               const blocked = bashGuardVerdict(cases[i], root) !== null;
