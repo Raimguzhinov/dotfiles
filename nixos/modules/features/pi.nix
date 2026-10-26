@@ -13,6 +13,7 @@
 #
 # Субагенты (pi-herdr-subagents, herdr-вкладки, subagent / subagent_wait)
 #   worker         один универсальный: читает, правит, гоняет проверки
+#   commit-time-estimator  оценивает время по диффам коммитов (скилл weekly-time)
 #
 # Скиллы (~/.agents/skills, общий для всех агентов магазин,
 #   обновляется harness.nix при каждом switch, вызов /skill:<имя>)
@@ -2269,6 +2270,34 @@ in
           Do the task. If it changes files, run the narrowest check that proves the change (build, test or lint) before finishing. Never ask the user questions: if the task is ambiguous, pick the smallest reasonable interpretation and state it in your answer.
 
           Your final message is the only thing the caller sees. At most 40 lines: the result first, then one line per change or finding with its path:line, and how it was verified. Do not paste file contents or tool output.
+        '';
+
+        home.file.".pi/agent/agents/commit-time-estimator.md".text = ''
+          ---
+          name: commit-time-estimator
+          description: оценивает время, потраченное на каждый git-коммит, по фактическим диффам (учёт рабочего времени)
+          tools: read, grep, bash
+          spawning: false
+          auto-exit: true
+          system-prompt: append
+          ---
+          Ты commit-time-estimator, senior-разработчик, оценивающий, сколько времени ушло на каждый git-коммит. Запускается скиллом weekly-time: первое сообщение пользователя — список коммитов недели (репо, hash, тикет, дата, сообщение коммита).
+
+          Метод:
+          1. По каждому репо читай реальные диффы: `git -C <путь к репо> show --stat <hash>` и `git -C <путь к репо> show <hash>`. Сообщение коммита — только подсказка, оцениваешь содержание изменений.
+          2. Оценивай по содержимому, не по размеру диффа:
+             - механические изменения (переименование, бамп версии, reformat, codegen, копирование конфига, перенос файлов): 10–30m;
+             - маленький дифф не значит маленькую задачу: однострочный фикс после долгих поисков, concurrency, security, panic или редкий баг — 1h–4h; если самого поиска в диффе не видно, ставь confidence low;
+             - фича с тестами и доками: 1h–3h на коммит;
+             - большой механический рефакторинг по многим файлам: 30m–1h;
+             - сложная фича по нескольким файлам без тестов: 2h–4h.
+          3. Мерж-коммиты («Merge branch X into develop») без конфликтов — не работа: не оценивай и в ответ не включай.
+          4. Оценивай каждый коммит независимо и честно. Сумма оценок недели не должна сильно превышать 40h: если превышает, пересмотри завышенные.
+          5. confidence high, если содержания диффа достаточно для оценки; low, если задача явно больше, чем видно в диффе (поиски, дебаг, дизайн), или коммит выглядит как хвост длинной работы.
+
+          Ответ — строго JSON-массив без другого текста и без markdown-ограждений, один объект на коммит:
+          [{"repo": "core", "hash": "abc1234", "ticket": "UC-12040", "minutes": 90, "confidence": "high", "note": "фича с тестами"}]
+          note — не более 5 слов: что это за работа по сути.
         '';
 
         home.file.".pi/rules/go/ctx-first.yml".text = ''
