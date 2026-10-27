@@ -29,9 +29,11 @@ service `xps-camera-recover` (post-resume) was added.
 
 ## Swap and hibernation
 
-- Swap: `/swap/swapfile` (32G) in the btrfs subvolume `swap` inside LUKS
-  (`cryptroot`). `boot.resumeDevice = "/dev/mapper/cryptroot"` and
-  `resume_offset` in `boot.kernelParams`.
+- Swap: `/swap/swapfile` (64G) in the btrfs subvolume `swap` inside LUKS
+  (`cryptroot`). Keep it at twice the RAM: with 32G, a hibernation under
+  memory pressure failed with `Image saving failed: -28`, and the thaw that
+  followed hung the touchpad I2C bus. `boot.resumeDevice =
+  "/dev/mapper/cryptroot"` and `resume_offset` in `boot.kernelParams`.
 - `resume_offset` comes from
   `btrfs inspect-internal map-swapfile -r /swap/swapfile`. When the file is
   recreated, update it, otherwise resume will not find the image.
