@@ -95,7 +95,7 @@
         "zswap.compressor=zstd"
         "zswap.max_pool_percent=20"
         "zswap.shrinker_enabled=1"
-        "resume_offset=130557184" # btrfs inspect-internal map-swapfile -r /swap/swapfile
+        "resume_offset=64675122" # btrfs inspect-internal map-swapfile -r /swap/swapfile
       ];
 
       # Low swappiness: prefer keeping processes in RAM, use swap only under pressure.
