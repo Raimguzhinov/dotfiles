@@ -945,7 +945,8 @@ in
           high = 6144;
         };
         compaction = {
-          reserveTokens = 41000;
+          reserveTokens = 34000;
+          keepRecentTokens = 20000;
         };
         packages = map (name: "${piExtensions}/node_modules/${name}") (lib.attrNames piExtensionDeps) ++ [
           "${piPlan}"
