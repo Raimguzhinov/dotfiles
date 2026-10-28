@@ -46,6 +46,10 @@ _Avoid_: secondary, "the second one", alternative
 The agent for pet projects, public and private, with no access to corporate infrastructure (currently claude).
 _Avoid_: pet agent
 
+**pi frontend**:
+A UI that runs the main agent in-process with the same pi configuration, not a separate agent (currently ThinkRail).
+_Avoid_: IDE, second agent
+
 ### Code intelligence
 
 **LSP ownership**:
