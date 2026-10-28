@@ -150,6 +150,7 @@
         Each tool has one job, do not use two tools for the same question.
         - Structure of a file: aft_outline. Body of a symbol: aft_zoom. Find code by name or text: aft_search, or grep for exact strings, comments, logs and config keys.
         - In Go, Nix, TypeScript, TSX, JavaScript, Rust and Python use LSP only for what aft cannot do: exact definition across files (lsp_definition), every usage of a symbol (lsp_references), its type or signature (lsp_hover), quick fixes and imports (lsp_code_actions).
+        - Call chains deeper than one hop (trace_path), what a diff affects (detect_changes) and the layout of an unfamiliar repo (get_architecture): codebase-memory. Pass as project the list_projects name whose root_path contains the working directory. If no project covers it, run index_repository on that directory first.
         - Rename a symbol only with lsp_rename, never with edit or text replacement: it updates every reference across files.
         - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
         - Find files with find, list directories with ls.
@@ -294,8 +295,8 @@
 
       options.programs.harness.codebaseMemoryAutoIndex = lib.mkOption {
         type = lib.types.bool;
-        default = false;
-        description = "Index new repositories automatically when an MCP session starts";
+        default = true;
+        description = "Index new repositories automatically and keep indexes in sync with file changes";
       };
 
       options.programs.harness.configFiles = lib.mkOption {
@@ -679,7 +680,7 @@
         home.activation.codebaseMemoryConfig = /* bash */ ''
           set -uo pipefail
           log() { printf '[harness] %s\n' "$*" >&2; }
-          for setting in auto_index=${lib.boolToString config.programs.harness.codebaseMemoryAutoIndex} auto_watch=false watcher_enabled=false; do
+          for setting in auto_index=${lib.boolToString config.programs.harness.codebaseMemoryAutoIndex} auto_watch=${lib.boolToString config.programs.harness.codebaseMemoryAutoIndex} watcher_enabled=${lib.boolToString config.programs.harness.codebaseMemoryAutoIndex}; do
             if "${lib.getExe config.programs.harness.codebaseMemory}" config set "''${setting%%=*}" "''${setting#*=}"; then
               log "codebase-memory-mcp: $setting"
             else

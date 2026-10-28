@@ -906,6 +906,15 @@ in
             env = {
               CBM_ALLOWED_ROOT = config.home.homeDirectory;
             };
+            toolExposure = {
+              list_projects = "direct";
+              index_repository = "direct";
+              search_graph = "direct";
+              trace_path = "direct";
+              get_code_snippet = "direct";
+              detect_changes = "direct";
+              get_architecture = "direct";
+            };
           };
           nixos = {
             description = "NixOS, Home Manager and nix-darwin packages, options and nixpkgs versions";

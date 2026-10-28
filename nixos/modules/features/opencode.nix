@@ -233,6 +233,14 @@
                   type = "remote";
                   url = "https://mcp.grep.app";
                 };
+                codebase_memory = {
+                  type = "local";
+                  command = [
+                    (lib.getExe config.programs.harness.codebaseMemory)
+                  ]
+                  ++ config.programs.harness.codebaseMemoryArgs;
+                  environment.CBM_ALLOWED_ROOT = config.home.homeDirectory;
+                };
                 nixos = {
                   type = "local";
                   command = [ (lib.getExe config.programs.harness.mcpNixos) ];
