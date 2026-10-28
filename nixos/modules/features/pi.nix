@@ -91,6 +91,54 @@ let
       };
     });
 
+  mkThinkrail =
+    {
+      lib,
+      stdenvNoCC,
+      fetchurl,
+      patchelf,
+      makeWrapper,
+      glibc,
+      git,
+    }:
+    let
+      port = "24242";
+    in
+    stdenvNoCC.mkDerivation (finalAttrs: {
+      pname = "thinkrail";
+      version = "0.2.0";
+
+      src = fetchurl {
+        url = "https://github.com/JetBrains/thinkrail/releases/download/v${finalAttrs.version}/thinkrail-linux-x64";
+        hash = "sha256-VA99RiWEkWExin2wU3GbGbQgHrf86vTdVWykx+CIAQw=";
+      };
+
+      dontUnpack = true;
+      dontStrip = true;
+      nativeBuildInputs = [
+        patchelf
+        makeWrapper
+      ];
+
+      installPhase = ''
+        install -Dm755 $src $out/libexec/thinkrail
+        patchelf --set-interpreter ${glibc}/lib/ld-linux-x86-64.so.2 --set-rpath ${glibc}/lib $out/libexec/thinkrail
+        makeWrapper $out/libexec/thinkrail $out/bin/thinkrail \
+          --set THINKRAIL_NO_ANALYTICS 1 \
+          --set THINKRAIL_PORT ${port} \
+          --set THINKRAIL_POSTHOG_HOST http://localhost:${port} \
+          --suffix PATH : ${lib.makeBinPath [ git ]}
+      '';
+
+      meta = {
+        description = "Web UI host for the pi coding agent, prebuilt release binary";
+        homepage = "https://github.com/JetBrains/thinkrail";
+        license = lib.licenses.asl20;
+        platforms = [ "x86_64-linux" ];
+        mainProgram = "thinkrail";
+      };
+    });
+
   piExtensionDeps = {
     "@cortexkit/aft-pi" = "0.59.0";
     "@gotgenes/pi-permission-system" = "40.3.0";
@@ -618,10 +666,20 @@ let
 in
 {
   perSystem =
-    { pkgs, pkgs-unstable, ... }:
     {
-      packages.pi = pkgs-unstable.pi-coding-agent;
-      packages.pi-acp = pkgs.callPackage mkPiAcp { };
+      pkgs,
+      pkgs-unstable,
+      system,
+      ...
+    }:
+    {
+      packages = {
+        pi = pkgs-unstable.pi-coding-agent;
+        pi-acp = pkgs.callPackage mkPiAcp { };
+      }
+      // lib.optionalAttrs (builtins.elem system [ "x86_64-linux" ]) {
+        thinkrail = pkgs.callPackage mkThinkrail { };
+      };
       checks.pi-extensions = pkgs.callPackage mkPiExtensions { };
       checks."bash-guard" =
         let
@@ -754,6 +812,8 @@ in
       piAgentDir = "${config.home.homeDirectory}/.pi/agent";
 
       piExtensions = pkgs.callPackage mkPiExtensions { };
+
+      thinkrail = pkgs.callPackage mkThinkrail { };
 
       readSecret = name: "!cat ${config.sops.secrets.${name}.path}";
 
@@ -2250,6 +2310,7 @@ in
           piStats
           piEval
           (pkgs.callPackage mkPiAcp { })
+          thinkrail
           pkgs.ast-grep
           pkgs.gopls
           pkgs.nixd
@@ -2257,6 +2318,19 @@ in
           pkgs.rust-analyzer
           pkgs.typescript-language-server
         ];
+
+        systemd.user.services.thinkrail = {
+          Unit = {
+            Description = "ThinkRail web UI host for pi";
+            PartOf = [ "graphical-session.target" ];
+            After = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${lib.getExe thinkrail} --no-open";
+            Restart = "on-failure";
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
 
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
         home.sessionVariables = {
