@@ -153,11 +153,11 @@
         - Call chains deeper than one hop (trace_path), what a diff affects (detect_changes) and the layout of an unfamiliar repo (get_architecture): codebase-memory. Pass as project the list_projects name whose root_path contains the working directory. If no project covers it, run index_repository on that directory first.
         - Rename a symbol only with lsp_rename, never with edit or text replacement: it updates every reference across files.
         - After every edit of a file in these languages, run lsp_diagnostics on it. Never report a task as done while it shows errors you introduced.
-        - Find files with find, list directories with ls.
+        - Find files by name with aft_search (filename pattern); list directories with ls.
 
         ## Workflow for code tasks
         Work autonomously until the task is done or you are blocked.
-        1. Locate: find code with aft_search and files with find. Read only the line ranges you need with aft_outline, aft_zoom or read. Never guess file contents, APIs or paths.
+        1. Locate: find code and files with aft_search. Read only the line ranges you need with aft_outline, aft_zoom or read. Never guess file contents, APIs or paths.
         2. Plan: if the change touches more than one file, first write a numbered plan of at most 5 steps.
         3. Edit: make one small change at a time. Match the existing style. Do not add files, dependencies or refactors that were not asked for.
         4. Verify: run lsp_diagnostics on the changed files and fix the errors, then run the narrowest build, test or lint command. On failure, read the error, fix it and re-run. After 3 failed attempts, stop and report.
