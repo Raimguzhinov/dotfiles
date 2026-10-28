@@ -1340,9 +1340,7 @@ in
             return left + " ".repeat(Math.max(1, before)) + center + " ".repeat(Math.max(1, mid - cw - before)) + right;
           };
 
-          const buildFooter = (width: number, theme: Theme, fd: ReadonlyFooterDataProvider): string[] => {
-            const ctx = liveCtx;
-            if (!ctx) return [];
+          const footerState = (ctx: ExtensionContext) => {
             const m = ctx.model;
             const virtual = isVirtual(m);
             let name: string, mmode: string, think: string, tmode = "";
@@ -1357,9 +1355,26 @@ in
               mmode = "manual";
               think = (ctx.thinkingLevel as string) || "off";
             }
-            const dim = (s: string) => theme.fg("dim", s);
             const cu = ctx.getContextUsage();
             const pct = cu ? cu.percent : null;
+            return { name, mmode, think, tmode, pct, tps: ewmaOf(backend()) };
+          };
+
+          const statusText = (ctx: ExtensionContext): string => {
+            const { name, mmode, think, tmode, pct, tps } = footerState(ctx);
+            return [
+              name + " ⟨" + mmode + "⟩",
+              think + (tmode ? " ⟨" + tmode + "⟩" : ""),
+              "ctx " + (pct === null || pct === undefined ? "?" : Math.round(pct) + "%"),
+              tps === undefined ? "" : Math.round(tps) + " tok/s",
+            ].filter(Boolean).join(" · ");
+          };
+
+          const buildFooter = (width: number, theme: Theme, fd: ReadonlyFooterDataProvider): string[] => {
+            const ctx = liveCtx;
+            if (!ctx) return [];
+            const { name, mmode, think, tmode, pct, tps: v } = footerState(ctx);
+            const dim = (s: string) => theme.fg("dim", s);
             let barText: string, barColor: "dim" | "warning" | "error";
             if (pct === null || pct === undefined) {
               barText = "░░░░░░░░░░ ?";
@@ -1373,7 +1388,6 @@ in
             const lsp = st.get("lsp") || "";
             const modes = Array.from(st.entries()).filter(([k]) => k !== "lsp" && k !== "protei-auto").map(([, t]) => t).filter(Boolean).join(" · ");
             const tools = Array.from(toolCounts.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([k, n]) => theme.fg("mdLink", k) + theme.fg("text", "×") + theme.fg("warning", n)).join(" ");
-            const v = ewmaOf(backend());
             const speed = v === undefined ? "" : "⚡ " + Math.round(v) + " tok/s";
             const l1c = "🪟 ctx " + theme.fg(barColor, barText);
             const l1l = "🤖 " + theme.fg("accent", name) + " " + dim("⟨" + mmode + "⟩") + " · " + theme.fg("success", think) + (tmode ? " " + dim("⟨" + tmode + "⟩") : "") + "  " + l1c;
@@ -1406,6 +1420,7 @@ in
             if (!ctx.hasUI) return;
             liveCtx = ctx;
             installFooter(ctx);
+            ctx.ui.setStatus("protei-auto", statusText(ctx));
             rerender?.();
           };
 
