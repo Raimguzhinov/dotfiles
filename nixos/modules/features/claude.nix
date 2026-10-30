@@ -173,7 +173,7 @@
           '';
       };
 
-      appendSystemFile = pkgs.writeText "claude-append-system.md" config.programs.harness.appendShared;
+      appendSystemFile = pkgs.writeText "claude-append-system.md" config.programs.harness.appendClaude;
 
       claudeCode = pkgs.symlinkJoin {
         name = "claude-code";
