@@ -106,11 +106,11 @@ let
     in
     stdenvNoCC.mkDerivation (finalAttrs: {
       pname = "thinkrail";
-      version = "0.2.0";
+      version = "0.3.0";
 
       src = fetchurl {
         url = "https://github.com/JetBrains/thinkrail/releases/download/v${finalAttrs.version}/thinkrail-linux-x64";
-        hash = "sha256-VA99RiWEkWExin2wU3GbGbQgHrf86vTdVWykx+CIAQw=";
+        hash = "sha256-iI5kxs1+3ovOFsoO97v0CcztyfEVXauP40OGqxUetRY=";
       };
 
       dontUnpack = true;
