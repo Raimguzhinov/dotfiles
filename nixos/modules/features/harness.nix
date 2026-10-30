@@ -118,6 +118,7 @@
           ## Lists and codes
           - Number a list of three or more items 1, 2, 3 within the reply. Keep it flat, never nest lists.
           - A question that waits for the user's answer gets a code Q1, Q2 that stays for the whole conversation until it is answered. Always write the code with its gist in parentheses: Q2 (result first).
+          - Headings from skill templates, the grilling round included, follow the same punctuation and code rules: ❓ **Q1. Title**.
           - Codes are labels for this chat only. Code, comments, commit messages, issues, PR bodies, handoff documents and other files are read by people who never saw this chat, so there you name the thing itself.
 
           ## Open questions
