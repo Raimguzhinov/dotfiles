@@ -794,6 +794,28 @@ in
       };
     };
 
+  flake.homeModules.thinkrail =
+    { lib, pkgs, ... }:
+    let
+      thinkrail = pkgs.callPackage mkThinkrail { };
+    in
+    {
+      home.packages = [ thinkrail ];
+
+      systemd.user.services.thinkrail = {
+        Unit = {
+          Description = "ThinkRail web UI host for pi";
+          PartOf = [ "graphical-session.target" ];
+          After = [ "graphical-session.target" ];
+        };
+        Service = {
+          ExecStart = "${lib.getExe thinkrail} --no-open";
+          Restart = "on-failure";
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+    };
+
   flake.homeModules.pi =
     {
       config,
@@ -812,8 +834,6 @@ in
       piAgentDir = "${config.home.homeDirectory}/.pi/agent";
 
       piExtensions = pkgs.callPackage mkPiExtensions { };
-
-      thinkrail = pkgs.callPackage mkThinkrail { };
 
       readSecret = name: "!cat ${config.sops.secrets.${name}.path}";
 
@@ -2325,7 +2345,6 @@ in
           piStats
           piEval
           (pkgs.callPackage mkPiAcp { })
-          thinkrail
           pkgs.ast-grep
           pkgs.gopls
           pkgs.nixd
@@ -2333,19 +2352,6 @@ in
           pkgs.rust-analyzer
           pkgs.typescript-language-server
         ];
-
-        systemd.user.services.thinkrail = {
-          Unit = {
-            Description = "ThinkRail web UI host for pi";
-            PartOf = [ "graphical-session.target" ];
-            After = [ "graphical-session.target" ];
-          };
-          Service = {
-            ExecStart = "${lib.getExe thinkrail} --no-open";
-            Restart = "on-failure";
-          };
-          Install.WantedBy = [ "graphical-session.target" ];
-        };
 
         # Не ходить на pi.dev при старте: version check, remote model catalog, install telemetry
         home.sessionVariables = {

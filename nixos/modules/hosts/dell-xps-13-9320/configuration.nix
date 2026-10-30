@@ -611,6 +611,7 @@
               homeModules.pi
               homeModules.rofi
               homeModules.sops
+              homeModules.thinkrail
               homeModules.thunderbird
               homeModules.tools
               homeModules.zed

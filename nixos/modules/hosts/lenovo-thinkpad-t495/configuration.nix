@@ -64,6 +64,19 @@
       };
       systemd.services.tailscaled.environment.TS_DEBUG_FIREWALL_MODE = "nftables";
 
+      systemd.services.tailscale-serve-thinkrail = {
+        after = [ "tailscaled.service" ];
+        wants = [ "tailscaled.service" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          Restart = "on-failure";
+          RestartSec = 5;
+          ExecStart = "${lib.getExe config.services.tailscale.package} serve --bg --https=443 http://127.0.0.1:24242";
+        };
+      };
+
       time.timeZone = "Asia/Novosibirsk";
       i18n.defaultLocale = "en_US.UTF-8";
 
@@ -102,6 +115,7 @@
 
       users.users.${username} = {
         isNormalUser = true;
+        linger = true;
         extraGroups = [
           "wheel"
           "networkmanager"
@@ -200,8 +214,10 @@
               homeModules.git
               homeModules.herdr
               homeModules.neovim
+              homeModules.thinkrail
               homeModules.tools
             ];
+            systemd.user.services.thinkrail.Install.WantedBy = lib.mkForce [ "default.target" ];
           };
       };
 
