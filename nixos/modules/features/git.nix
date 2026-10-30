@@ -3,6 +3,7 @@
   flake.homeModules.git =
     {
       lib,
+      osConfig,
       pkgs,
       username,
       ...
@@ -36,13 +37,16 @@
           difftool.prompt = false;
           merge.tool = "meld";
           mergetool.prompt = false;
-          commit.gpgsign = true;
+          commit.gpgsign = osConfig.hardware.gpgSmartcards.enable;
           gpg.program = "${lib.getExe pkgs.gnupg}";
-          user.signingkey = "0x719B8382A9DBA991";
+          user = {
+            name = "Raimguzhinov";
+            email = "disas.raim@gmail.com";
+            signingkey = "0x719B8382A9DBA991";
+          };
         };
         includes = [
           { path = "/home/${username}/.config/git/identities/gitlab_work_url"; }
-          { path = "/home/${username}/.config/git/identities/github_user"; }
           {
             condition = "gitdir:~/Work/";
             path = "/home/${username}/.config/git/identities/gitlab_work_user";

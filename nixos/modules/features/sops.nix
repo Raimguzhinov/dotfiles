@@ -34,10 +34,6 @@
         secrets."youtrack/url" = { };
         secrets."youtrack/token" = { };
         secrets."git/github_token" = { };
-        secrets."git/github_user" = {
-          path = "${config.home.homeDirectory}/.config/git/identities/github_user";
-          mode = "0644";
-        };
         secrets."git/gitlab_work_user" = {
           path = "${config.home.homeDirectory}/.config/git/identities/gitlab_work_user";
           mode = "0644";
