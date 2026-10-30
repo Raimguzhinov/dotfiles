@@ -73,7 +73,7 @@
           RemainAfterExit = true;
           Restart = "on-failure";
           RestartSec = 5;
-          ExecStart = "${lib.getExe config.services.tailscale.package} serve --bg --https=443 http://127.0.0.1:24242";
+          ExecStart = "${lib.getExe config.services.tailscale.package} serve --bg --http=80 http://localhost:24242";
         };
       };
 
