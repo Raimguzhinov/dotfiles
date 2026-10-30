@@ -213,14 +213,15 @@
       '';
     in
     {
-      programs.zsh.initContent = lib.mkOrder 2000 ''
+      programs.zsh.initContent = lib.mkOrder 1999 ''
         export _ZO_DOCTOR=0
         # снапшот шелла Claude Code переносит алиасы и функции без условий их создания, поэтому терминал проверяется при каждом вызове
-        unalias ls cat cp mv 2>/dev/null
+        unalias ls cat cp mv mkdir 2>/dev/null
         ls() { if [[ -t 0 && -t 1 ]]; then eza "$@"; else command ls "$@"; fi }
         cat() { if [[ -t 1 ]]; then bat -p "$@"; else command cat "$@"; fi }
         cp() { if [[ -t 0 ]]; then command cp -riv "$@"; else command cp -r "$@"; fi }
         mv() { if [[ -t 0 ]]; then command mv -iv "$@"; else command mv "$@"; fi }
+        mkdir() { if [[ -t 0 ]]; then command mkdir -vp "$@"; else command mkdir -p "$@"; fi }
         if (( $+functions[cd] )); then
           functions[__zoxide_tty_cd]=$functions[cd]
           cd() { if [[ -t 0 && -t 1 ]]; then __zoxide_tty_cd "$@"; else builtin cd "$@"; fi }
