@@ -85,6 +85,10 @@
             url = "https://web.vk.me/";
             default_launch_container = "window";
           }
+          {
+            url = "http://localhost:24242/";
+            default_launch_container = "window";
+          }
         ];
       };
 
