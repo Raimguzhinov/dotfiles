@@ -305,16 +305,6 @@
             args = [ ];
             env.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
           };
-          typst = {
-            type = "stdio";
-            command = "docker";
-            args = [
-              "run"
-              "--rm"
-              "-i"
-              "ghcr.io/johannesbrandenburger/typst-mcp:latest"
-            ];
-          };
         };
       };
     };
