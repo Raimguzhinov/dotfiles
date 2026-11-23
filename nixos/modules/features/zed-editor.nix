@@ -5,6 +5,7 @@
       config,
       lib,
       pkgs,
+      llm-agents,
       ...
     }:
     {
@@ -56,8 +57,16 @@
           agent_servers = {
             OpenCode = {
               type = "custom";
-              command = "${lib.getExe pkgs.opencode}";
+              command = "${lib.getExe config.programs.opencode.package}";
               args = [ "acp" ];
+            };
+            "Claude Code" = {
+              type = "custom";
+              command = "${lib.getExe llm-agents.claude-agent-acp}";
+            };
+            Codex = {
+              type = "custom";
+              command = "${lib.getExe llm-agents.codex-acp}";
             };
           };
           vim_mode = true;

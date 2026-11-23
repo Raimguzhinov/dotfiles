@@ -3,6 +3,9 @@
 Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
 `llama-cpp.nix`. Terms in `GLOSSARY.md`, decisions in `docs/adr/`.
 
+- Agent binaries (claude-code, pi, pi-acp, opencode, codex, herdr, ACP
+  adapters, skills) come from the `llm-agents` module argument, see ADR-0010.
+  Bump with `nix flake lock --update-input llm-agents`.
 - Shared settings live in `programs.harness.*` (`harness.nix`); each agent
   module renders them into its own schema.
 - MCP servers: package and args in `programs.harness.*`, one entry per client.

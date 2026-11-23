@@ -6,6 +6,7 @@
       lib,
       pkgs,
       pkgs-unstable,
+      llm-agents,
       inputs,
       hostname,
       username,
@@ -31,6 +32,22 @@
         stalled-download-timeout = 30;
         download-attempts = 2;
         fallback = true;
+        extra-substituters = [
+          "https://mirror.yandex.ru/nixos?priority=50"
+          "https://mirrors.ustc.edu.cn/nix-channels/store?priority=60"
+          "https://nix-community.cachix.org"
+          "https://niri.cachix.org"
+          "https://notashelf.cachix.org"
+          "https://noctalia.cachix.org"
+          "https://cache.numtide.com"
+        ];
+        extra-trusted-public-keys = [
+          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+          "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+          "notashelf.cachix.org-1:VTTBFNQWbfyLuRzgm2I7AWSDJdqAa11ytLXHBhrprZk="
+          "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+          "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+        ];
       };
       nix.settings.trusted-users = [ username ];
 
@@ -44,10 +61,6 @@
       nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
 
       nixpkgs.config.allowUnfree = true;
-      # Needed for `pkgs.claude-code` (and possibly other inputs-provided packages).
-      nixpkgs.overlays = [
-        inputs.claude-code.overlays.default
-      ];
 
       networking.hostName = hostname;
       networking.networkmanager.enable = true;
@@ -140,8 +153,8 @@
         bat
         btop
         chawan
-        claude-code
-        codex
+        llm-agents.claude-code
+        llm-agents.codex
         curl
         eza
         fd
@@ -185,6 +198,7 @@
         backupFileExtension = "backup";
         extraSpecialArgs = {
           inherit pkgs-unstable;
+          inherit llm-agents;
           inherit hostname;
           inherit username;
         };
@@ -196,7 +210,7 @@
             home.homeDirectory = "/root";
             home.stateVersion = version;
             imports = [
-              inputs.nvf.homeManagerModules.default
+              inputs.nvf.homeModules.default
               homeModules.git
               homeModules.neovim
               homeModules.tools
@@ -210,7 +224,7 @@
             home.stateVersion = version;
             home.homeDirectory = "/home/${username}";
             imports = [
-              inputs.nvf.homeManagerModules.default
+              inputs.nvf.homeModules.default
               homeModules.git
               homeModules.herdr
               homeModules.neovim

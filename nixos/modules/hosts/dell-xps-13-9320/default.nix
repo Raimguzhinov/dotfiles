@@ -13,6 +13,7 @@
         system = "x86_64-linux";
         config.allowUnfree = true;
       };
+      llm-agents = inputs.llm-agents.packages.x86_64-linux;
       homeModules = config.flake.homeModules;
     };
     modules = [

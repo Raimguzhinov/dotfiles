@@ -27,6 +27,7 @@
           inherit system;
           config.allowUnfree = true;
         };
+        _module.args.llm-agents = inputs.llm-agents.packages.${system} or { };
       };
   };
 }

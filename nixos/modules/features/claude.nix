@@ -6,7 +6,7 @@
       osConfig,
       lib,
       pkgs,
-      pkgs-unstable,
+      llm-agents,
       ...
     }:
     let
@@ -177,14 +177,14 @@
 
       claudeCode = pkgs.symlinkJoin {
         name = "claude-code";
-        paths = [ pkgs-unstable.claude-code ];
+        paths = [ llm-agents.claude-code ];
         nativeBuildInputs = [ pkgs.makeWrapper ];
         postBuild = ''
           rm $out/bin/claude
-          makeWrapper ${lib.getExe pkgs-unstable.claude-code} $out/bin/claude \
+          makeWrapper ${lib.getExe llm-agents.claude-code} $out/bin/claude \
             --add-flags "--append-system-prompt-file ${appendSystemFile}"
         '';
-        inherit (pkgs-unstable.claude-code) meta version;
+        inherit (llm-agents.claude-code) meta version;
       };
 
       jevPlugin = pkgs.runCommand "claude-jev-router-plugin" { } ''

@@ -7,7 +7,6 @@
       nixpkgs.config.allowUnfree = true;
       nixpkgs.overlays = [
         inputs.nix-firefox-addons.overlays.default
-        inputs.claude-code.overlays.default
         inputs.niri.overlays.niri
         (
           final: prev:

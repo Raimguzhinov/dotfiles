@@ -2,25 +2,37 @@
 # 4 секрета (litellm key, youtrack token, gitlab token, lightrag url) не
 # попадают в store: в opencode.json встраиваются токены {file:<path>},
 # opencode читает sops-nix-файлы при старте (packages/core/src/config/variable.ts).
-{ inputs, ... }:
+{ ... }:
+let
+  mkOpencode =
+    pkgs: llm-agents:
+    pkgs.symlinkJoin {
+      name = "opencode-${llm-agents.opencode2.version}";
+      paths = [ llm-agents.opencode2 ];
+      postBuild = "ln -s $out/bin/opencode2 $out/bin/opencode";
+      inherit (llm-agents.opencode2) version;
+      meta = llm-agents.opencode2.meta // {
+        mainProgram = "opencode";
+      };
+    };
+in
 {
   perSystem =
-    { system, ... }:
+    { pkgs, llm-agents, ... }:
     {
-      packages.opencode = inputs.opencode.packages.${system}.opencode;
+      packages.opencode = mkOpencode pkgs llm-agents;
     };
 
   flake.homeModules.opencode =
     {
       config,
-      inputs,
+      llm-agents,
       lib,
       osConfig,
       pkgs,
       ...
     }:
     let
-      op = inputs.opencode.packages.${pkgs.stdenv.hostPlatform.system};
       thinkingVariants = [
         {
           id = "off";
@@ -52,7 +64,7 @@
     {
       config = {
 
-        home.packages = [ op.opencode-desktop ];
+        home.packages = [ llm-agents.opencode2-desktop ];
 
         programs.opencode.context = config.programs.harness.appendShared;
 
@@ -62,7 +74,7 @@
 
         programs.opencode = {
           enable = true;
-          package = op.opencode;
+          package = mkOpencode pkgs llm-agents;
 
           # Формат конфигурации opencode 2.x (схема @opencode/schema/config)
           settings = {
@@ -95,7 +107,6 @@
                       temperature = 0.7;
                       topP = 0.8;
                       topK = 20;
-                      minP = 0.0;
                       presencePenalty = 1.5;
                       repetitionPenalty = 1.0;
                     };
@@ -112,7 +123,6 @@
                       temperature = 1.0;
                       topP = 0.95;
                       topK = 20;
-                      minP = 0.0;
                       presencePenalty = 0.0;
                       repetitionPenalty = 1.0;
                     };
@@ -142,7 +152,6 @@
                       temperature = 1.0;
                       topP = 0.95;
                       topK = 20;
-                      minP = 0.0;
                       presencePenalty = 0.0;
                       repetitionPenalty = 1.0;
                     };

@@ -9,6 +9,8 @@ let
       src,
       cargoHash,
       description,
+      nativeBuildInputs ? [ ],
+      buildInputs ? [ ],
     }:
     let
       bin = rustPlatform.buildRustPackage {
@@ -16,6 +18,8 @@ let
         inherit version;
         inherit src;
         inherit cargoHash;
+        inherit nativeBuildInputs;
+        inherit buildInputs;
 
         doCheck = false;
 
@@ -65,6 +69,12 @@ let
         hash = "sha256-KJNzp6e7Uy3E1teheD/dMpB5Zqw7dqxEGnjJqvJgYaE=";
       };
       cargoHash = "sha256-v7GFjRE2Zw6HWpD5Pl7Pd8+PNz7Lb05dvsnFJshFtLE=";
+      nativeBuildInputs = [ pkgs-unstable.pkg-config ];
+      buildInputs = with pkgs-unstable; [
+        libgit2
+        oniguruma
+        zlib
+      ];
       description = "Review agent-written diffs beside the chat in herdr";
     };
 
@@ -367,6 +377,7 @@ in
       lib,
       pkgs,
       pkgs-unstable,
+      llm-agents,
       system,
       ...
     }:
@@ -376,10 +387,10 @@ in
         "aarch64-linux"
       ])
       {
-        packages.herdr = pkgs-unstable.herdr;
+        packages.herdr = llm-agents.herdr;
         checks.herdr-config = pkgs.runCommand "herdr-config" { nativeBuildInputs = [ pkgs.python3 ]; } ''
           python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' ${
-            (pkgs.formats.toml { }).generate "herdr-config.toml" (herdrSettings pkgs pkgs-unstable.herdr)
+            (pkgs.formats.toml { }).generate "herdr-config.toml" (herdrSettings pkgs llm-agents.herdr)
           }
           touch "$out"
         '';
@@ -391,10 +402,11 @@ in
       lib,
       pkgs,
       pkgs-unstable,
+      llm-agents,
       ...
     }:
     let
-      inherit (pkgs-unstable) herdr;
+      inherit (llm-agents) herdr;
       toml = pkgs.formats.toml { };
       configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs herdr);
       pluginRoots = linkedPlugins pkgs pkgs-unstable;

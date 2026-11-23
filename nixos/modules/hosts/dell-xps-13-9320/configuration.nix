@@ -9,6 +9,7 @@
       lib,
       pkgs,
       pkgs-unstable,
+      llm-agents,
       inputs,
       hostname,
       username,
@@ -46,6 +47,22 @@
         stalled-download-timeout = 30;
         download-attempts = 2;
         fallback = true;
+        extra-substituters = [
+          "https://mirror.yandex.ru/nixos?priority=50"
+          "https://mirrors.ustc.edu.cn/nix-channels/store?priority=60"
+          "https://nix-community.cachix.org"
+          "https://niri.cachix.org"
+          "https://notashelf.cachix.org"
+          "https://noctalia.cachix.org"
+          "https://cache.numtide.com"
+        ];
+        extra-trusted-public-keys = [
+          "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+          "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
+          "notashelf.cachix.org-1:VTTBFNQWbfyLuRzgm2I7AWSDJdqAa11ytLXHBhrprZk="
+          "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+          "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+        ];
       };
       nix.settings.trusted-users = [ username ];
 
@@ -116,6 +133,7 @@
         extraSpecialArgs = {
           inherit inputs;
           inherit pkgs-unstable;
+          inherit llm-agents;
           inherit username;
           inherit hostname;
         };
@@ -127,7 +145,7 @@
             home.homeDirectory = "/root";
             home.stateVersion = version;
             imports = [
-              inputs.nvf.homeManagerModules.default
+              inputs.nvf.homeModules.default
               homeModules.neovim
               homeModules.tools
             ];
@@ -355,6 +373,9 @@
               (with pkgs-unstable; [
                 telegram-desktop
               ])
+              ++ (with llm-agents; [
+                herdr-app
+              ])
               ++ (with pkgs; [
                 alacritty
                 cmatrix
@@ -502,6 +523,7 @@
               };
               gtk4.extraConfig = {
                 gtk-theme-name = "adw-gtk3-dark";
+                gtk-interface-color-scheme = "dark";
               };
               colorScheme = "dark";
               iconTheme = {
@@ -593,7 +615,7 @@
 
             imports = [
               inputs.noctalia.homeModules.default
-              inputs.nvf.homeManagerModules.default
+              inputs.nvf.homeModules.default
               inputs.zen-browser.homeModules.beta
               homeModules.chromium
               homeModules.clashVerge
@@ -603,7 +625,7 @@
               homeModules.git
               homeModules.harness
               homeModules.herdr
-              homeModules.jetbrains
+              # homeModules.jetbrains
               homeModules.kitty
               # homeModules.llamaCpp
               homeModules.neovim
@@ -1174,6 +1196,9 @@
         ])
         ++ (with pkgs-unstable; [
           ergohaven-entropy
+        ])
+        ++ (with llm-agents; [
+          codex
           handy
         ])
         ++ (with pkgs.gst_all_1; [
@@ -1196,7 +1221,6 @@
           chafa # terminal image viewer
           choose # cut → choose
           cliphist
-          codex
           ddgr
           dig
           docker-buildx

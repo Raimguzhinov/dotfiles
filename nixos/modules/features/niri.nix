@@ -20,7 +20,7 @@
     {
       config,
       pkgs,
-      pkgs-unstable,
+      llm-agents,
       lib,
       ...
     }:
@@ -331,7 +331,7 @@
                     hotkey-overlay.title = "Toggle sticky";
                   };
                   "Mod+Shift+Space" = {
-                    action = spawn "${lib.getExe pkgs-unstable.handy}" "--toggle-transcription";
+                    action = spawn "${lib.getExe llm-agents.handy}" "--toggle-transcription";
                     hotkey-overlay.title = "Toggle transcription";
                   };
                   "Mod+Shift+P" = {

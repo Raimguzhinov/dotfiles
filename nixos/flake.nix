@@ -9,12 +9,14 @@
       "https://niri.cachix.org"
       "https://notashelf.cachix.org"
       "https://noctalia.cachix.org"
+      "https://cache.numtide.com"
     ];
     extra-trusted-public-keys = [
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
       "notashelf.cachix.org-1:VTTBFNQWbfyLuRzgm2I7AWSDJdqAa11ytLXHBhrprZk="
       "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
     ];
   };
 
@@ -29,10 +31,6 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     flake-utils.url = "github:numtide/flake-utils";
     import-tree.url = "github:vic/import-tree";
-    claude-code = {
-      url = "github:sadjow/claude-code-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
     codebase-memory-mcp = {
       url = "github:DeusData/codebase-memory-mcp";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -44,6 +42,9 @@
     ecdy = {
       url = "github:Raimguzhinov/ecdy";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
     };
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
@@ -82,9 +83,6 @@
     obsidian-plugins = {
       url = "github:cjavad/nixpille-obsidian-community-plugins";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    opencode = {
-      url = "github:anomalyco/opencode";
     };
   };
 

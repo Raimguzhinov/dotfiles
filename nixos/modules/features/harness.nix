@@ -52,6 +52,7 @@
       lib,
       pkgs,
       pkgs-unstable,
+      llm-agents,
       ...
     }:
     let
@@ -650,7 +651,7 @@
           config.programs.harness.codebaseMemory
         ];
 
-        # Наши скиллы, вне списка mattpocock/skills: npx skills их не трогает
+        # Наши скиллы, вне списка mattpocock/skills: skills их не трогает
         home.file.".agents/skills/skills-faq/SKILL.md".source = ../../../skills/skills-faq/SKILL.md;
         home.file.".agents/skills/protei-vpn/SKILL.md".source = ../../../skills/protei-vpn/SKILL.md;
 
@@ -668,16 +669,16 @@
             ]
           }:$PATH"
           if DISABLE_TELEMETRY=1 DO_NOT_TRACK=1 "${pkgs.coreutils}/bin/timeout" 300s \
-            npx -y skills@latest add mattpocock/skills -g -a pi -a claude-code -y -s ${lib.escapeShellArgs mattpocockSkills} >/dev/null 2>&1; then
+            ${lib.getExe llm-agents.skills} add mattpocock/skills -g -a pi -a claude-code -y -s ${lib.escapeShellArgs mattpocockSkills} >/dev/null 2>&1; then
             log "Updated mattpocock/skills in ~/.agents/skills"
           else
-            log "WARNING: npx skills add mattpocock/skills failed (no network?), keeping installed skills"
+            log "WARNING: skills add mattpocock/skills failed (no network?), keeping installed skills"
           fi
         '';
 
         # Скилл из cursor/plugins: fetch в activation, не в деривации, чтобы
         # не кэшироваться в store и всегда тянуть свежий upstream. Имя hook'а
-        # алфавитно после updateAgentSkills, чтобы идти после npx skills
+        # алфавитно после updateAgentSkills, чтобы идти после skills add
         home.activation.updateCursorSkill = /* bash */ ''
           set -euo pipefail
           log() { printf '[harness] %s\n' "$*" >&2; }
@@ -706,8 +707,8 @@
         '';
 
         # Симлинк для claude-code: pi и opencode читают ~/.agents/skills
-        # нативно, npx свой скилл не линкует. Имя после updateCursorSkill,
-        # чтобы идти после npx
+        # нативно, skills свой скилл не линкует. Имя после updateCursorSkill,
+        # чтобы идти после skills add
         home.activation.updateLocalSkillSymlinks = /* bash */ ''
           set -euo pipefail
           mkdir -p "$HOME/.claude/skills"

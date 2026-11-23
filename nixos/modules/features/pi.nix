@@ -65,32 +65,6 @@
 #
 { config, lib, ... }:
 let
-  mkPiAcp =
-    {
-      lib,
-      buildNpmPackage,
-      fetchFromGitHub,
-    }:
-    buildNpmPackage (finalAttrs: {
-      pname = "pi-acp";
-      version = "0.0.34";
-
-      src = fetchFromGitHub {
-        owner = "svkozak";
-        repo = "pi-acp";
-        tag = "v${finalAttrs.version}";
-        hash = "sha256-QRwxOtTZOY+Np3PkAoy2o2PrUzEqjItM/372sCPlSMo=";
-      };
-      npmDepsHash = "sha256-BvLNtFfp1cMVjzWcMRSdhTqiJrTfbFoUbWkkPW9200o=";
-
-      meta = {
-        description = "ACP adapter for pi coding agent";
-        homepage = "https://github.com/svkozak/pi-acp";
-        license = lib.licenses.mit;
-        mainProgram = "pi-acp";
-      };
-    });
-
   mkThinkrail =
     {
       lib,
@@ -668,14 +642,14 @@ in
   perSystem =
     {
       pkgs,
-      pkgs-unstable,
+      llm-agents,
       system,
       ...
     }:
     {
       packages = {
-        pi = pkgs-unstable.pi-coding-agent;
-        pi-acp = pkgs.callPackage mkPiAcp { };
+        pi = llm-agents.pi;
+        pi-acp = llm-agents.pi-acp;
       }
       // lib.optionalAttrs (builtins.elem system [ "x86_64-linux" ]) {
         thinkrail = pkgs.callPackage mkThinkrail { };
@@ -822,7 +796,7 @@ in
       osConfig,
       lib,
       pkgs,
-      pkgs-unstable,
+      llm-agents,
       ...
     }:
 
@@ -853,7 +827,6 @@ in
               temperature = 1.0;
               top_p = 0.95;
               top_k = 20;
-              min_p = 0.0;
               presence_penalty = 0.0;
               repetition_penalty = 1.0;
             };
@@ -910,7 +883,6 @@ in
                   temperature = 0.7;
                   top_p = 0.8;
                   top_k = 20;
-                  min_p = 0.0;
                   presence_penalty = 1.5;
                   repetition_penalty = 1.0;
                 };
@@ -2341,10 +2313,10 @@ in
         };
 
         home.packages = [
-          pkgs-unstable.pi-coding-agent
+          llm-agents.pi
           piStats
           piEval
-          (pkgs.callPackage mkPiAcp { })
+          llm-agents.pi-acp
           pkgs.ast-grep
           pkgs.gopls
           pkgs.nixd
