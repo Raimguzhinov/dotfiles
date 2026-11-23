@@ -11,7 +11,7 @@
 #   buf lint, nixfmt, ast-grep standards) -> кратко отчитывается
 #   give_up        честная остановка, когда застрял (вместо бесконечных ретраев)
 #
-# Субагенты (pi-herdr-subagents, herdr-вкладки, subagent / subagent_wait)
+# Субагенты (pi-herdr-subagents, herdr-вкладки, subagent / subagent_resume / subagent_interrupt / subagents_list, /subplan)
 #   worker         один универсальный: читает, правит, гоняет проверки
 #   commit-time-estimator  оценивает время по диффам коммитов (скилл weekly-time)
 #
@@ -41,7 +41,7 @@
 #   aft-pi            aft_search / aft_outline / aft_zoom / codemode
 #   pi-lsp-extension  lsp_* (Python/pyright, Nix/nixd, TypeScript, Go/gopls, Rust/rust-analyzer)
 #   rpiv-todo         todo (план многошаговой работы)
-#   pi-herdr-subagents  subagent / subagent_wait через herdr
+#   pi-herdr-subagents  subagent / subagent_resume / subagent_interrupt / subagents_list через herdr
 #   pi-add-dir, @gotgenes/pi-permission-system, pi-fff, pi-undo-redo
 #
 # Карта файла (секции в порядке следования)
@@ -359,6 +359,8 @@ let
         substituteInPlace node_modules/pi-herdr-subagents/pi-extension/subagents/subagent-done.ts \
           --replace-fail '"ctrl+j"' '"ctrl+i"' \
           --replace-fail 'Ctrl+J' 'Ctrl+I'
+        substituteInPlace node_modules/pi-herdr-subagents/pi-extension/subagents/index.ts \
+          --replace-fail 'pi.registerCommand("plan", {' 'pi.registerCommand("subplan", {'
         substituteInPlace node_modules/pi-fff/src/fff-runtime.ts \
           --replace-fail 'async findFiles(request: FindFilesRequest): Promise<FindFilesResult> {' 'async searchPathCandidates(query: string, limit = DEFAULT_FILE_CANDIDATE_LIMIT): Promise<AppResult<FffFileCandidate[], RuntimeInitializationError | FinderOperationError>> { const finderResult = await this.ensure(); if (finderResult.isErr()) return propagateError(finderResult); const normalizedQuery = normalizePathQuery(query); if (!normalizedQuery) return Result.ok([]); const search = safeFinderCall("mixedSearch", () => finderResult.value.mixedSearch(normalizedQuery, { pageSize: Math.max(limit, DEFAULT_FILE_CANDIDATE_LIMIT) })); if (search.isErr()) return propagateError(search); return Result.ok(search.value.items.slice(0, limit).map((entry, index) => normalizeCandidate(entry.item as FileItem, search.value.scores[index]))); } async findFiles(request: FindFilesRequest): Promise<FindFilesResult> {'
         substituteInPlace node_modules/pi-fff/src/editor.ts \
