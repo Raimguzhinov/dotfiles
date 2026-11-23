@@ -370,6 +370,11 @@ let
     };
   };
 
+  herdrCoreSettings = {
+    shell = [ "zsh" ];
+    restore_screen = true;
+  };
+
 in
 {
   perSystem =
@@ -394,6 +399,14 @@ in
           }
           touch "$out"
         '';
+        checks.herdr-core-config =
+          pkgs.runCommand "herdr-core-config" { nativeBuildInputs = [ pkgs.python3 ]; }
+            ''
+              python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' ${
+                (pkgs.formats.toml { }).generate "herdr-core-config.toml" herdrCoreSettings
+              }
+              touch "$out"
+            '';
       };
 
   flake.homeModules.herdr =
@@ -407,6 +420,7 @@ in
     }:
     let
       inherit (llm-agents) herdr;
+      inherit (llm-agents) herdr-core;
       toml = pkgs.formats.toml { };
       configFile = toml.generate "herdr-config.toml" (herdrSettings pkgs herdr);
       pluginRoots = linkedPlugins pkgs pkgs-unstable;
@@ -537,6 +551,7 @@ in
     {
       home.packages = [
         herdr
+        herdr-core
         pickFileFullscreen
         pluginsSync
         sendPaths
@@ -547,6 +562,13 @@ in
       home.file.".pi/agent/skills/herdr/SKILL.md".source = "${herdr}/share/skills/herdr/herdr/SKILL.md";
       xdg.configFile."opencode/skills/herdr/SKILL.md".source =
         "${herdr}/share/skills/herdr/herdr/SKILL.md";
+
+      home.file.".claude/skills/herdr-core/SKILL.md".source =
+        "${herdr-core}/share/skills/herdr-core/herdr-core/SKILL.md";
+      xdg.configFile."opencode/skills/herdr-core/SKILL.md".source =
+        "${herdr-core}/share/skills/herdr-core/herdr-core/SKILL.md";
+      xdg.configFile."herdr-core/config.toml".source =
+        toml.generate "herdr-core-config.toml" herdrCoreSettings;
 
       programs.zsh.oh-my-zsh = {
         custom = ohMyZshCustomDir;

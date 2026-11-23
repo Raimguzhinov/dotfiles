@@ -373,9 +373,6 @@
               (with pkgs-unstable; [
                 telegram-desktop
               ])
-              ++ (with llm-agents; [
-                herdr-app
-              ])
               ++ (with pkgs; [
                 alacritty
                 cmatrix
@@ -873,6 +870,7 @@
       # Define a user account. Don’t forget to set a password with ‘passwd’.
       users.users.${username} = {
         isNormalUser = true;
+        linger = true;
         initialHashedPassword = # mkpasswd <password>
           "$y$j9T$u06AsIj.fZtLVi2I0teH9.$IRF6NKQyvVgQKtr7r6PPAHO3CPnvp/nPHxVj.SBgBK4";
         description = username;

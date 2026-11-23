@@ -31,9 +31,17 @@ Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
   deployed to `~/.agents/skills` by `home.file` in `harness.nix` and linked
   into `~/.claude/skills` by `updateLocalSkillSymlinks`. `protei-vpn` brings
   up the corporate VPN.
+- herdr-core (`hc`, `herdr.nix`): a headless terminal runtime separate from the
+  herdr TUI, with its own server and agent list. The herdr phone app reaches it
+  over SSH. Agents started with `hc run` survive the session and show on the
+  phone; agents in herdr TUI panes do not. Config:
+  `~/.config/herdr-core/config.toml` from `herdrCoreSettings`. Core starts its
+  own transient `hc-serve-*` systemd user units, so the repo has no unit for
+  it. `hc update` refuses on Nix: bump `llm-agents` instead.
 - Flake checks (perSystem, exposed as `<system>-<name>`): `pi-extensions`
   builds the patched extension bundle, `bash-guard` runs the inline block/pass
   suite, `harness-configs` parses the rendered config files with jq,
-  `herdr-config` validates the rendered herdr config,
+  `herdr-config` and `herdr-core-config` parse the rendered herdr and
+  herdr-core configs,
   `pi-permission-schema` validates the rendered permission config against the
   schema. Run with `nix flake check`.

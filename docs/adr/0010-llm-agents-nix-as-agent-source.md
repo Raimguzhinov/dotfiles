@@ -4,12 +4,12 @@ Agent binaries came from five places: `pkgs-unstable` (claude-code, pi, herdr, h
 
 Decision:
 
-- **`numtide/llm-agents.nix` is the single source for agent binaries and agent-adjacent tools**: claude-code, pi, pi-acp, opencode (`opencode2` plus an `opencode` symlink), codex, herdr, handy, skills and the claude/codex ACP adapters.
+- **`numtide/llm-agents.nix` is the single source for agent binaries and agent-adjacent tools**: claude-code, pi, pi-acp, opencode (`opencode2` plus an `opencode` symlink), codex, herdr, herdr-core, handy, skills and the claude/codex ACP adapters.
 - **No `inputs.nixpkgs.follows`.** The flake is built and tested only against its own nixpkgs-unstable pin, and its binary cache hits only for that pin. Modules read `inputs.llm-agents.packages.${system}` through the `llm-agents` module argument (perSystem, NixOS and home-manager), not through the `shared-nixpkgs` overlay, which rebuilds against our nixpkgs and misses the cache.
 - **`cache.numtide.com` is a substituter** in `nixConfig` and in `nix.settings` on both hosts.
 - Bump with `nix flake lock --update-input llm-agents`.
 
-Stays outside the catalog: codebase-memory-mcp (own input), thinkrail, pi extensions (ADR-0003), herdr plugins, mcp-nixos.
+Stays outside the catalog: codebase-memory-mcp (own input), thinkrail, pi extensions (ADR-0003), herdr plugins, mcp-nixos and mcp-searxng (both from `pkgs-unstable`).
 
 Considered:
 
@@ -19,4 +19,5 @@ Considered:
 Consequences:
 
 - Daily upstream bumps can outpace herdr plugins built against a herdr version. On a break, report options (update, wait, drop) instead of patching.
+- herdr-core cannot update itself on Nix (`hc update` refuses), so it moves only with the `llm-agents` bump. herdr-app was tried and dropped: herdr TUI stays the workspace, herdr-core serves the phone app.
 - opencode's main program is `opencode2`; the `opencode` symlink in `opencode.nix` keeps herdr integrations, ecdy and Zed working.
