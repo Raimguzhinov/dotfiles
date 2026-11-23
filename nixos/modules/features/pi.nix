@@ -936,7 +936,7 @@ in
             command = "npx";
             args = [
               "-y"
-              "@modelcontextprotocol/server-postgres"
+              "@modelcontextprotocol/server-postgres@0.6.2"
               "postgresql://uc:ucPassword@localhost:5432/uc?sslmode=disable&options=-csearch_path%3Dcompany_0%2Cpublic"
             ];
           };
