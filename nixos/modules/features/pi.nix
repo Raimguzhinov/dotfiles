@@ -1218,8 +1218,6 @@ in
           slowBelow: 8,
           smallFactor: 1.5,
           backAtLeast: 15,
-          swapBelow: 40_000,
-          swapFactor: 2,
           dwellMs: 30 * 60_000,
           headroom: 16_384,
         };
@@ -1236,6 +1234,7 @@ in
         const BACKENDS = new Set(["Protei", "ProteiStrict"]);
 
         type Target = keyof typeof TARGETS;
+        type RouterState = { pool: "main" | "small"; since: number; probe: boolean; auto?: number; manual?: { level: number; at: number } };
         type Shared = Record<string, { ewma: number; at: number }>;
         type Entry = { type: string; customType?: string; data?: { mode?: string; active?: boolean } };
 
@@ -1301,6 +1300,7 @@ in
           let liveCtx: ExtensionContext | undefined;
           let rerender: (() => void) | undefined;
           let footerInstalled = false;
+          let stored: string | undefined;
             const toolCounts = new Map<string, number>(); // намерено суммарные вызовы за сессию, reset не предусмотрен
 
           const backend = () => TARGETS[routed].id;
@@ -1426,6 +1426,26 @@ in
             upCount = 0;
             lastMain = Date.now();
             usage = undefined;
+            stored = undefined;
+          };
+
+          const snapshot = (): RouterState => ({ pool, since, probe, auto, manual });
+
+          const hydrate = (s: RouterState | undefined) => {
+            const key = JSON.stringify(s ?? null);
+            if (key === stored) return;
+            stored = key;
+            if (!s) return;
+            ({ pool, since, probe, auto, manual } = s);
+            upTarget = -1;
+            upCount = 0;
+          };
+
+          const persist = (): RouterState | undefined => {
+            const key = JSON.stringify(snapshot());
+            if (key === stored) return undefined;
+            stored = key;
+            return snapshot();
           };
 
           const choosePool = (now: number) => {
@@ -1506,7 +1526,7 @@ in
             }
           };
 
-          pi.registerVirtualModel({
+          pi.registerVirtualModel<RouterState>({
             provider: VIRTUAL.provider,
             id: VIRTUAL.id,
             name: "Protei auto",
@@ -1528,6 +1548,7 @@ in
                 const next: Target = key ? (big && key !== "strict" ? "strict" : key) : big || planMode(ctx) === "plan" ? "strict" : pool;
                 return { model: find(next), thinkingLevel: request.thinkingLevel };
               }
+              hydrate(request.state);
               const sticky = request.reason === "retry" ? request.failed : request.reason === "user" ? undefined : request.previous;
               const stickyKey = sticky && keyOf(sticky.model);
               const stickyLevel = sticky?.thinkingLevel;
@@ -1537,16 +1558,10 @@ in
                 const continuation = request.reason === "continuation";
                 const forceStrict = continuation && stickyKey !== "strict" && big;
                 const leavePlan = continuation && stickyKey === "strict" && !big && planMode(ctx) !== "plan";
-                const other = stickyKey === "main" ? SMALL : MAIN;
-                const cur = ewmaOf(E2E(TARGETS[stickyKey].id), now);
-                const alt = ewmaOf(E2E(other), now);
-                const slowNow = cur !== undefined && cur < CFG.slowBelow && (alt === undefined || alt >= CFG.smallFactor * cur);
-                const worth = contextTokens(request.messages) < CFG.swapBelow || slowNow || (cur !== undefined && alt !== undefined && alt >= CFG.swapFactor * cur);
-                const swap = continuation && stickyKey !== "strict" && worth;
-                if (!forceStrict && (swap || leavePlan)) choosePool(now);
-                retarget(forceStrict ? "strict" : leavePlan || swap ? pool : stickyKey);
+                if (leavePlan) choosePool(now);
+                retarget(forceStrict ? "strict" : leavePlan ? pool : stickyKey);
                 show(ctx);
-                return { model: find(routed), thinkingLevel: stickyLevel };
+                return { model: find(routed), thinkingLevel: stickyLevel, state: persist() };
               }
               if (selected !== undefined && request.thinkingLevel !== selected && levelIndex(request.thinkingLevel) >= 0) {
                 manual = { level: levelIndex(request.thinkingLevel), at: now };
@@ -1560,7 +1575,7 @@ in
               const model: Model<Api> = find(routed);
               const thinkingLevel: ModelThinkingLevel = LEVELS[level(now)];
               show(ctx);
-              return { model, thinkingLevel };
+              return { model, thinkingLevel, state: persist() };
             },
           });
 
