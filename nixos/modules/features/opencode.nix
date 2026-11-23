@@ -256,11 +256,7 @@ in
                 };
                 searxng = {
                   type = "local";
-                  command = [
-                    "npx"
-                    "-y"
-                    "mcp-searxng"
-                  ];
+                  command = [ (lib.getExe config.programs.harness.mcpSearxng) ];
                   environment.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
                 };
               };

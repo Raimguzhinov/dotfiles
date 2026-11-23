@@ -927,11 +927,8 @@ in
           };
           searxng = {
             description = "Web search and URL reading through local SearXNG";
-            command = "npx";
-            args = [
-              "-y"
-              "mcp-searxng"
-            ];
+            command = lib.getExe config.programs.harness.mcpSearxng;
+            args = [ ];
             env.SEARXNG_URL = "http://127.0.0.1:${toString osConfig.services.searx.settings.server.port}";
           };
           postgres = {

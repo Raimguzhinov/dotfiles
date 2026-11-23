@@ -328,6 +328,12 @@
         description = "mcp-nixos package shared by pi, opencode and claude-code";
       };
 
+      options.programs.harness.mcpSearxng = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs-unstable.mcp-searxng;
+        description = "mcp-searxng package shared by pi, opencode and claude-code";
+      };
+
       options.programs.harness.codebaseMemoryArgs = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
