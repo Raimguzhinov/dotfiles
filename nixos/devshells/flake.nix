@@ -1,5 +1,5 @@
 {
-  description = "Lightweight devshells for ~/Work (go + python), ~/Homelab (go), and Typst";
+  description = "Lightweight devshells for ~/Work (go + python + node), ~/Homelab (go), and Typst";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -43,6 +43,7 @@
             inputsFrom = [
               config.devShells.go
               config.devShells.python
+              config.devShells.nodejs
             ];
           };
         };
