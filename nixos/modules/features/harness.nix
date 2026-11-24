@@ -644,6 +644,10 @@
                   pattern = "dd *of=/dev/*";
                   reason = "Запись в блочное устройство";
                 }
+                {
+                  pattern = "*youtrack*";
+                  reason = "YouTrack только через read-only MCP: никаких прямых вызовов из bash";
+                }
               ];
               description = "Bash-команды, которые запрещены (deny с причиной)";
             };
@@ -659,7 +663,6 @@
 
         # Наши скиллы, вне списка mattpocock/skills: skills их не трогает
         home.file.".agents/skills/skills-faq/SKILL.md".source = ../../../skills/skills-faq/SKILL.md;
-        home.file.".agents/skills/protei-vpn/SKILL.md".source = ../../../skills/protei-vpn/SKILL.md;
 
         # Одна команда на каждый switch: обновляет скиллы и пересоздаёт
         # симлинки. pi и opencode читают store нативно, claude-code получает
@@ -719,7 +722,6 @@
           set -euo pipefail
           mkdir -p "$HOME/.claude/skills"
           ln -sfn "$HOME/.agents/skills/skills-faq" "$HOME/.claude/skills/skills-faq"
-          ln -sfn "$HOME/.agents/skills/protei-vpn" "$HOME/.claude/skills/protei-vpn"
         '';
 
         # auto_index не имеет ни env, ни JSON-ключа (только SQLite _config.db),

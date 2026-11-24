@@ -30,8 +30,8 @@ Modules: `harness.nix`, `pi.nix`, `opencode.nix`, `claude.nix`, `herdr.nix`,
   (`packages/agent/src/agent-loop.ts`); the first blocking handler wins.
 - User-level skills (every repo, every agent): `skills/<name>/SKILL.md`,
   deployed to `~/.agents/skills` by `home.file` in `harness.nix` and linked
-  into `~/.claude/skills` by `updateLocalSkillSymlinks`. `protei-vpn` brings
-  up the corporate VPN.
+  into `~/.claude/skills` by `updateLocalSkillSymlinks`. Work skills such as
+  `protei-vpn` live in the Home Repo `~/Work/home/.agents/skills`.
 - herdr-core (`hc`, `herdr.nix`): a headless terminal runtime separate from the
   herdr TUI, with its own server and agent list. The herdr phone app reaches it
   over SSH. Agents started with `hc run` survive the session and show on the
