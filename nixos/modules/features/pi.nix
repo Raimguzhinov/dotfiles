@@ -1101,6 +1101,7 @@ in
             };
             external_directory_write = {
               "*" = "ask";
+              "~/Work/herdr-worktrees/*" = "allow";
             };
             path = {
               "*" = "allow";

@@ -319,6 +319,11 @@ in
                   resource = "~/.config/opencode/*";
                   effect = "allow";
                 }
+                {
+                  action = "external_directory";
+                  resource = "~/Work/herdr-worktrees/*";
+                  effect = "allow";
+                }
               ];
 
             plugins = [
