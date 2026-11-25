@@ -36,7 +36,12 @@ in
       thinkingVariants = [
         {
           id = "off";
-          body.chat_template_kwargs.enable_thinking = false;
+          body = {
+            temperature = 0.7;
+            top_p = 0.8;
+            presence_penalty = 1.5;
+            chat_template_kwargs.enable_thinking = false;
+          };
         }
         {
           id = "low";
@@ -105,10 +110,10 @@ in
                     };
                     body = {
                       temperature = 0.7;
-                      topP = 0.8;
-                      topK = 20;
-                      presencePenalty = 1.5;
-                      repetitionPenalty = 1.0;
+                      top_p = 0.8;
+                      top_k = 20;
+                      presence_penalty = 1.5;
+                      repetition_penalty = 1.0;
                     };
                     variants = thinkingVariants;
                   };
@@ -121,10 +126,10 @@ in
                     };
                     body = {
                       temperature = 1.0;
-                      topP = 0.95;
-                      topK = 20;
-                      presencePenalty = 0.0;
-                      repetitionPenalty = 1.0;
+                      top_p = 0.95;
+                      top_k = 20;
+                      presence_penalty = 0.0;
+                      repetition_penalty = 1.0;
                     };
                     variants = thinkingVariants;
                   };
@@ -145,15 +150,15 @@ in
                     name = "Protei Small";
                     modelID = "agent_proteya_slow";
                     limit = {
-                      context = 131072;
+                      context = 262144;
                       output = 8192;
                     };
                     body = {
                       temperature = 1.0;
-                      topP = 0.95;
-                      topK = 20;
-                      presencePenalty = 0.0;
-                      repetitionPenalty = 1.0;
+                      top_p = 0.95;
+                      top_k = 20;
+                      presence_penalty = 0.0;
+                      repetition_penalty = 1.0;
                     };
                     variants = thinkingVariants;
                   };
@@ -174,8 +179,8 @@ in
                   };
                   body = {
                     temperature = 0.6;
-                    topK = 20;
-                    topP = 0.95;
+                    top_k = 20;
+                    top_p = 0.95;
                   };
                   variants = [
                     {
