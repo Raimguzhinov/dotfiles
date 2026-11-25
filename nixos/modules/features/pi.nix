@@ -823,7 +823,7 @@ in
               "text"
               "image"
             ];
-            contextWindow = 131072;
+            contextWindow = 262144;
             maxTokens = 32768;
             samplingParams = {
               temperature = 1.0;
@@ -879,7 +879,7 @@ in
             (
               removeAttrs (proteiModel "agent_proteya" "Protei Strict") [ "samplingParamsByThinkingLevel" ]
               // {
-                contextWindow = 131072;
+                contextWindow = 262144;
                 maxTokens = 32768;
                 samplingParams = {
                   temperature = 0.7;
@@ -1532,7 +1532,7 @@ in
             id: VIRTUAL.id,
             name: "Protei auto",
             thinkingLevels: [...LEVELS],
-            contextWindow: 131072,
+            contextWindow: 262144,
             maxTokens: 32768,
             route(request, ctx) {
               const now = Date.now();
